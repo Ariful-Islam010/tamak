@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 
 class PeerSupportScreen extends StatefulWidget {
   const PeerSupportScreen({super.key});
@@ -10,6 +13,8 @@ class PeerSupportScreen extends StatefulWidget {
 
 class _PeerSupportScreenState extends State<PeerSupportScreen> {
   bool _isAnonymous = false;
+  final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   final List<Map<String, dynamic>> _messages = [
     {
@@ -37,6 +42,55 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       "time": "১০:৪০ এএম"
     },
   ];
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _sendMessage() {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final user = context.read<AuthService>().currentUser;
+    final userName = user?.displayName ?? "ব্যবহারকারী";
+
+    // Format time in Bengali
+    final now = DateTime.now();
+    final formatter = DateFormat('hh:mm a');
+    String formattedTime = formatter.format(now)
+        .replaceAll('AM', 'এএম')
+        .replaceAll('PM', 'পিএম')
+        .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
+        .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
+        .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
+        .replaceAll('9', '৯');
+
+    setState(() {
+      _messages.add({
+        "isMe": true,
+        "sender": userName,
+        "level": "Beginner", // Or dynamic based on user profile
+        "isCounselor": false,
+        "text": _messageController.text.trim(),
+        "time": formattedTime,
+      });
+    });
+
+    _messageController.clear();
+    
+    // Scroll to bottom
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +163,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
           
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
@@ -151,9 +206,12 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                             icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
                             onPressed: () {},
                           ),
-                          const Expanded(
+                          Expanded(
                             child: TextField(
-                              decoration: InputDecoration(
+                              controller: _messageController,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _sendMessage(),
+                              decoration: const InputDecoration(
                                 hintText: "মেসেজ লিখুন...",
                                 border: InputBorder.none,
                               ),
@@ -168,16 +226,16 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    height: 48,
-                    width: 48,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF075E54), // WhatsApp primary green
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: () {},
+                  GestureDetector(
+                    onTap: _sendMessage,
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF075E54), // WhatsApp primary green
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.send, color: Colors.white),
                     ),
                   ),
                 ],

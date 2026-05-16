@@ -19,6 +19,19 @@ class HomeDashboardScreen extends StatelessWidget {
     final user = context.watch<AuthService>().currentUser;
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
+    // Calculate smoke-free days based on quitDate
+    int smokeFreeDays = 0;
+    if (user?.quitDate != null) {
+      final now = DateTime.now();
+      final diff = now.difference(user!.quitDate!).inDays;
+      if (diff >= 0) {
+        smokeFreeDays = diff;
+      }
+    }
+
+    // Example translation to Bengali numerals
+    final String smokeFreeDaysStr = smokeFreeDays.toString().replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২').replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫').replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮').replaceAll('9', '৯');
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
@@ -105,11 +118,11 @@ class HomeDashboardScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(context, "ধূমপানমুক্ত দিন", "৫", Icons.calendar_month, AppTheme.primaryGreen),
+                    child: _buildStatCard(context, "ধূমপানমুক্ত দিন", smokeFreeDaysStr, Icons.calendar_month, AppTheme.primaryGreen),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: _buildStatCard(context, "টাকা সেভ", "৳৫০০", Icons.account_balance_wallet, AppTheme.primaryBlue),
+                    child: _buildStatCard(context, "টাকা সেভ", "৳০", Icons.account_balance_wallet, AppTheme.primaryBlue),
                   ),
                 ],
               ),
@@ -130,7 +143,7 @@ class HomeDashboardScreen extends StatelessWidget {
                   _buildGridItem(context, "এস.ও.এস", Icons.warning_rounded, AppTheme.errorColor, const SosEmergencyScreen(), isSos: true),
                   _buildGridItem(context, "টাকা সেভার", Icons.savings, AppTheme.accentYellow, const MoneySaverScreen()),
                   _buildGridItem(context, "সহায়তা গ্রুপ", Icons.group, Colors.purple, const PeerSupportScreen()),
-                  _buildGridItem(context, "শিক্ষাগত তথ্য", Icons.school, Colors.teal, const EducationInfoScreen()), // Replaced Profile with Education
+                  _buildGridItem(context, "সচেতনতা", Icons.menu_book, Colors.teal, const EducationInfoScreen()),
                 ],
               ),
             ],

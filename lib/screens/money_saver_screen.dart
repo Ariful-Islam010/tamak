@@ -1,11 +1,64 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
-class MoneySaverScreen extends StatelessWidget {
+class MoneySaverScreen extends StatefulWidget {
   const MoneySaverScreen({super.key});
 
   @override
+  State<MoneySaverScreen> createState() => _MoneySaverScreenState();
+}
+
+class _MoneySaverScreenState extends State<MoneySaverScreen> {
+  int _totalSavings = 0;
+
+  void _showAddMoneyDialog() {
+    final TextEditingController amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("টাকা যোগ করুন"),
+          content: TextField(
+            controller: amountController,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              hintText: "যেমন: ৫০",
+              prefixText: "৳ ",
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("বাতিল"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final int? amount = int.tryParse(amountController.text);
+                if (amount != null && amount > 0) {
+                  setState(() {
+                    _totalSavings += amount;
+                  });
+                }
+                Navigator.pop(context);
+              },
+              child: const Text("যোগ করুন"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // English numerals to Bengali
+    final String savingsStr = _totalSavings.toString()
+        .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
+        .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
+        .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
+        .replaceAll('9', '৯');
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
@@ -47,27 +100,25 @@ class MoneySaverScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "৳২,৫০০",
+                    "৳$savingsStr",
                     style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: AppTheme.white,
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
                         ),
                   ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _showAddMoneyDialog,
+                    icon: const Icon(Icons.add, color: AppTheme.primaryGreen),
+                    label: const Text("যোগ করুন", style: TextStyle(color: AppTheme.primaryGreen)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.white,
+                      foregroundColor: AppTheme.primaryGreen,
+                    ),
+                  )
                 ],
               ),
-            ),
-            const SizedBox(height: 32),
-
-            // Time based savings
-            Row(
-              children: [
-                Expanded(child: _buildTimeCard(context, "দৈনিক", "৳৫০")),
-                const SizedBox(width: 16),
-                Expanded(child: _buildTimeCard(context, "সাপ্তাহিক", "৳৩৫০")),
-                const SizedBox(width: 16),
-                Expanded(child: _buildTimeCard(context, "মাসিক", "৳১,৫০০")),
-              ],
             ),
             const SizedBox(height: 40),
 
@@ -78,48 +129,36 @@ class MoneySaverScreen extends StatelessWidget {
                 Text("আমার স্বপ্ন", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22)),
                 TextButton(
                   onPressed: () {},
-                  child: const Text("যোগ করুন"),
+                  child: const Text("নতুন স্বপ্ন"),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             
-            _buildWishlistCard(context, "নতুন জুতো", Icons.directions_walk, 3500, 2500, AppTheme.primaryBlue),
-            _buildWishlistCard(context, "হেডফোন", Icons.headphones, 1200, 1200, AppTheme.primaryGreen, isCompleted: true),
-            _buildWishlistCard(context, "স্মার্টফোন", Icons.smartphone, 15000, 2500, AppTheme.accentOrange),
+            _buildWishlistCard(context, "নতুন জুতো", Icons.directions_walk, 3500, AppTheme.primaryBlue),
+            _buildWishlistCard(context, "হেডফোন", Icons.headphones, 1200, AppTheme.primaryGreen),
+            _buildWishlistCard(context, "স্মার্টফোন", Icons.smartphone, 15000, AppTheme.accentOrange),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTimeCard(BuildContext context, String title, String amount) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
-          const SizedBox(height: 8),
-          Text(amount, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppTheme.textColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWishlistCard(BuildContext context, String title, IconData icon, int targetAmount, int currentAmount, Color color, {bool isCompleted = false}) {
-    double progress = currentAmount / targetAmount;
+  Widget _buildWishlistCard(BuildContext context, String title, IconData icon, int targetAmount, Color color) {
+    double progress = _totalSavings / targetAmount;
     if (progress > 1.0) progress = 1.0;
+    bool isCompleted = progress >= 1.0;
+
+    final String targetStr = targetAmount.toString()
+        .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
+        .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
+        .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
+        .replaceAll('9', '৯');
+    final String currentStr = _totalSavings.toString()
+        .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
+        .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
+        .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
+        .replaceAll('9', '৯');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -156,7 +195,7 @@ class MoneySaverScreen extends StatelessWidget {
                   children: [
                     Text(title, style: Theme.of(context).textTheme.titleLarge),
                     Text(
-                      isCompleted ? "লক্ষ্য অর্জিত!" : "৳$currentAmount / ৳$targetAmount",
+                      isCompleted ? "লক্ষ্য অর্জিত!" : "৳$currentStr / ৳$targetStr",
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             color: isCompleted ? AppTheme.primaryGreen : AppTheme.textLight,
                             fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
