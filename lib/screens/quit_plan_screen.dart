@@ -46,14 +46,11 @@ class _QuitPlanScreenState extends State<QuitPlanScreen> {
             ),
             
             Expanded(
-              child: PageView(
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _buildDurationStep(),
-                  _buildTriggerStep(),
-                  _buildTimelinePreview(),
-                ][_currentStep],
-              ),
+              child: [
+                _buildDurationStep(),
+                _buildTriggerStep(),
+                _buildTimelinePreview(),
+              ][_currentStep],
             ),
             
             // Bottom Buttons

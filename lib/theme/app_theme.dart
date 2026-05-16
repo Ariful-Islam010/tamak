@@ -50,7 +50,7 @@ class AppTheme {
         ),
         iconTheme: const IconThemeData(color: textColor),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: white,
         elevation: 0,
         shadowColor: Colors.black.withOpacity(0.05),
