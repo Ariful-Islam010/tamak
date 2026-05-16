@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 import 'home_dashboard_screen.dart';
 
 class ProfileAssessmentScreen extends StatefulWidget {
@@ -10,12 +13,34 @@ class ProfileAssessmentScreen extends StatefulWidget {
 }
 
 class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _educationController = TextEditingController();
+
   String? _selectedTobaccoType;
   int? _selectedDuration;
   DateTime? _selectedDate;
 
   final List<String> _tobaccoTypes = ["সিগারেট", "জর্দা/গুল", "বিড়ি", "অন্যান্য"];
   final List<int> _durations = [7, 14, 30];
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-fill name from AuthService
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthService>().currentUser;
+      if (user?.displayName != null) {
+        _nameController.text = user!.displayName!;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _educationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +64,14 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight),
             ),
             const SizedBox(height: 32),
+
+            // Name
+            _buildInputField("আপনার নাম", "আপনার পূর্ণ নাম লিখুন", _nameController),
+            const SizedBox(height: 24),
+
+            // Education Info
+            _buildInputField("শিক্ষাগত তথ্য", "যেমন: ঢাকা বিশ্ববিদ্যালয় / বিএসসি", _educationController),
+            const SizedBox(height: 24),
 
             // Age & Gender (Simplified for mockup)
             Row(
@@ -171,6 +204,28 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
+                  final authService = context.read<AuthService>();
+                  final currentUser = authService.currentUser;
+                  
+                  if (currentUser != null) {
+                    final updatedUser = currentUser.copyWith(
+                      displayName: _nameController.text.isNotEmpty ? _nameController.text : null,
+                      educationalInfo: _educationController.text.isNotEmpty ? _educationController.text : null,
+                      tobaccoType: _selectedTobaccoType,
+                      planDuration: _selectedDuration,
+                      quitDate: _selectedDate,
+                    );
+                    authService.updateUserData(updatedUser);
+                  } else {
+                    // For mockup without actual auth
+                    final dummyUser = UserModel(
+                      uid: 'dummy',
+                      displayName: _nameController.text.isNotEmpty ? _nameController.text : "ব্যবহারকারী",
+                      educationalInfo: _educationController.text.isNotEmpty ? _educationController.text : "শিক্ষাগত তথ্য নেই",
+                    );
+                    authService.updateUserData(dummyUser);
+                  }
+
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
@@ -185,13 +240,14 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
     );
   }
 
-  Widget _buildInputField(String label, String hint) {
+  Widget _buildInputField(String label, String hint, [TextEditingController? controller]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16)),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           decoration: InputDecoration(
             hintText: hint,
           ),

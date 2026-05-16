@@ -198,52 +198,57 @@ class _QuitPlanScreenState extends State<QuitPlanScreen> {
         children: [
           Text("আপনার পরিকল্পনা", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24)),
           const SizedBox(height: 8),
-          Text("দৈনিক লক্ষ্যসমূহ", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
+          Text("আজকের লক্ষ্য", style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
           const SizedBox(height: 32),
-          _buildTimelineItem("দিন ১-৩", "নিকোটিনের আসক্তি কমানো", Icons.battery_charging_full, AppTheme.accentOrange),
-          _buildTimelineItem("দিন ৪-৭", "মানসিক চাপ নিয়ন্ত্রণ", Icons.self_improvement, AppTheme.primaryBlue),
-          _buildTimelineItem("দিন ৮-১৪", "নতুন অভ্যাস তৈরি", Icons.directions_run, AppTheme.primaryGreen),
-          _buildTimelineItem("দিন ১৫+", "পুরোপুরি ধূমপানমুক্ত", Icons.emoji_events, AppTheme.accentYellow, isLast: true),
+          
+          // Focus only on today's task
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.primaryBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.self_improvement, color: AppTheme.white, size: 40),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  "মানসিক চাপ নিয়ন্ত্রণ",
+                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                    color: AppTheme.primaryBlue,
+                    fontSize: 24,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "আজ আপনার মূল ফোকাস হবে স্ট্রেস বা মানসিক চাপ কমানো। যখনই ধূমপান করতে ইচ্ছা করবে, লম্বা শ্বাস নিন এবং অন্য কাজে মনোযোগ দিন।",
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.textColor,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {},
+                  icon: const Icon(Icons.check_circle),
+                  label: const Text("আমি প্রস্তুত"),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTimelineItem(String title, String subtitle, IconData icon, Color color, {bool isLast = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            if (!isLast)
-              Container(
-                height: 40,
-                width: 2,
-                color: Colors.grey.withOpacity(0.3),
-              ),
-          ],
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18)),
-              const SizedBox(height: 4),
-              Text(subtitle, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

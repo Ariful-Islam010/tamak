@@ -16,6 +16,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       "isMe": false,
       "sender": "রহিম উদ্দিন",
       "level": "Warrior",
+      "isCounselor": false,
       "text": "আজ আমার ৪র্থ দিন তামাক ছাড়া! বেশ ভালো লাগছে।",
       "time": "১০:৩০ এএম"
     },
@@ -23,14 +24,16 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       "isMe": true,
       "sender": "রাকিব হোসেন",
       "level": "Beginner",
+      "isCounselor": false,
       "text": "অভিনন্দন ভাই! আমার কেবল দ্বিতীয় দিন। একটু কষ্ট হচ্ছে।",
       "time": "১০:৩৫ এএম"
     },
     {
       "isMe": false,
       "sender": "পিয়ার কাউন্সেলর (অ্যাডমিন)",
-      "level": "Champion",
-      "text": "রাকিব, প্রথম কয়েকদিন একটু কঠিন হয়। প্রচুর পানি পান করুন আর এস.ও.এস (SOS) ফিচারটি ব্যবহার করুন।",
+      "level": "Expert",
+      "isCounselor": true,
+      "text": "রাকিব, প্রথম কয়েকদিন একটু কঠিন হয়। প্রচুর পানি পান করুন আর এস.ও.এস (SOS) ফিচারটি ব্যবহার করুন। আমরা আপনার সাথে আছি!",
       "time": "১০:৪০ এএম"
     },
   ];
@@ -38,23 +41,36 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: const Color(0xFFE5DDD5), // WhatsApp style background color
       appBar: AppBar(
-        title: const Text("সহায়তা গ্রুপ"),
+        backgroundColor: const Color(0xFF075E54), // WhatsApp primary green
+        foregroundColor: Colors.white,
+        title: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("সহায়তা গ্রুপ", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text("৪ জন অনলাইন", style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70)),
+          ],
+        ),
         actions: [
           Row(
             children: [
-              Text(
+              const Text(
                 "অজ্ঞাত",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textColor),
+                style: TextStyle(fontSize: 12, color: Colors.white),
               ),
               Switch(
                 value: _isAnonymous,
-                activeColor: AppTheme.primaryBlue,
+                activeColor: AppTheme.accentYellow,
+                inactiveThumbColor: Colors.grey.shade300,
+                inactiveTrackColor: Colors.grey.shade600,
                 onChanged: (val) {
                   setState(() {
                     _isAnonymous = val;
                   });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(_isAnonymous ? "আপনি এখন অজ্ঞাত হিসেবে চ্যাট করছেন" : "আপনার নাম দৃশ্যমান")),
+                  );
                 },
               ),
             ],
@@ -63,18 +79,30 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       ),
       body: Column(
         children: [
-          // Emergency Help Button
+          // Emergency Help Button (Big, Prominent)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: AppTheme.white,
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
             child: ElevatedButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.support_agent),
-              label: const Text("সরাসরি সাহায্য নিন (Ask for Help Now)"),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("কাউন্সেলরকে জানানো হয়েছে, দ্রুতই কেউ যোগাযোগ করবে!")),
+                );
+              },
+              icon: const Icon(Icons.support_agent, size: 28),
+              label: const Text(
+                "সরাসরি সাহায্য নিন (Ask for Help Now)",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.errorColor,
                 foregroundColor: AppTheme.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
@@ -91,50 +119,64 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                   msg["sender"],
                   msg["time"],
                   msg["isMe"],
-                  msg["level"],
+                  msg["isCounselor"],
                 );
               },
             ),
           ),
           
-          // Message Input Field
+          // Message Input Field (WhatsApp Style)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppTheme.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  offset: const Offset(0, -2),
-                  blurRadius: 10,
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            color: Colors.transparent,
             child: SafeArea(
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "মেসেজ লিখুন...",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: AppTheme.backgroundColor,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            offset: const Offset(0, 1),
+                            blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
+                            onPressed: () {},
+                          ),
+                          const Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: "মেসেজ লিখুন...",
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.attach_file, color: Colors.grey),
+                            onPressed: () {},
+                          ),
+                        ],
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
+                    height: 48,
+                    width: 48,
                     decoration: const BoxDecoration(
-                      color: AppTheme.primaryBlue,
+                      color: Color(0xFF075E54), // WhatsApp primary green
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send, color: AppTheme.white),
+                      icon: const Icon(Icons.send, color: Colors.white),
                       onPressed: () {},
                     ),
                   ),
@@ -147,40 +189,42 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
     );
   }
 
-  Widget _buildChatBubble(BuildContext context, String text, String sender, String time, bool isMe, String level) {
+  Widget _buildChatBubble(BuildContext context, String text, String sender, String time, bool isMe, bool isCounselor) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe)
             CircleAvatar(
               radius: 16,
-              backgroundColor: level == "Champion" ? AppTheme.accentYellow : AppTheme.primaryBlue.withOpacity(0.2),
+              backgroundColor: isCounselor ? AppTheme.accentYellow : Colors.grey.shade300,
               child: Icon(
-                level == "Champion" ? Icons.verified_user : Icons.person,
+                isCounselor ? Icons.verified_user : Icons.person,
                 size: 20,
-                color: level == "Champion" ? AppTheme.white : AppTheme.primaryBlue,
+                color: isCounselor ? Colors.white : Colors.grey.shade600,
               ),
             ),
           if (!isMe) const SizedBox(width: 8),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: isMe ? AppTheme.primaryBlue : AppTheme.white,
+                color: isCounselor 
+                    ? const Color(0xFFFFF8DC) // Light yellow for counselor
+                    : (isMe ? const Color(0xFFDCF8C6) : Colors.white), // WhatsApp chat bubble colors
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 0),
-                  bottomRight: Radius.circular(isMe ? 0 : 16),
+                  topLeft: const Radius.circular(12),
+                  topRight: const Radius.circular(12),
+                  bottomLeft: Radius.circular(isMe ? 12 : 0),
+                  bottomRight: Radius.circular(isMe ? 0 : 12),
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
-                    offset: const Offset(0, 2),
-                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                    blurRadius: 1,
                   ),
                 ],
               ),
@@ -191,43 +235,43 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        _isAnonymous ? "অজ্ঞাত ব্যবহারকারী" : "$sender ($level)",
+                        _isAnonymous && !isCounselor ? "অজ্ঞাত ব্যবহারকারী" : sender,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: level == "Champion" ? AppTheme.accentOrange : AppTheme.textLight,
+                          fontSize: 13,
+                          color: isCounselor ? AppTheme.accentOrange : const Color(0xFF075E54),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
                   Text(
                     text,
-                    style: TextStyle(
-                      color: isMe ? AppTheme.white : AppTheme.textColor,
+                    style: const TextStyle(
+                      color: Colors.black87,
                       fontSize: 15,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Align(
                     alignment: Alignment.bottomRight,
-                    child: Text(
-                      time,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: isMe ? AppTheme.white.withOpacity(0.7) : AppTheme.textLight,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          time,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                        if (isMe) const SizedBox(width: 4),
+                        if (isMe) const Icon(Icons.done_all, size: 14, color: Colors.blue), // Read receipt
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          if (isMe) const SizedBox(width: 8),
-          if (isMe)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppTheme.primaryGreen.withOpacity(0.2),
-              child: const Icon(Icons.person, size: 20, color: AppTheme.primaryGreen),
-            ),
         ],
       ),
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 import 'quit_plan_screen.dart';
 import 'daily_check_in_screen.dart';
 import 'sos_emergency_screen.dart';
@@ -7,12 +9,16 @@ import 'money_saver_screen.dart';
 import 'gamification_screen.dart';
 import 'peer_support_screen.dart';
 import 'profile_screen.dart';
+import 'education_info_screen.dart';
 
 class HomeDashboardScreen extends StatelessWidget {
   const HomeDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = context.watch<AuthService>().currentUser;
+    final userName = user?.displayName ?? "ব্যবহারকারী";
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
@@ -33,7 +39,7 @@ class HomeDashboardScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight),
                       ),
                       Text(
-                        "রাকিব হোসেন",
+                        userName,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22),
                       ),
                     ],
@@ -58,7 +64,8 @@ class HomeDashboardScreen extends StatelessWidget {
                         child: CircleAvatar(
                           radius: 20,
                           backgroundColor: AppTheme.primaryBlue.withOpacity(0.2),
-                          child: const Icon(Icons.person, color: AppTheme.primaryBlue),
+                          backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                          child: user?.photoUrl == null ? const Icon(Icons.person, color: AppTheme.primaryBlue) : null,
                         ),
                       ),
                     ],
@@ -123,7 +130,7 @@ class HomeDashboardScreen extends StatelessWidget {
                   _buildGridItem(context, "এস.ও.এস", Icons.warning_rounded, AppTheme.errorColor, const SosEmergencyScreen(), isSos: true),
                   _buildGridItem(context, "টাকা সেভার", Icons.savings, AppTheme.accentYellow, const MoneySaverScreen()),
                   _buildGridItem(context, "সহায়তা গ্রুপ", Icons.group, Colors.purple, const PeerSupportScreen()),
-                  _buildGridItem(context, "আমার প্রোফাইল", Icons.manage_accounts, Colors.teal, const ProfileScreen()),
+                  _buildGridItem(context, "শিক্ষাগত তথ্য", Icons.school, Colors.teal, const EducationInfoScreen()), // Replaced Profile with Education
                 ],
               ),
             ],

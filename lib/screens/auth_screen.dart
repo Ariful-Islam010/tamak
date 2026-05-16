@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
 import 'profile_assessment_screen.dart';
 
 class AuthScreen extends StatelessWidget {
@@ -105,27 +107,42 @@ class AuthScreen extends StatelessWidget {
               const SizedBox(height: 32),
               
               // Google Login Button
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileAssessmentScreen()),
-                    );
-                  },
-                  icon: const Icon(Icons.g_mobiledata, size: 32, color: AppTheme.primaryBlue),
-                  label: const Text("Google দিয়ে লগইন করুন"),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+              Consumer<AuthService>(
+                builder: (context, authService, child) {
+                  return SizedBox(
+                    width: double.infinity,
+                    height: 56, // Ensure consistent height
+                    child: OutlinedButton.icon(
+                      onPressed: authService.isLoading
+                          ? null
+                          : () async {
+                              final credential = await authService.signInWithGoogle();
+                              if (credential != null && context.mounted) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const ProfileAssessmentScreen()),
+                                );
+                              }
+                            },
+                      icon: authService.isLoading 
+                          ? const SizedBox(
+                              width: 24, 
+                              height: 24, 
+                              child: CircularProgressIndicator(strokeWidth: 2)
+                            )
+                          : const Icon(Icons.g_mobiledata, size: 32, color: AppTheme.primaryBlue),
+                      label: Text(authService.isLoading ? "অপেক্ষা করুন..." : "Google দিয়ে লগইন করুন"),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        side: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                        foregroundColor: AppTheme.textColor,
+                        textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
+                      ),
                     ),
-                    side: BorderSide(color: Colors.grey.withOpacity(0.3)),
-                    foregroundColor: AppTheme.textColor,
-                    textStyle: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
-                  ),
-                ),
+                  );
+                },
               ),
             ],
           ),
