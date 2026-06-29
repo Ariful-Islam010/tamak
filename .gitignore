@@ -1,45 +1,43 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+# Ignore environment files
+.env
+**/.env
+.env.*
+!.env.example
+!**/.env.example
 
-# IntelliJ related
+
+# Large zip backup files
+*.zip
+*.rar
+tobacco_awareness_backend.zip
+
+# Flutter & Dart build artifacts
+tobacco_awareness/.dart_tool/
+tobacco_awareness/.flutter-plugins-dependencies
+tobacco_awareness/.pub-cache/
+tobacco_awareness/.pub/
+tobacco_awareness/build/
+
+# Node.js modules
+node_modules/
+tobacco_awareness/node_modules/
+
+# Python Cache and Virtual Environments
+__pycache__/
+**/__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+ENV/
+
+# IDE files
+.idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# OS files
+.DS_Store
+Thumbs.db
