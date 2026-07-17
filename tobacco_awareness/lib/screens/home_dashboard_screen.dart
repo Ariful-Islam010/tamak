@@ -46,10 +46,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return "সুপ্রভাত, ☀️";
-    if (hour < 17) return "শুভ দুপুর, 🌤️";
-    if (hour < 20) return "শুভ সন্ধ্যা, 🌇";
-    return "শুভ রাত্রি, 🌙";
+    if (hour < 12) return "সুপ্রভাত,";
+    if (hour < 17) return "শুভ দুপুর,";
+    if (hour < 20) return "শুভ সন্ধ্যা,";
+    return "শুভ রাত্রি,";
   }
 
   @override
@@ -69,192 +69,134 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.demonDark,
-              AppTheme.backgroundColor,
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            stops: const [0.25, 0.45],
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _refreshAllData,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Top Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _getGreeting(),
-                              style: const TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    userName,
-                                    style: const TextStyle(
-                                      fontSize: 24, 
-                                      color: Colors.white, 
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                    maxLines: 1, 
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Icon(Icons.flash_on_rounded, color: AppTheme.accentYellow, size: 24),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Row(
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _refreshAllData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Bar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          IconButton(
-                            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationScreen())),
-                            icon: const Icon(Icons.stars_rounded, color: AppTheme.accentYellow, size: 30),
-                            style: IconButton.styleFrom(
-                              backgroundColor: AppTheme.demonMid,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                side: const BorderSide(color: AppTheme.accentYellow, width: 2),
+                          Text(_getGreeting(),
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(userName,
+                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22, color: AppTheme.primaryGreen),
+                                    maxLines: 1, overflow: TextOverflow.ellipsis),
                               ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: AppTheme.accentPink, width: 2.5),
-                              ),
-                              child: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                                backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
-                                child: user?.photoUrl == null ? const Icon(Icons.person, color: Colors.white) : null,
-                              ),
-                            ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.eco, color: AppTheme.primaryGreen, size: 20),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Motivational Strip
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: gamification.currentStreak > 0 ? AppTheme.fireGradient : AppTheme.pinkGradient,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white, width: 2.5),
-                      boxShadow: AppTheme.glowShadow(AppTheme.accentOrange),
                     ),
-                    child: Row(
+                    Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.white24,
-                            shape: BoxShape.circle,
+                        IconButton(
+                          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationScreen())),
+                          icon: const Icon(Icons.stars, color: AppTheme.accentYellow, size: 28),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppTheme.cardBackgroundColor,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 32),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            gamification.currentStreak > 0
-                                ? "দারুণ! ${_toBengali(gamification.currentStreak)} দিন ধরে ডেমনকে পরাস্ত করে তামাকমুক্ত আছেন! 🔥👾"
-                                : "আজই হোক তামাকমুক্ত জীবনের প্রথম দিন! ডেমনকে হারাতে প্রস্তুত হোন! ⚔️👾",
-                            style: const TextStyle(
-                              color: Colors.white, 
-                              fontWeight: FontWeight.w900, 
-                              fontSize: 16,
-                              height: 1.4,
-                            ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                          child: CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                            backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                            child: user?.photoUrl == null ? const Icon(Icons.person, color: AppTheme.primaryBlue) : null,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 24),
+                  ],
+                ),
+                const SizedBox(height: 24),
 
-                  // Stats Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          context, 
-                          "তামাকমুক্ত দিন", 
-                          _toBengali(smokeFreeDays), 
-                          Icons.air_rounded, 
-                          AppTheme.accentLime,
-                          AppTheme.greenGradient,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildStatCard(
-                          context, 
-                          "টাকা সেভ", 
-                          "৳${_toBengali(totalSaved)}", 
-                          Icons.savings_rounded, 
-                          AppTheme.accentYellow,
-                          AppTheme.fireGradient,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-
-                  // Features Grid
-                  const Text(
-                    "সার্ভিস সমূহ 🛠️", 
-                    style: TextStyle(
-                      fontSize: 20, 
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.textColor,
+                // Motivational Strip
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF00C6A7), AppTheme.primaryGreen],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 3,
-                    childAspectRatio: 0.82,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: [
-                      _buildGridItem(context, "পরিকল্পনা", Icons.map_rounded, AppTheme.accentCyan, AppTheme.cyanGradient, const QuitPlanScreen()),
-                      _buildGridItem(context, "দৈনিক চেক-ইন", Icons.check_circle_rounded, AppTheme.accentLime, AppTheme.greenGradient, const DailyCheckInScreen()),
-                      _buildSosGridItem(context),
-                      _buildGridItem(context, "টাকা সেভার", Icons.monetization_on_rounded, AppTheme.accentYellow, AppTheme.fireGradient, const MoneySaverScreen()),
-                      _buildGridItem(context, "সহায়তা গ্রুপ", Icons.forum_rounded, AppTheme.accentPink, AppTheme.pinkGradient, const PeerSupportScreen()),
-                      _buildGridItem(context, "সচেতনতা", Icons.auto_stories_rounded, AppTheme.primaryPurple, AppTheme.cardGradient, const EducationInfoScreen()),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 40),
-                ],
-              ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.eco, color: Colors.white, size: 32),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          gamification.currentStreak > 0
+                              ? "দারুণ! ${_toBengali(gamification.currentStreak)} দিন ধরে তামাকমুক্ত! 🌿"
+                              : "আজই হোক তামাকমুক্ত জীবনের প্রথম দিন! 🌿",
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: AppTheme.white, fontWeight: FontWeight.bold, height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Stats Row
+                Row(
+                  children: [
+                    Expanded(child: _buildStatCard(context, "তামাকমুক্ত দিন", _toBengali(smokeFreeDays), Icons.air, AppTheme.primaryGreen)),
+                    const SizedBox(width: 16),
+                    Expanded(child: _buildStatCard(context, "টাকা সেভ", "৳${_toBengali(totalSaved)}", Icons.account_balance_wallet, AppTheme.primaryBlue)),
+                  ],
+                ),
+                const SizedBox(height: 32),
+
+                // Features Grid
+                Text("সার্ভিস সমূহ", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18)),
+                const SizedBox(height: 16),
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 3,
+                  childAspectRatio: 0.85,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  children: [
+                    _buildGridItem(context, "পরিকল্পনা", Icons.map, AppTheme.primaryBlue, const QuitPlanScreen()),
+                    _buildGridItem(context, "দৈনিক চেক-ইন", Icons.check_circle, AppTheme.primaryGreen, const DailyCheckInScreen()),
+                    _buildSosGridItem(context),
+                    _buildGridItem(context, "টাকা সেভার", Icons.savings, AppTheme.accentYellow, const MoneySaverScreen()),
+                    _buildGridItem(context, "সহায়তা গ্রুপ", Icons.group, Colors.purple, const PeerSupportScreen()),
+                    _buildGridItem(context, "সচেতনতা", Icons.menu_book, Colors.teal, const EducationInfoScreen()),
+                  ],
+                ),
+                const SizedBox(height: 80),
+              ],
             ),
           ),
         ),
@@ -262,55 +204,30 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color accentColor, LinearGradient gradient) {
+  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.demonMid.withValues(alpha: 0.1), width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: accentColor.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: AppTheme.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: TextStyle(
-              color: AppTheme.textColor, 
-              fontSize: 26, 
-              fontWeight: FontWeight.w900,
-            ),
-          ),
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 12),
+          Text(value,
+              style: Theme.of(context).textTheme.displayMedium?.copyWith(color: color, fontSize: 28)),
           const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppTheme.textLight, 
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight)),
         ],
       ),
     );
   }
 
+  // Original-style SOS grid item (same as before)
   Widget _buildSosGridItem(BuildContext context) {
     const color = AppTheme.errorColor;
     return GestureDetector(
@@ -321,12 +238,11 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       child: Column(
         children: [
           Container(
-            height: 68,
-            width: 68,
+            height: 64,
+            width: 64,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white, width: 3),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.4),
@@ -335,25 +251,21 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ),
               ],
             ),
-            child: const Icon(Icons.warning_rounded, color: AppTheme.white, size: 36),
+            child: const Icon(Icons.warning_rounded, color: AppTheme.white, size: 32),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             "এস.ও.এস",
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.w900, 
-              fontSize: 13,
-              color: AppTheme.textColor,
-            ),
-            maxLines: 1,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
+            maxLines: 2,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGridItem(BuildContext context, String title, IconData icon, Color color, LinearGradient gradient, Widget destination) {
+  Widget _buildGridItem(BuildContext context, String title, IconData icon, Color color, Widget destination) {
     return GestureDetector(
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => destination));
@@ -362,32 +274,20 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       child: Column(
         children: [
           Container(
-            height: 68,
-            width: 68,
+            height: 64,
+            width: 64,
             decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(icon, color: Colors.white, size: 32),
+            child: Icon(icon, color: color, size: 32),
           ),
           const SizedBox(height: 8),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900, 
-              fontSize: 13,
-              color: AppTheme.textColor,
-            ),
-            maxLines: 1,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
+            maxLines: 2,
           ),
         ],
       ),

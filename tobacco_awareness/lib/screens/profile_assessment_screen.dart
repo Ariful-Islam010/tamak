@@ -29,18 +29,16 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   final List<String> _genders = ["পুরুষ", "মহিলা", "অন্যান্য"];
   final List<int> _durations = [7, 14, 30];
 
-  int _selectedAge = 19;
   int _selectedGenderIndex = 0;
-  int _selectedCigarettes = 5;
   int _selectedDurationIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _ageController.text = "19";
-    _cigarettesPerDayController.text = "5";
-    _selectedGender = _genders[0];
-    _selectedDuration = _durations[0];
+    _ageController.text = ""; // Empty by default
+    _cigarettesPerDayController.text = ""; // Empty by default
+    _selectedGender = _genders[0]; // Default: পুরুষ
+    _selectedDuration = _durations[0]; // Default: 7 days
   }
 
   @override
@@ -52,24 +50,58 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
     super.dispose();
   }
 
+  /// Validate current page before moving forward
   bool _validateCurrentPage() {
     switch (_currentPage) {
-      case 0:
+      case 0: // Educational info - MUST be entered
+        if (_classController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("অনুগ্রহ করে আপনার শিক্ষাগত তথ্য/শ্রেণি প্রবেশ করান!"),
+              backgroundColor: AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return false;
+        }
         return true;
-      case 1:
-        return _ageController.text.isNotEmpty;
-      case 2:
+      case 1: // Age - MUST be entered
+        final age = int.tryParse(_ageController.text.trim());
+        if (age == null || age <= 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("অনুগ্রহ করে আপনার বয়স সঠিকভাবে টাইপ করুন!"),
+              backgroundColor: AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 2: // Gender - always has a default
         return _selectedGender != null;
-      case 3:
-        return _cigarettesPerDayController.text.isNotEmpty;
-      case 4:
+      case 3: // Cigarettes per day - MUST be entered
+        final cigs = int.tryParse(_cigarettesPerDayController.text.trim());
+        if (cigs == null || cigs < 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("অনুগ্রহ করে দৈনিক ধূমপানের পরিমাণ সঠিকভাবে টাইপ করুন!"),
+              backgroundColor: AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 4: // Plan duration - always has a default
         return _selectedDuration != null;
-      case 5:
+      case 5: // Quit date - MUST be selected
         if (_selectedDate == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("অনুগ্রহ করে শুরুর তারিখ নির্বাচন করুন!"),
               backgroundColor: AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
             ),
           );
           return false;
@@ -94,6 +126,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   }
 
   void _finishAssessment() async {
+    // Final validation
     if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -108,14 +141,16 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
     final quitPlanProvider = context.read<QuitPlanProvider>();
     final currentUser = authService.currentUser;
     
+    // Show loading indicator
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return const Center(child: CircularProgressIndicator(color: AppTheme.accentPink));
+        return const Center(child: CircularProgressIndicator());
       },
     );
 
+    // Generate AI Plan
     final String? aiPlan = await GroqAiService.generateQuitPlan(
       durationInDays: _selectedDuration ?? 7,
       cigarettesPerDay: int.tryParse(_cigarettesPerDayController.text) ?? 5,
@@ -127,8 +162,8 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
       await quitPlanProvider.saveAiPlan(aiPlan);
     }
     
-    if (context.mounted) {
-      Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context); // Dismiss loading dialog
     }
 
     if (currentUser != null) {
@@ -153,7 +188,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
       await authService.updateUserData(dummyUser);
     }
     
-    if (context.mounted) {
+    if (mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
@@ -164,17 +199,16 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
+      // Prevent user from going back without completing onboarding
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppTheme.backgroundColor,
+        backgroundColor: AppTheme.loginBackgroundColor,
         appBar: AppBar(
-          title: const Text("প্রাথমিক তথ্য 📝", style: TextStyle(fontWeight: FontWeight.bold)),
-          automaticallyImplyLeading: false,
-          backgroundColor: AppTheme.demonDark,
-          centerTitle: true,
+          title: const Text("প্রাথমিক তথ্য"),
+          automaticallyImplyLeading: false, // No back button for onboarding
           leading: _currentPage > 0 
               ? IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  icon: const Icon(Icons.arrow_back),
                   onPressed: () {
                     _pageController.previousPage(
                       duration: const Duration(milliseconds: 300), 
@@ -186,6 +220,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
         ),
         body: Stack(
           children: [
+            // Decorative background elements
             Positioned(
               top: -100,
               right: -50,
@@ -193,7 +228,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
                 width: 300,
                 height: 300,
                 decoration: BoxDecoration(
-                  color: AppTheme.accentPink.withValues(alpha: 0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
               ),
@@ -205,63 +240,53 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
                 width: 250,
                 height: 250,
                 decoration: BoxDecoration(
-                  color: AppTheme.accentCyan.withValues(alpha: 0.05),
+                  color: AppTheme.primaryGreen.withValues(alpha: 0.08),
                   shape: BoxShape.circle,
                 ),
               ),
             ),
             SafeArea(
               child: Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: (_currentPage + 1) / 6,
-                    backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.1),
-                    valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentPink),
-                    minHeight: 6,
-                  ),
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      onPageChanged: (int page) {
-                        setState(() {
-                          _currentPage = page;
-                        });
-                      },
-                      children: [
-                        _buildClassStep(),
-                        _buildAgeStep(),
-                        _buildGenderStep(),
-                        _buildCigarettesStep(),
-                        _buildPlanStep(),
-                        _buildDateStep(),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _nextPage,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentPink,
-                          foregroundColor: Colors.white,
-                          elevation: 4,
-                          shadowColor: AppTheme.accentPink.withValues(alpha: 0.4),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        ),
-                        child: Text(
-                          _currentPage == 5 ? "সম্পন্ন করুন 🚀" : "পরবর্তী ➡️",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            children: [
+              // Progress Indicator
+              LinearProgressIndicator(
+                value: (_currentPage + 1) / 6,
+                backgroundColor: Colors.grey.withValues(alpha: 0.2),
+                valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
               ),
-            ),
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  onPageChanged: (int page) {
+                    setState(() {
+                      _currentPage = page;
+                    });
+                  },
+                  children: [
+                    _buildClassStep(),
+                    _buildAgeStep(),
+                    _buildGenderStep(),
+                    _buildCigarettesStep(),
+                    _buildPlanStep(),
+                    _buildDateStep(),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _nextPage,
+                    child: Text(_currentPage == 5 ? "সম্পন্ন করুন" : "পরবর্তী"),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
           ],
         ),
       ),
@@ -276,12 +301,12 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textColor),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             subtitle,
-            style: const TextStyle(color: AppTheme.textLight, fontSize: 14, fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight),
           ),
           const SizedBox(height: 32),
           child,
@@ -292,19 +317,12 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildClassStep() {
     return _buildStepContainer(
-      "শিক্ষাগত যোগ্যতা 🎓",
+      "শিক্ষাগত যোগ্যতা",
       "আপনি কোন ক্লাসে পড়েন বা আপনার শিক্ষাগত তথ্য দিন।",
       TextField(
         controller: _classController,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           hintText: "যেমন: একাদশ শ্রেণি / অনার্স ২য় বর্ষ",
-          fillColor: AppTheme.white,
-          filled: true,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(24),
-            borderSide: BorderSide(color: AppTheme.primaryPurple.withValues(alpha: 0.2)),
-          ),
         ),
       ),
     );
@@ -312,53 +330,13 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildAgeStep() {
     return _buildStepContainer(
-      "আপনার বয়স 🎂",
-      "আপনার বর্তমান বয়স কত?",
-      SizedBox(
-        height: 250,
-        child: ListWheelScrollView.useDelegate(
-          itemExtent: 80,
-          perspective: 0.005,
-          diameterRatio: 1.5,
-          physics: const FixedExtentScrollPhysics(),
-          onSelectedItemChanged: (index) {
-            setState(() {
-              _selectedAge = 12 + index;
-              _ageController.text = _selectedAge.toString();
-            });
-          },
-          childDelegate: ListWheelChildBuilderDelegate(
-            builder: (context, index) {
-              final age = 12 + index;
-              final isSelected = age == _selectedAge;
-              return Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 130 : 90,
-                  height: isSelected ? 80 : 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.accentLime : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? Colors.white : AppTheme.primaryPurple.withValues(alpha: 0.1),
-                      width: 3,
-                    ),
-                    boxShadow: isSelected ? AppTheme.glowShadow(AppTheme.accentLime) : null,
-                  ),
-                  child: Text(
-                    age.toString(),
-                    style: TextStyle(
-                      fontSize: isSelected ? 32 : 22,
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : AppTheme.textColor,
-                    ),
-                  ),
-                ),
-              );
-            },
-            childCount: 50,
-          ),
+      "আপনার বয়স",
+      "আপনার বর্তমান বয়স কত? (অবশ্যই পূরণ করতে হবে)",
+      TextField(
+        controller: _ageController,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          hintText: "যেমন: ১৯",
         ),
       ),
     );
@@ -366,7 +344,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildGenderStep() {
     return _buildStepContainer(
-      "লিঙ্গ 👥",
+      "লিঙ্গ",
       "আপনার লিঙ্গ নির্বাচন করুন।",
       SizedBox(
         height: 250,
@@ -387,25 +365,20 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
               final isSelected = index == _selectedGenderIndex;
               return Center(
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 170 : 130,
+                  duration: const Duration(milliseconds: 300),
+                  width: isSelected ? 160 : 120,
                   height: isSelected ? 80 : 50,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.accentCyan : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? Colors.white : AppTheme.primaryPurple.withValues(alpha: 0.1),
-                      width: 3,
-                    ),
-                    boxShadow: isSelected ? AppTheme.glowShadow(AppTheme.accentCyan) : null,
+                    color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     gender,
                     style: TextStyle(
                       fontSize: isSelected ? 24 : 18,
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : AppTheme.textColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.white : AppTheme.textColor.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -420,53 +393,13 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildCigarettesStep() {
     return _buildStepContainer(
-      "ধূমপানের পরিমাণ 🚬",
-      "আপনি দিনে গড়ে কয়টি সিগারেট পান করেন?",
-      SizedBox(
-        height: 250,
-        child: ListWheelScrollView.useDelegate(
-          itemExtent: 80,
-          perspective: 0.005,
-          diameterRatio: 1.5,
-          physics: const FixedExtentScrollPhysics(),
-          onSelectedItemChanged: (index) {
-            setState(() {
-              _selectedCigarettes = index + 1;
-              _cigarettesPerDayController.text = _selectedCigarettes.toString();
-            });
-          },
-          childDelegate: ListWheelChildBuilderDelegate(
-            builder: (context, index) {
-              final count = index + 1;
-              final isSelected = count == _selectedCigarettes;
-              return Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 130 : 90,
-                  height: isSelected ? 80 : 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.errorColor : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? Colors.white : AppTheme.primaryPurple.withValues(alpha: 0.1),
-                      width: 3,
-                    ),
-                    boxShadow: isSelected ? AppTheme.glowShadow(AppTheme.errorColor) : null,
-                  ),
-                  child: Text(
-                    count.toString(),
-                    style: TextStyle(
-                      fontSize: isSelected ? 32 : 22,
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : AppTheme.textColor,
-                    ),
-                  ),
-                ),
-              );
-            },
-            childCount: 40,
-          ),
+      "ধূমপানের পরিমাণ",
+      "আপনি দিনে গড়ে কয়টি সিগারেট পান করেন? (অবশ্যই পূরণ করতে হবে)",
+      TextField(
+        controller: _cigarettesPerDayController,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          hintText: "যেমন: ৫",
         ),
       ),
     );
@@ -474,7 +407,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildPlanStep() {
     return _buildStepContainer(
-      "আপনার লক্ষ্য 🗓️",
+      "আপনার লক্ষ্য",
       "আপনি কতদিনের মধ্যে ধূমপান ছাড়ার পরিকল্পনা করছেন?",
       SizedBox(
         height: 250,
@@ -495,25 +428,20 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
               final isSelected = index == _selectedDurationIndex;
               return Center(
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: isSelected ? 170 : 130,
+                  duration: const Duration(milliseconds: 300),
+                  width: isSelected ? 160 : 120,
                   height: isSelected ? 80 : 50,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.accentLime : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: isSelected ? Colors.white : AppTheme.primaryPurple.withValues(alpha: 0.1),
-                      width: 3,
-                    ),
-                    boxShadow: isSelected ? AppTheme.glowShadow(AppTheme.accentLime) : null,
+                    color: isSelected ? AppTheme.primaryGreen : Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     "$days দিন",
                     style: TextStyle(
                       fontSize: isSelected ? 24 : 18,
-                      fontWeight: FontWeight.w900,
-                      color: isSelected ? Colors.white : AppTheme.textColor,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.white : AppTheme.textColor.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
@@ -528,7 +456,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
 
   Widget _buildDateStep() {
     return _buildStepContainer(
-      "শুরুর তারিখ 📅",
+      "শুরুর তারিখ",
       "আপনি কবে থেকে এই পরিকল্পনা শুরু করতে চান? (অবশ্যই নির্বাচন করুন)",
       InkWell(
         onTap: () async {
@@ -537,20 +465,6 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
             initialDate: DateTime.now(),
             firstDate: DateTime.now(),
             lastDate: DateTime.now().add(const Duration(days: 365)),
-            builder: (context, child) {
-              return Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: const ColorScheme.dark(
-                    primary: AppTheme.accentPink,
-                    onPrimary: Colors.white,
-                    surface: AppTheme.demonMid,
-                    onSurface: Colors.white,
-                  ),
-                  dialogBackgroundColor: AppTheme.demonDark,
-                ),
-                child: child!,
-              );
-            },
           );
           if (picked != null) {
             setState(() => _selectedDate = picked);
@@ -559,38 +473,34 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           decoration: BoxDecoration(
-            color: AppTheme.white,
-            borderRadius: BorderRadius.circular(24),
+            color: AppTheme.cardBackgroundColor,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: _selectedDate != null 
-                  ? AppTheme.accentLime 
-                  : AppTheme.primaryPurple.withValues(alpha: 0.2),
-              width: 3,
+                  ? AppTheme.primaryGreen 
+                  : Colors.grey.withValues(alpha: 0.2),
+              width: _selectedDate != null ? 2 : 1,
             ),
-            boxShadow: _selectedDate != null ? AppTheme.glowShadow(AppTheme.accentLime) : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                Icons.calendar_today_rounded, 
-                color: _selectedDate != null ? AppTheme.accentLime : AppTheme.accentPink,
-                size: 28,
+                Icons.calendar_today, 
+                color: _selectedDate != null ? AppTheme.primaryGreen : AppTheme.primaryBlue,
               ),
               const SizedBox(width: 16),
               Text(
                 _selectedDate == null
                     ? "তারিখ নির্বাচন করুন"
                     : "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: _selectedDate != null ? AppTheme.accentLime : AppTheme.textColor,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: _selectedDate != null ? AppTheme.primaryGreen : null,
                 ),
               ),
               if (_selectedDate != null) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.check_circle_rounded, color: AppTheme.accentLime, size: 24),
+                const Icon(Icons.check_circle, color: AppTheme.primaryGreen),
               ],
             ],
           ),

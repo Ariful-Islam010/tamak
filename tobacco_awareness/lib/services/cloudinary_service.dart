@@ -1,20 +1,51 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:crypto/crypto.dart';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class CloudinaryService {
-  static String get _cloudName => dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '';
-  static String get _apiKey => dotenv.env['CLOUDINARY_API_KEY'] ?? '';
-  static String get _apiSecret => dotenv.env['CLOUDINARY_API_SECRET'] ?? '';
+  static String get _cloudName => (dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? '').trim().replaceAll('"', '').replaceAll("'", "");
+  static String get _apiKey => (dotenv.env['CLOUDINARY_API_KEY'] ?? '').trim().replaceAll('"', '').replaceAll("'", "");
+  static String get _apiSecret => (dotenv.env['CLOUDINARY_API_SECRET'] ?? '').trim().replaceAll('"', '').replaceAll("'", "");
+  static String get _uploadPreset => (dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? '').trim().replaceAll('"', '').replaceAll("'", "");
   static String get _uploadUrl => 'https://api.cloudinary.com/v1_1/$_cloudName/image/upload';
 
 
-  /// Uploads an image to Cloudinary using a signed upload flow and returns the secure URL
+  /// Uploads an image to Cloudinary using either unsigned or signed upload flow and returns the secure URL
   static Future<String?> uploadImage(File file) async {
     try {
+      final preset = _uploadPreset;
+      
+      // If upload preset is defined, use the foolproof UNSIGNED upload flow
+      if (preset.isNotEmpty) {
+        final request = http.MultipartRequest('POST', Uri.parse(_uploadUrl));
+        request.fields['upload_preset'] = preset;
+        
+        final multipartFile = await http.MultipartFile.fromPath('file', file.path);
+        request.files.add(multipartFile);
+        
+        final response = await request.send();
+        final responseData = await response.stream.bytesToString();
+        
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final Map<String, dynamic> jsonMap = jsonDecode(responseData);
+          return jsonMap['secure_url'] as String?;
+        } else {
+          String errMsg = 'Cloudinary unsigned upload failed with status: ${response.statusCode}';
+          try {
+            final Map<String, dynamic> jsonMap = jsonDecode(responseData);
+            if (jsonMap['error'] != null && jsonMap['error']['message'] != null) {
+              errMsg = jsonMap['error']['message'];
+            }
+          } catch (_) {}
+          throw Exception(errMsg);
+        }
+      }
+
+      // OTHERWISE fallback to standard SIGNED upload flow
       final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
       final folder = 'tobacco_awareness_profiles';
       
@@ -53,14 +84,18 @@ class CloudinaryService {
         final Map<String, dynamic> jsonMap = jsonDecode(responseData);
         return jsonMap['secure_url'] as String?;
       } else {
-        // Log details to console
-        print('Cloudinary upload failed with status: ${response.statusCode}');
-        print('Response body: $responseData');
-        return null;
+        String errMsg = 'Cloudinary upload failed with status: ${response.statusCode}';
+        try {
+          final Map<String, dynamic> jsonMap = jsonDecode(responseData);
+          if (jsonMap['error'] != null && jsonMap['error']['message'] != null) {
+            errMsg = jsonMap['error']['message'];
+          }
+        } catch (_) {}
+        throw Exception(errMsg);
       }
     } catch (e) {
-      print('Error uploading to Cloudinary: $e');
-      return null;
+      debugPrint('Error uploading to Cloudinary: $e');
+      rethrow;
     }
   }
 }

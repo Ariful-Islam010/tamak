@@ -29,7 +29,9 @@ class AuthService extends ChangeNotifier {
       // Schedule daily notifications when user logs in
       final permission = await NotificationService().requestPermission();
       if (permission) {
-        await NotificationService().scheduleAllDailyNotifications();
+        await NotificationService().scheduleAllDailyNotifications(
+          quitDate: _currentUser?.quitDate,
+        );
         // Show welcome notification
         if (_currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(

@@ -42,7 +42,7 @@ class MoneySaverProvider extends ChangeNotifier {
         final List<dynamic> decoded = json.decode(dreamsStr);
         _dreams = decoded.map((e) => {
           "title": e["title"],
-          "icon": IconData(e["icon"], fontFamily: 'MaterialIcons'),
+          "icon": Icons.star,
           "target": e["target"],
           "color": Color(e["color"]),
         }).toList();
@@ -70,7 +70,7 @@ class MoneySaverProvider extends ChangeNotifier {
               .select()
               .eq('user_id', userId)
               .order('created_at', ascending: false);
-          if (goalsData != null && goalsData.isNotEmpty) {
+          if (goalsData.isNotEmpty) {
             _dreams = goalsData.map((e) => {
               "title": e["title"],
               "icon": Icons.star,
@@ -82,7 +82,7 @@ class MoneySaverProvider extends ChangeNotifier {
               "title": e["title"],
               "icon": (e["icon"] as IconData).codePoint,
               "target": e["target"],
-              "color": (e["color"] as Color).value,
+              "color": (e["color"] as Color).toARGB32(),
             }).toList();
             await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
           }
@@ -107,7 +107,7 @@ class MoneySaverProvider extends ChangeNotifier {
         "title": e["title"],
         "icon": (e["icon"] as IconData).codePoint,
         "target": e["target"],
-        "color": (e["color"] as Color).value,
+        "color": (e["color"] as Color).toARGB32(),
       }).toList();
       await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
     } catch (e) {

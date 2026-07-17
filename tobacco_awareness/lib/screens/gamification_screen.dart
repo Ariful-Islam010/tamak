@@ -1,8 +1,8 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/gamification_provider.dart';
-import '../providers/money_saver_provider.dart';
 
 class GamificationScreen extends StatelessWidget {
   const GamificationScreen({super.key});
@@ -11,342 +11,533 @@ class GamificationScreen extends StatelessWidget {
   Map<String, String> _getTreeInfo(int stage, bool hasPest) {
     if (hasPest) {
       return {
-        "emoji": "🥀👾",
-        "title": "ডেমন আক্রান্ত চারাগাছ",
-        "desc": "নিকোটিন ডেমন আপনার চারাগাছটিকে আক্রমণ করেছে! এটি তাড়াতে টানা ৩ দিন সম্পূর্ণ তামাকমুক্ত থাকুন।",
+        "emoji": "🌵",
+        "title": "পোকা আক্রান্ত গাছ",
+        "desc": "গাছটিতে পোকা ধরেছে! এটি সুস্থ করতে টানা ৩ দিন তামাকমুক্ত থাকুন।",
       };
     }
     switch (stage) {
       case 0:
         return {
-          "emoji": "🫙✨",
-          "title": "খালি জাদুকরী পাত্র",
-          "desc": "আপনার বাগানের প্রথম জাদুকরী বীজের অঙ্কুরোদগম শুরু করতে দৈনিক টাস্ক ও চেক-ইন সম্পন্ন করুন।",
+          "emoji": "🫙",
+          "title": "শূন্য মাটির পাত্র",
+          "desc": "প্রথম অঙ্কুরোদগম শুরু করতে দৈনিক চেক-ইন সম্পন্ন করুন।",
         };
       case 1:
         return {
-          "emoji": "🌱💖",
-          "title": "প্রথম অঙ্কুরোদগম",
-          "desc": "অভিনন্দন! আপনার সতেজ ইচ্ছাশক্তির চারাগাছটি মাটি ভেদ করে জেগে উঠেছে।",
+          "emoji": "🌱",
+          "title": "বীজের অঙ্কুরোদগম",
+          "desc": "অভিনন্দন! আপনার প্রথম চারাগাছটি মাটি ভেদ করে উঠেছে।",
         };
       case 2:
         return {
-          "emoji": "🌿💫",
-          "title": "ছোট সবুজ চারা",
-          "desc": "গাছটি ধীরে ধীরে বড় হচ্ছে। জল দিয়ে চারাটিকে বড় করতে প্রতিদিন চেক-ইন করুন।",
+          "emoji": "🌿",
+          "title": "ছোট চারা গাছ",
+          "desc": "গাছটি ধীরে ধীরে বড় হচ্ছে। জল দিতে প্রতিদিন চেক-ইন করুন।",
         };
       case 3:
         return {
-          "emoji": "🪴🌟",
-          "title": "সতেজ পাতা",
-          "desc": "অনেক সুন্দর পাতা গজিয়েছে! সুস্থ ফুসফুসের মতো আপনার গাছও এখন সতেজ হচ্ছে।",
+          "emoji": "🪴",
+          "title": "পাতা মেলছে",
+          "desc": "অনেক পাতা গজিয়েছে! সুস্থ ফুসফুসের মতো আপনার গাছও সতেজ হচ্ছে।",
         };
       case 4:
         return {
-          "emoji": "🌳🔥",
-          "title": "তরুণ শক্তিশালী বৃক্ষ",
-          "desc": "গাছটি এখন অনেক শক্তিশালী রূপ নিয়েছে। পূর্ণাঙ্গ রূপ পেতে আর অল্প কিছুদিন বাকি!",
+          "emoji": "🌳",
+          "title": "তরুণ বৃক্ষ",
+          "desc": "গাছটি এখন অনেক শক্তিশালী। পূর্ণাঙ্গ রূপ পেতে আর অল্প কিছুদিন বাকি!",
         };
       case 5:
       default:
         return {
-          "emoji": "🌲🏆",
-          "title": "পূর্ণাঙ্গ জাদুকরী বৃক্ষ!",
-          "desc": "অসাধারণ! আপনি একটি সফল গাছ বড় করেছেন এবং আপনার তামাকমুক্ত বাগানকে সমৃদ্ধ করেছেন।",
+          "emoji": "🌲",
+          "title": "পূর্ণাঙ্গ বৃক্ষ!",
+          "desc": "অসাধারণ! আপনি একটি সফল গাছ বড় করেছেন এবং আপনার বাগান সমৃদ্ধ করেছেন।",
         };
+    }
+  }
+
+  Color _stageColor(int stage, bool hasPest) {
+    if (hasPest) return AppTheme.errorColor;
+    switch (stage) {
+      case 0: return const Color(0xFF9CA3AF);
+      case 1: return const Color(0xFF34D399);
+      case 2: return const Color(0xFF10B981);
+      case 3: return const Color(0xFF059669);
+      case 4: return const Color(0xFF047857);
+      default: return const Color(0xFF065F46);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final gamification = context.watch<GamificationProvider>();
-    final moneySaver = context.watch<MoneySaverProvider>();
 
     if (gamification.isLoading) {
       return Scaffold(
-        backgroundColor: AppTheme.demonDark,
+        backgroundColor: AppTheme.backgroundColor,
         appBar: AppBar(
           title: const Text("রিওয়ার্ডস ও এচিভমেন্ট"),
-          backgroundColor: AppTheme.demonDark,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(color: AppTheme.accentPink),
-        ),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     final treeInfo = _getTreeInfo(gamification.plantStage, gamification.hasPestAttack);
+    final stageColor = _stageColor(gamification.plantStage, gamification.hasPestAttack);
 
     return Scaffold(
-      backgroundColor: AppTheme.demonDark,
-      appBar: AppBar(
-        title: const Text("গার্ডেন ও রিওয়ার্ডস 🌲🏆", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.demonDark,
-        elevation: 0,
-        centerTitle: true,
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.demonDark, AppTheme.demonMid],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 16),
-
-              // 🌲 ভার্চুয়াল "তামাকমুক্ত বাগান" (Virtual Quit-Forest)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppTheme.demonLight,
-                    borderRadius: BorderRadius.circular(30),
-                    border: Border.all(
-                      color: gamification.hasPestAttack ? AppTheme.accentOrange : AppTheme.accentLime,
-                      width: 3.5,
-                    ),
-                    boxShadow: AppTheme.glowShadow(
-                      gamification.hasPestAttack ? AppTheme.accentOrange : AppTheme.accentLime,
+      backgroundColor: const Color(0xFFF0FDF4),
+      body: CustomScrollView(
+        slivers: [
+          // ── Colorful Header ──
+          SliverAppBar(
+            expandedHeight: 180,
+            pinned: true,
+            backgroundColor: const Color(0xFF065F46),
+            iconTheme: const IconThemeData(color: Colors.white),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF059669), Color(0xFF0D9488)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 48, 24, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                "গার্ডেন ও রিওয়ার্ডস",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                "আপনার অর্জন ও বৃক্ষের যত্ন নিন",
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Text("🌲", style: TextStyle(fontSize: 56)),
+                      ],
                     ),
                   ),
-                  child: Column(
+                ),
+              ),
+            ),
+          ),
+
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                // ── Stats Row ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Row(
                     children: [
-                      const Center(
-                        child: Text(
-                          "আমার তামাকমুক্ত বৃক্ষ 🌳",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
+                      Expanded(
+                        child: _buildStatCard(
+                          "স্ট্রিক",
+                          "${gamification.toBengaliNumeral(gamification.currentStreak)} দিন",
+                          Icons.local_fire_department,
+                          const Color(0xFFEA580C),
+                          const Color(0xFFFFF7ED),
+                          const Color(0xFFFFEDD5),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      
-                      // Visual Tree display
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 800),
-                        curve: Curves.easeInOut,
-                        height: 140,
-                        width: 140,
-                        decoration: BoxDecoration(
-                          color: Colors.black26,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white,
-                            width: 3,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                            )
-                          ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          "পরিকল্পনা",
+                          "${gamification.toBengaliNumeral(gamification.planDuration)} দিন",
+                          Icons.assignment_turned_in,
+                          const Color(0xFF7C3AED),
+                          const Color(0xFFF5F3FF),
+                          const Color(0xFFEDE9FE),
                         ),
-                        alignment: Alignment.center,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 600),
-                          transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-                          child: Text(
-                            treeInfo["emoji"]!,
-                            key: ValueKey<String>(treeInfo["emoji"]!),
-                            style: const TextStyle(fontSize: 60),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      
-                      Text(
-                        treeInfo["title"]!,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: gamification.hasPestAttack ? AppTheme.accentOrange : AppTheme.accentLime,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        treeInfo["desc"]!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                          height: 1.5,
-                        ),
-                      ),
-                      const Divider(height: 32, color: Colors.white24),
-                      
-                      // Watering logic explanation
-                      Row(
-                        children: [
-                          Icon(
-                            gamification.hasPestAttack ? Icons.bug_report_rounded : Icons.water_drop_rounded, 
-                            color: gamification.hasPestAttack ? AppTheme.accentOrange : Colors.cyanAccent, 
-                            size: 24,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              gamification.hasPestAttack
-                                  ? "পোকা তাড়াতে প্রগতি: ৩ দিনের মধ্যে ${gamification.toBengaliNumeral(gamification.pestDaysClean)} দিন সম্পন্ন"
-                                  : "প্রতিদিনের টাস্ক সম্পন্ন করার মাধ্যমে গাছে জল দিন ও সেটিকে বৃক্ষে রূপান্তর করুন!",
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-              // 🏅 অর্জনের ব্যাজ এবং ট্রফি (Badges & Milestones)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-                decoration: const BoxDecoration(
-                  color: AppTheme.backgroundColor,
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(40), topRight: Radius.circular(40)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "অ্যাওয়ার্ড জার্নি 🏅", 
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textColor),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "তামাকমুক্ত জীবনের পথে আপনার অর্জিত ব্যাজ ও ট্রফি সমূহ:", 
-                      style: TextStyle(color: AppTheme.textLight, fontSize: 14),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Plan & Stats indicators
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatBadge(
-                          context,
-                          "স্ট্রিক 🔥",
-                          "${gamification.toBengaliNumeral(gamification.currentStreak)} দিন",
-                          AppTheme.accentOrange,
-                        ),
-                        _buildStatBadge(
-                          context,
-                          "পরিকল্পনা 📋",
-                          "${gamification.toBengaliNumeral(gamification.planDuration)} দিন",
-                          AppTheme.accentCyan,
+                // ── Virtual Tree Card ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          stageColor.withValues(alpha: 0.08),
+                          stageColor.withValues(alpha: 0.02),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: stageColor.withValues(alpha: 0.25),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: stageColor.withValues(alpha: 0.12),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 32),
-                    
-                    // Badges list
-                    GridView.count(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisCount: 3,
-                      childAspectRatio: 0.8,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      children: gamification.allBadges.map((badge) {
-                        final isUnlocked = gamification.isBadgeUnlocked(badge);
-                        return _buildBadgeItem(
-                          context,
-                          badge.title,
-                          badge.icon,
-                          badge.color,
-                          isUnlocked,
-                          badge.description,
-                        );
-                      }).toList(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        children: [
+                          // Title
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: stageColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "আমার তামাকমুক্ত বৃক্ষ",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: stageColor,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  color: stageColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Tree Emoji with glow
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 800),
+                            curve: Curves.easeInOut,
+                            height: 150,
+                            width: 150,
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                colors: [
+                                  stageColor.withValues(alpha: 0.2),
+                                  stageColor.withValues(alpha: 0.05),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: stageColor.withValues(alpha: 0.5),
+                                width: 3,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: stageColor.withValues(alpha: 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: AnimatedVirtualTree(
+                              stage: gamification.plantStage,
+                              hasPest: gamification.hasPestAttack,
+                              stageColor: stageColor,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          Text(
+                            treeInfo["title"]!,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: stageColor,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            treeInfo["desc"]!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF4B5563),
+                              height: 1.5,
+                            ),
+                          ),
+
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: stageColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.water_drop, color: Colors.blue.shade400, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    gamification.hasPestAttack
+                                        ? "পোকা সরাতে: ৩ দিনের মধ্যে ${gamification.toBengaliNumeral(gamification.pestDaysClean)} দিন সম্পন্ন"
+                                        : "প্রতিদিন চেক-ইন = গাছে জল দেওয়া 💧",
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF374151),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+
+                // ── Award Journey ──
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(40),
+                      topRight: Radius.circular(40),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Section header
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.emoji_events, color: Colors.white, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "অ্যাওয়ার্ড জার্নি",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF111827),
+                                  ),
+                                ),
+                                Text(
+                                  "আপনার অর্জিত ব্যাজ ও ট্রফি",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Badges Grid
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 3,
+                          childAspectRatio: 0.78,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          children: gamification.allBadges.map((badge) {
+                            final isUnlocked = gamification.isBadgeUnlocked(badge);
+                            return _buildBadgeItem(
+                              context,
+                              badge.title,
+                              badge.icon,
+                              badge.color,
+                              isUnlocked,
+                              badge.description,
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatBadge(BuildContext context, String label, String value, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color iconColor,
+    Color bgColor,
+    Color borderColor,
+  ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.white,
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 2.5),
+        border: Border.all(color: borderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.1),
+            color: iconColor.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
-          )
+          ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textLight, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: color)),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildBadgeItem(BuildContext context, String title, IconData icon, Color color, bool isUnlocked, String description) {
+  Widget _buildBadgeItem(
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    bool isUnlocked,
+    String description,
+  ) {
     return GestureDetector(
       onTap: () {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isUnlocked ? "✅ $title - $description" : "🔒 $description"),
             duration: const Duration(seconds: 2),
-            backgroundColor: isUnlocked ? AppTheme.accentLime : AppTheme.demonLight,
+            backgroundColor: isUnlocked ? color : Colors.grey.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       },
       child: Column(
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
             height: 64,
             width: 64,
             decoration: BoxDecoration(
-              color: isUnlocked ? color.withValues(alpha: 0.15) : Colors.grey.withValues(alpha: 0.1),
+              gradient: isUnlocked
+                  ? LinearGradient(
+                      colors: [
+                        color.withValues(alpha: 0.9),
+                        color.withValues(alpha: 0.6),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : LinearGradient(
+                      colors: [
+                        Colors.grey.shade200,
+                        Colors.grey.shade100,
+                      ],
+                    ),
               shape: BoxShape.circle,
               border: Border.all(
-                color: isUnlocked ? color : Colors.grey.withValues(alpha: 0.3),
-                width: 3.5,
+                color: isUnlocked ? color : Colors.grey.shade300,
+                width: 2.5,
               ),
-              boxShadow: isUnlocked 
+              boxShadow: isUnlocked
                   ? [
                       BoxShadow(
-                        color: color.withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        spreadRadius: 1,
-                      )
+                        color: color.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
                     ]
-                  : null,
+                  : [],
             ),
             child: Icon(
               icon,
-              color: isUnlocked ? color : Colors.grey,
-              size: 32,
+              color: isUnlocked ? Colors.white : Colors.grey.shade400,
+              size: 30,
             ),
           ),
           const SizedBox(height: 8),
@@ -354,14 +545,122 @@ class GamificationScreen extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 12,
-              color: isUnlocked ? AppTheme.textColor : AppTheme.textLight,
-              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              color: isUnlocked ? const Color(0xFF111827) : Colors.grey.shade400,
+              fontWeight: isUnlocked ? FontWeight.bold : FontWeight.normal,
             ),
             maxLines: 2,
           ),
+          if (isUnlocked)
+            const Padding(
+              padding: EdgeInsets.only(top: 2),
+              child: Text("✓", style: TextStyle(fontSize: 10, color: Color(0xFF059669))),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class AnimatedVirtualTree extends StatefulWidget {
+  final int stage;
+  final bool hasPest;
+  final Color stageColor;
+
+  const AnimatedVirtualTree({
+    super.key,
+    required this.stage,
+    required this.hasPest,
+    required this.stageColor,
+  });
+
+  @override
+  State<AnimatedVirtualTree> createState() => _AnimatedVirtualTreeState();
+}
+
+class _AnimatedVirtualTreeState extends State<AnimatedVirtualTree> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _swayAnimation;
+  late Animation<double> _breathAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+
+    _swayAnimation = Tween<double>(begin: -0.05, end: 0.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
+    _breathAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String emoji = "🌱";
+    if (widget.hasPest) {
+      emoji = "🌵"; 
+    } else {
+      switch (widget.stage) {
+        case 0: emoji = "🪴"; break; 
+        case 1: emoji = "🌱"; break; 
+        case 2: emoji = "🌿"; break; 
+        case 3: emoji = "🍀"; break; 
+        case 4: emoji = "🌳"; break; 
+        case 5:
+        default: emoji = "🌲"; break; 
+      }
+    }
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            if (widget.stage >= 3 && !widget.hasPest)
+              ...List.generate(5, (index) {
+                final double delay = index * 0.2;
+                final double angle = (index * 72) * 3.14159 / 180;
+                final double radius = 55 + 10 * math.sin(_controller.value * 2 * 3.14159 + delay);
+                return Transform.translate(
+                  offset: Offset(math.cos(angle) * radius, math.sin(angle) * radius - 10),
+                  child: Opacity(
+                    opacity: 0.6 + 0.4 * math.sin(_controller.value * 2 * 3.14159 + delay),
+                    child: const Icon(
+                      Icons.star_rounded,
+                      size: 14,
+                      color: Colors.amber,
+                    ),
+                  ),
+                );
+              }),
+            
+            Transform.scale(
+              scale: _breathAnimation.value,
+              child: Transform.rotate(
+                angle: _swayAnimation.value,
+                origin: const Offset(0, 40), 
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 84),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

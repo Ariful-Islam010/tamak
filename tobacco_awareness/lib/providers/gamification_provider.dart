@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DynamicBadge {
   final String id;
@@ -38,6 +39,8 @@ class GamificationProvider extends ChangeNotifier {
   int _completedTrees = 0;
 
   bool _isLoading = true;
+  bool _hasPlan = false;
+  int _completedTasksCount = 0;
 
   int get currentStreak => _currentStreak;
   int get longestStreak => _longestStreak;
@@ -54,6 +57,8 @@ class GamificationProvider extends ChangeNotifier {
   int get completedTrees => _completedTrees;
 
   bool get isLoading => _isLoading;
+  bool get hasPlan => _hasPlan;
+  int get completedTasksCount => _completedTasksCount;
 
   /// Dynamic list of badges
   List<DynamicBadge> get allBadges => [
@@ -70,8 +75,8 @@ class GamificationProvider extends ChangeNotifier {
           title: '৩ দিনের যোদ্ধা',
           icon: Icons.shield,
           color: const Color(0xFF00A36C),
-          description: 'টানা ৩ দিন তামাকমুক্ত থাকা',
-          unlockCondition: (p) => p._longestStreak >= 3,
+          description: 'পরিকল্পনা অনুযায়ী ৩ দিনের টাস্ক সম্পন্ন করা',
+          unlockCondition: (p) => p.hasPlan && p.completedTasksCount >= 3,
         ),
         DynamicBadge(
           id: 'plan_fresh',
@@ -82,8 +87,8 @@ class GamificationProvider extends ChangeNotifier {
                   : '১ মাসের মুক্ত বাতাস',
           icon: Icons.emoji_events,
           color: const Color(0xFFFBBF24),
-          description: 'টানা $_planDuration দিন তামাকমুক্ত থাকা',
-          unlockCondition: (p) => p._longestStreak >= _planDuration,
+          description: 'পরিকল্পনা অনুযায়ী $_planDuration দিনের টাস্ক সম্পন্ন করা',
+          unlockCondition: (p) => p.hasPlan && p.completedTasksCount >= _planDuration,
         ),
         DynamicBadge(
           id: 'money_saver',
@@ -164,18 +169,25 @@ class GamificationProvider extends ChangeNotifier {
         _totalSavingsAmount = 0;
       }
 
-      // 3. Fetch plan duration from user profile
+      // 3. Fetch plan duration and quit_date from user profile
       final profileResponse = await _supabase
           .from('user_profiles')
-          .select('plan_duration')
+          .select('plan_duration, quit_date')
           .eq('id', userId)
           .maybeSingle();
 
-      if (profileResponse != null && profileResponse['plan_duration'] != null) {
-        _planDuration = (profileResponse['plan_duration'] as num).toInt();
+      if (profileResponse != null) {
+        _planDuration = (profileResponse['plan_duration'] as num?)?.toInt() ?? 7;
+        _hasPlan = profileResponse['quit_date'] != null;
       } else {
         _planDuration = 7;
+        _hasPlan = false;
       }
+
+      // Load task completions from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final completedDates = prefs.getStringList('completed_task_dates_$userId') ?? [];
+      _completedTasksCount = completedDates.length;
 
       // 4. Fetch SOS logs count
       final sosResponse = await _supabase
@@ -339,6 +351,8 @@ class GamificationProvider extends ChangeNotifier {
     _hasPestAttack = false;
     _pestDaysClean = 0;
     _completedTrees = 0;
+    _hasPlan = false;
+    _completedTasksCount = 0;
   }
 
   /// Convert number to Bengali numeral string

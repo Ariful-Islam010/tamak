@@ -2,14 +2,19 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/notification_service.dart';
 
 class QuitPlanProvider extends ChangeNotifier {
   bool _isLoading = true;
   bool _isGoalStarted = false;
+  bool _hasAnsweredToday = false;
+  bool _isCompletedToday = false;
   List<dynamic> _dailyPlans = [];
 
   bool get isLoading => _isLoading;
   bool get isGoalStarted => _isGoalStarted;
+  bool get hasAnsweredToday => _hasAnsweredToday;
+  bool get isCompletedToday => _isCompletedToday;
   List<dynamic> get dailyPlans => _dailyPlans;
 
   QuitPlanProvider() {
@@ -50,9 +55,16 @@ class QuitPlanProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      final lastStarted = prefs.getString('last_plan_started_date_$userId');
       
-      _isGoalStarted = (lastStarted == today);
+      final lastAnsweredDate = prefs.getString('last_plan_answered_date_$userId');
+      final lastAnsweredStatus = prefs.getBool('last_plan_answered_status_$userId') ?? false;
+
+      _hasAnsweredToday = (lastAnsweredDate == today);
+      _isCompletedToday = _hasAnsweredToday && lastAnsweredStatus;
+      _isGoalStarted = _isCompletedToday;
+
+      // Reschedule plan completion reminder notification dynamically
+      await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
 
       final storedPlanLocal = prefs.getString('ai_quit_plan_$userId');
       String? storedPlan = storedPlanLocal;
@@ -74,7 +86,7 @@ class QuitPlanProvider extends ChangeNotifier {
             }
             // Sync locally
             if (storedPlan != storedPlanLocal) {
-              await prefs.setString('ai_quit_plan_$userId', storedPlan!);
+              await prefs.setString('ai_quit_plan_$userId', storedPlan);
             }
           }
         } catch (e) {
@@ -157,17 +169,37 @@ class QuitPlanProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> startGoal() async {
+  Future<void> submitPlanResponse(bool completed) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      await prefs.setString('last_plan_started_date_$userId', today);
       
-      _isGoalStarted = true;
+      await prefs.setString('last_plan_answered_date_$userId', today);
+      await prefs.setBool('last_plan_answered_status_$userId', completed);
+
+      if (completed) {
+        // Save today's date in completed task dates list
+        List<String> completedDates = prefs.getStringList('completed_task_dates_$userId') ?? [];
+        if (!completedDates.contains(today)) {
+          completedDates.add(today);
+          await prefs.setStringList('completed_task_dates_$userId', completedDates);
+        }
+        await prefs.setString('last_plan_started_date_$userId', today);
+        _isGoalStarted = true;
+      } else {
+        _isGoalStarted = false;
+      }
+      
+      _hasAnsweredToday = true;
+      _isCompletedToday = completed;
+
+      // Reschedule plan completion reminder notification dynamically
+      await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: true);
+
       notifyListeners();
     } catch (e) {
-      debugPrint("Error starting goal: $e");
+      debugPrint("Error submitting plan response: $e");
     }
   }
 }

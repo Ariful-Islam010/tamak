@@ -20,61 +20,35 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.demonMid,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: AppTheme.accentPink, width: 3),
-          ),
-          title: const Text(
-            "নতুন স্বপ্ন যোগ করুন 💭",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          title: const Text("নতুন স্বপ্ন যোগ করুন"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "স্বপ্নের নাম (যেমন: সাইকেল 🚲)",
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+                decoration: const InputDecoration(hintText: "স্বপ্নের নাম (যেমন: সাইকেল)"),
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "লক্ষ্য পরিমাণ (৳)",
-                  hintStyle: const TextStyle(color: Colors.white38),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+                decoration: const InputDecoration(hintText: "লক্ষ্য পরিমাণ (৳)"),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("বাতিল", style: TextStyle(color: Colors.white70)),
+              child: const Text("বাতিল"),
             ),
             ElevatedButton(
               onPressed: () {
                 final int? amount = int.tryParse(amountController.text);
                 if (titleController.text.isNotEmpty && amount != null && amount > 0) {
-                  context.read<MoneySaverProvider>().addDream(titleController.text, amount, AppTheme.accentPink);
+                  context.read<MoneySaverProvider>().addDream(titleController.text, amount, AppTheme.primaryBlue);
                 }
                 Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentPink,
-                foregroundColor: Colors.white,
-              ),
               child: const Text("যোগ করুন"),
             ),
           ],
@@ -90,33 +64,19 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.demonMid,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: AppTheme.accentLime, width: 3),
-          ),
-          title: const Text(
-            "টাকা যোগ করুন 💰",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          title: const Text("টাকা যোগ করুন"),
           content: TextField(
             controller: amountController,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
               hintText: "যেমন: ৫০",
-              hintStyle: const TextStyle(color: Colors.white38),
               prefixText: "৳ ",
-              prefixStyle: const TextStyle(color: AppTheme.accentLime, fontWeight: FontWeight.bold),
-              filled: true,
-              fillColor: Colors.black26,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("বাতিল", style: TextStyle(color: Colors.white70)),
+              child: const Text("বাতিল"),
             ),
             ElevatedButton(
               onPressed: () {
@@ -126,10 +86,6 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
                 }
                 Navigator.pop(context);
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentLime,
-                foregroundColor: Colors.white,
-              ),
               child: const Text("যোগ করুন"),
             ),
           ],
@@ -141,6 +97,7 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
   @override
   Widget build(BuildContext context) {
     final moneyProvider = context.watch<MoneySaverProvider>();
+    // English numerals to Bengali
     final String savingsStr = moneyProvider.totalSavings.toString()
         .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
         .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
@@ -148,14 +105,14 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
         .replaceAll('9', '৯');
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: const Color(0xFF3EA74D),
       appBar: AppBar(
-        title: const Text("টাকা সেভার 💰✨", style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: AppTheme.demonDark,
+        backgroundColor: const Color(0xFF3EA74D),
+        foregroundColor: Colors.white,
+        title: const Text("টাকা সেভার", style: TextStyle(color: Colors.white)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -164,88 +121,70 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                gradient: AppTheme.heroGradient,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: Colors.white, width: 3),
-                boxShadow: AppTheme.glowShadow(AppTheme.accentPink),
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.5),
               ),
               child: Column(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: Colors.white24,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.savings_rounded, color: Colors.white, size: 48),
-                  ),
+                  const Icon(Icons.savings, color: AppTheme.white, size: 48),
                   const SizedBox(height: 16),
                   Text(
-                    "মোট জমানো অর্থ",
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    "মোট সঞ্চয়",
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: AppTheme.white.withValues(alpha: 0.8),
+                        ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "৳$savingsStr",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 44,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                          color: AppTheme.white,
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: moneyProvider.hasAddedMoneyToday
                         ? () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text("আজকের জন্য টাকা যোগ করা হয়ে গেছে! আগামীকাল আবার যোগ করতে পারবেন। 🔒"),
+                                content: Text("আজকের জন্য টাকা যোগ করা হয়ে গেছে! আগামীকাল আবার যোগ করতে পারবেন।"),
                                 backgroundColor: AppTheme.errorColor,
                               ),
                             );
                           }
                         : _showAddMoneyDialog,
-                    icon: Icon(
-                      Icons.add_circle_rounded, 
-                      color: moneyProvider.hasAddedMoneyToday ? Colors.grey : AppTheme.primaryPurple,
-                      size: 24,
-                    ),
+                    icon: Icon(Icons.add, color: moneyProvider.hasAddedMoneyToday ? Colors.grey : AppTheme.primaryGreen),
                     label: Text(
-                      "টাকা যোগ করুন",
-                      style: TextStyle(
-                        color: moneyProvider.hasAddedMoneyToday ? Colors.grey : AppTheme.primaryPurple,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      "যোগ করুন",
+                      style: TextStyle(color: moneyProvider.hasAddedMoneyToday ? Colors.grey : AppTheme.primaryGreen),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      backgroundColor: AppTheme.white,
+                      foregroundColor: moneyProvider.hasAddedMoneyToday ? Colors.grey : AppTheme.primaryGreen,
                     ),
                   )
                 ],
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 40),
 
             // Wishlist Section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "আমার স্বপ্নসমূহ 💭🌟", 
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.textColor),
+                Text(
+                  "আমার স্বপ্ন",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 22, color: Colors.white),
                 ),
                 TextButton.icon(
                   onPressed: () {
                     if (moneyProvider.hasUnachievedDream) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text("অনুগ্রহ করে আগের স্বপ্নটি পূরণ করুন! এরপর নতুন স্বপ্ন যোগ করতে পারবেন। 🔒"),
+                          content: Text("অনুগ্রহ করে আগের স্বপ্নটি পূরণ করুন! এরপর নতুন স্বপ্ন যোগ করতে পারবেন।"),
                           backgroundColor: AppTheme.errorColor,
                         ),
                       );
@@ -254,15 +193,14 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
                     }
                   },
                   icon: Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: moneyProvider.hasUnachievedDream ? Colors.grey : AppTheme.accentPink,
+                    Icons.add,
+                    color: moneyProvider.hasUnachievedDream ? Colors.white54 : Colors.white,
                   ),
                   label: Text(
                     "নতুন স্বপ্ন",
                     style: TextStyle(
-                      color: moneyProvider.hasUnachievedDream ? Colors.grey : AppTheme.accentPink,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15,
+                      color: moneyProvider.hasUnachievedDream ? Colors.white54 : Colors.white,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
@@ -270,31 +208,13 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
             ),
             const SizedBox(height: 16),
             
-            if (moneyProvider.dreams.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    children: [
-                      const Text("😢", style: TextStyle(fontSize: 50)),
-                      const SizedBox(height: 12),
-                      Text(
-                        "এখনো কোনো স্বপ্ন যোগ করা হয়নি! ধূমপানমুক্ত জীবনে বেঁচে যাওয়া টাকা দিয়ে পূরণ করুন নতুন স্বপ্ন!",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: AppTheme.textLight, fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ...moneyProvider.dreams.map((dream) => _buildWishlistCard(
-                    context,
-                    dream["title"],
-                    dream["icon"],
-                    dream["target"],
-                    dream["color"] ?? AppTheme.accentPink,
-                  )),
+            ...moneyProvider.dreams.map((dream) => _buildWishlistCard(
+                  context,
+                  dream["title"],
+                  dream["icon"],
+                  dream["target"],
+                  dream["color"],
+                )),
           ],
         ),
       ),
@@ -322,19 +242,12 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppTheme.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isCompleted ? AppTheme.accentLime : AppTheme.primaryPurple.withValues(alpha: 0.1), 
-          width: 3,
+          color: isCompleted ? AppTheme.primaryGreen : Colors.grey.withValues(alpha: 0.1),
+          width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,47 +257,38 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: color, size: 28),
+                child: Icon(icon, color: color),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
                     Text(
-                      title, 
-                      style: const TextStyle(
-                        fontSize: 18, 
-                        fontWeight: FontWeight.w900, 
-                        color: AppTheme.textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isCompleted ? "অভিনন্দন! লক্ষ্য অর্জিত! 🎉" : "৳$currentStr / ৳$targetStr",
-                      style: TextStyle(
-                        color: isCompleted ? AppTheme.accentLime : AppTheme.textLight,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+                      isCompleted ? "লক্ষ্য অর্জিত!" : "৳$currentStr / ৳$targetStr",
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: isCompleted ? AppTheme.primaryGreen : AppTheme.textLight,
+                            fontWeight: isCompleted ? FontWeight.bold : FontWeight.normal,
+                          ),
                     ),
                   ],
                 ),
               ),
               if (isCompleted)
-                const Icon(Icons.check_circle_rounded, color: AppTheme.accentLime, size: 32),
+                const Icon(Icons.check_circle, color: AppTheme.primaryGreen, size: 28),
             ],
           ),
           if (!isCompleted) ...[
             const SizedBox(height: 16),
             ClipRRect(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: progress,
-                minHeight: 12,
+                minHeight: 10,
                 backgroundColor: color.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),

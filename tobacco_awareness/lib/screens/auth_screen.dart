@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import 'dart:io';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'profile_assessment_screen.dart';
@@ -40,41 +42,31 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     final authService = context.watch<AuthService>();
 
     return Scaffold(
-      backgroundColor: AppTheme.demonDark,
+      backgroundColor: AppTheme.loginBackgroundColor,
       body: Stack(
         children: [
-          // Glowing decorative cartoon backgrounds
+          // Decorative background elements
           Positioned(
-            top: -50,
+            top: -100,
             right: -50,
             child: Container(
-              width: 250,
-              height: 250,
+              width: 300,
+              height: 300,
               decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.accentPink.withValues(alpha: 0.25),
-                    Colors.transparent,
-                  ],
-                ),
               ),
             ),
           ),
           Positioned(
             bottom: -50,
-            left: -50,
+            left: -100,
             child: Container(
-              width: 300,
-              height: 300,
+              width: 250,
+              height: 250,
               decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.accentCyan.withValues(alpha: 0.2),
-                    Colors.transparent,
-                  ],
-                ),
               ),
             ),
           ),
@@ -87,54 +79,53 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Spacer(flex: 2),
-                  // Animated Logo/Demon Shield
+                  // Animated Logo/Tree
                   AnimatedBuilder(
                     animation: _scaleAnimation,
                     builder: (context, child) {
                       return Transform.scale(
                         scale: _scaleAnimation.value,
                         child: Container(
-                          height: 150,
-                          width: 150,
+                          height: 140,
+                          width: 140,
                           decoration: BoxDecoration(
-                            gradient: AppTheme.heroGradient,
-                            borderRadius: BorderRadius.circular(40),
-                            border: Border.all(color: Colors.white, width: 3),
+                            color: AppTheme.primaryGreen,
+                            borderRadius: BorderRadius.circular(32),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.accentPink.withValues(alpha: 0.4),
-                                blurRadius: 25 * _scaleAnimation.value,
-                                spreadRadius: 6 * _scaleAnimation.value,
+                                color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                                blurRadius: 20 * _scaleAnimation.value,
+                                spreadRadius: 5 * _scaleAnimation.value,
                                 offset: const Offset(0, 8),
                               ),
                             ],
                           ),
                           child: const Icon(
-                            Icons.shield_rounded, // Anti-demon shield
+                            Icons.park_rounded, // Tree icon
                             color: Colors.white,
-                            size: 80,
+                            size: 70,
                           ),
                         ),
                       );
                     },
                   ),
                   const SizedBox(height: 40),
-                  const Text(
-                    "তামাক মুক্ত চ্যালেঞ্জ ⚔️",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
+                  Text(
+                    "নতুন যাত্রা",
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      color: AppTheme.primaryGreen,
+                      fontSize: 36,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    "আসুন সবাই মিলে ধূমপানের ডেমনকে হারিয়ে একটি স্বাস্থ্যকর ও সুন্দর জীবন গড়ে তুলি!",
+                  Text(
+                    "এগিয়ে চলুন তামাকমুক্ত সুন্দর জীবনের দিকে, যেখানে প্রতিটি দিন একটি নতুন সাফল্য।",
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white70,
-                      height: 1.6,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.textLight,
+                      height: 1.5,
                       fontSize: 16,
                     ),
                   ),
@@ -147,8 +138,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                     decoration: BoxDecoration(
                       boxShadow: [
                         BoxShadow(
-                          color: AppTheme.accentPink.withValues(alpha: 0.3),
-                          blurRadius: 20,
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.2),
+                          blurRadius: 15,
                           offset: const Offset(0, 8),
                         ),
                       ],
@@ -182,45 +173,46 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                                 }
                               } catch (e) {
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text("গুগল সাইন-ইন ব্যর্থ হয়েছে: $e"),
-                                      backgroundColor: AppTheme.errorColor,
-                                    ),
-                                  );
+                                  final String errorMessage = _getNetworkErrorMessage(e);
+                                  _showErrorDialog(context, errorMessage);
                                 }
                               }
                             },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppTheme.demonDark,
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
-                          side: const BorderSide(color: AppTheme.accentPink, width: 2),
                         ),
                       ),
                       child: authService.isLoading
                           ? const SizedBox(
                               width: 24,
                               height: 24,
-                              child: CircularProgressIndicator(strokeWidth: 3, color: AppTheme.demonDark),
+                              child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
                             )
-                          : const Row(
+                          : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.g_mobiledata,
-                                  size: 32,
-                                  color: AppTheme.accentPink,
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.g_mobiledata,
+                                    size: 24,
+                                    color: AppTheme.primaryGreen,
+                                  ),
                                 ),
-                                SizedBox(width: 12),
-                                Text(
+                                const SizedBox(width: 16),
+                                const Text(
                                   "Google দিয়ে শুরু করুন",
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.textColor,
                                   ),
                                 ),
                               ],
@@ -233,6 +225,124 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// নেটওয়ার্ক বা অন্যান্য error থেকে user-friendly বাংলা message তৈরি করে
+  String _getNetworkErrorMessage(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+
+    // Network / internet connection errors
+    if (error is SocketException ||
+        errorStr.contains('socketexception') ||
+        errorStr.contains('network is unreachable') ||
+        errorStr.contains('connection refused') ||
+        errorStr.contains('connection timed out') ||
+        errorStr.contains('failed host lookup') ||
+        errorStr.contains('no route to host') ||
+        errorStr.contains('network_error') ||
+        errorStr.contains('networkerror')) {
+      return 'ইন্টারনেট সংযোগ নেই!\n\nঅনুগ্রহ করে আপনার নেটওয়ার্ক চেক করুন এবং আবার চেষ্টা করুন।';
+    }
+
+    // Timeout errors
+    if (error is TimeoutException ||
+        errorStr.contains('timeout') ||
+        errorStr.contains('timed out')) {
+      return 'সংযোগ স্থাপনে অনেক সময় লাগছে!\n\nইন্টারনেট সংযোগ দুর্বল হতে পারে। একটু পরে আবার চেষ্টা করুন।';
+    }
+
+    // Google Sign-In cancelled
+    if (errorStr.contains('sign_in_cancelled') ||
+        errorStr.contains('canceled') ||
+        errorStr.contains('cancelled')) {
+      return 'সাইন-ইন বাতিল করা হয়েছে।\n\nলগইন করতে আবার চেষ্টা করুন।';
+    }
+
+    // Google Sign-In failed
+    if (errorStr.contains('sign_in_failed') ||
+        errorStr.contains('google')) {
+      return 'গুগল সাইন-ইন ব্যর্থ হয়েছে!\n\nইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।';
+    }
+
+    // Server/API errors
+    if (errorStr.contains('server') ||
+        errorStr.contains('500') ||
+        errorStr.contains('503') ||
+        errorStr.contains('502')) {
+      return 'সার্ভারে সমস্যা হচ্ছে!\n\nকিছুক্ষণ পরে আবার চেষ্টা করুন।';
+    }
+
+    // Default network-related message (no raw exception shown)
+    return 'লগইন করতে সমস্যা হয়েছে!\n\nইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।';
+  }
+
+  /// Error dialog দেখায় - snackbar এর চেয়ে বেশি visible
+  void _showErrorDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(28.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.wifi_off_rounded,
+                  color: Colors.red.shade400,
+                  size: 48,
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'সংযোগ সমস্যা',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A2E),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Color(0xFF6B7280),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text(
+                    'ঠিক আছে',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

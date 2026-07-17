@@ -203,6 +203,7 @@ CREATE POLICY "Users can delete own goals" ON public.money_saver_goals FOR DELET
 ALTER TABLE public.peer_support_messages ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view all messages" ON public.peer_support_messages FOR SELECT USING (true);
 CREATE POLICY "Users can insert own messages" ON public.peer_support_messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
+CREATE POLICY "Users can update own messages" ON public.peer_support_messages FOR UPDATE USING (auth.uid() = sender_id);
 CREATE POLICY "Users can delete own messages" ON public.peer_support_messages FOR DELETE USING (auth.uid() = sender_id);
 
 -- --------------------------------------------------------

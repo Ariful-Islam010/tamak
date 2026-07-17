@@ -169,6 +169,34 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteMessage(dynamic messageId) async {
+    try {
+      if (messageId == null) return;
+      await _supabase
+          .from('peer_support_messages')
+          .delete()
+          .eq('id', messageId);
+      await loadMessages();
+    } catch (e) {
+      debugPrint("Error deleting message: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> editMessage(dynamic messageId, String newContent) async {
+    try {
+      if (messageId == null) return;
+      await _supabase
+          .from('peer_support_messages')
+          .update({'content': newContent.trim()})
+          .eq('id', messageId);
+      await loadMessages();
+    } catch (e) {
+      debugPrint("Error editing message: $e");
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     if (_channel != null) {

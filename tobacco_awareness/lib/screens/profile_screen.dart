@@ -37,15 +37,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications_enabled', value);
 
+    if (!mounted) return;
+    final authService = context.read<AuthService>();
+
     if (value) {
       final granted = await NotificationService().requestPermission();
       if (granted) {
-        await NotificationService().scheduleAllDailyNotifications();
+        await NotificationService().scheduleAllDailyNotifications(
+          quitDate: authService.currentUser?.quitDate,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('🔔 নোটিফিকেশন চালু করা হয়েছে!'),
-              backgroundColor: AppTheme.accentLime,
+              backgroundColor: AppTheme.primaryGreen,
             ),
           );
         }
@@ -101,7 +106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text("ছবি আপলোড করা হচ্ছে..."),
               ],
             ),
-            duration: Duration(days: 1),
+            duration: Duration(days: 1), // Keep open until dismissed
           ),
         );
       }
@@ -148,25 +153,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _showImagePickerOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.demonMid,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         return SafeArea(
           child: Wrap(
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library, color: AppTheme.accentCyan),
-                title: const Text("গ্যালারি থেকে সিলেক্ট করুন", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                leading: const Icon(Icons.photo_library, color: AppTheme.primaryBlue),
+                title: const Text("গ্যালারি থেকে সিলেক্ট করুন"),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndUploadImage(ImageSource.gallery);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: AppTheme.accentPink),
-                title: const Text("ক্যামেরা দিয়ে ছবি তুলুন", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                leading: const Icon(Icons.camera_alt, color: AppTheme.primaryBlue),
+                title: const Text("ক্যামেরা দিয়ে ছবি তুলুন"),
                 onTap: () {
                   Navigator.pop(context);
                   _pickAndUploadImage(ImageSource.camera);
@@ -200,14 +204,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return "$dayStr ${months[date.month - 1]}, $yearStr";
   }
 
-  String _toBengaliNumber(String englishNumber) {
-    return englishNumber
-        .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
-        .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
-        .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
-        .replaceAll('9', '৯');
-  }
-
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
@@ -216,29 +212,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final userEmail = user?.email ?? "ইমেইল দেওয়া হয়নি";
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: const Color(0xFFF0FDF4), // Vibrant light green/mint background
       appBar: AppBar(
         title: const Text(
-          "আমার প্রোফাইল 👤✨",
+          "আমার প্রোফাইল",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        centerTitle: true,
-        backgroundColor: AppTheme.demonDark,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("সেটিংস অপশনটি শীঘ্রই আসছে...")),
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            const SizedBox(height: 16),
             // Profile Header Card
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppTheme.accentPink, width: 3.5),
-                boxShadow: AppTheme.glowShadow(AppTheme.accentPink),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFECFDF5), Colors.white],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: const Color(0xFFA7F3D0), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF047857).withValues(alpha: 0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -254,30 +269,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             gradient: const LinearGradient(
-                              colors: [AppTheme.accentPink, AppTheme.accentYellow, AppTheme.accentCyan],
+                              colors: [Color(0xFF10B981), Color(0xFF3B82F6), Color(0xFFF59E0B)],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                blurRadius: 12,
+                                spreadRadius: 2,
+                              ),
+                            ],
                           ),
                           child: Hero(
                             tag: "profile-avatar",
                             child: CircleAvatar(
                               radius: 50,
-                              backgroundColor: AppTheme.primaryPurple.withValues(alpha: 0.1),
+                              backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
                               backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
                               child: _isUploading
-                                  ? const CircularProgressIndicator(color: AppTheme.accentPink)
+                                  ? const CircularProgressIndicator(color: AppTheme.primaryBlue)
                                   : (user?.photoUrl == null
-                                      ? const Icon(Icons.person, size: 60, color: AppTheme.primaryPurple)
+                                      ? const Icon(Icons.person, size: 60, color: AppTheme.primaryBlue)
                                       : null),
                             ),
                           ),
                         ),
                         if (!_isUploading)
                           Container(
-                            padding: const EdgeInsets.all(8),
+                            padding: const EdgeInsets.all(6),
                             decoration: const BoxDecoration(
-                              color: AppTheme.accentPink,
+                              color: AppTheme.primaryGreen,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.camera_alt, size: 16, color: AppTheme.white),
@@ -290,8 +312,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     userName, 
                     style: const TextStyle(
                       fontSize: 22, 
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.textColor,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -302,8 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     userEmail, 
                     style: const TextStyle(
                       fontSize: 14,
-                      color: AppTheme.textLight,
-                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4B5563),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -312,18 +333,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   if (user?.quitDate != null) ...[
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppTheme.accentLime.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.accentLime, width: 2),
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        "তামাকমুক্ত যাত্রা: ${_getBengaliDateString(user!.quitDate!)}",
+                        "তামাকমুক্ত যাত্রা শুরু: ${_getBengaliDateString(user!.quitDate!)}",
                         style: const TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.accentLime,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          color: Color(0xFF065F46),
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -332,103 +352,218 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Settings Group
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(color: AppTheme.primaryPurple.withValues(alpha: 0.1), width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryPurple.withValues(alpha: 0.05),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  _buildSettingsTile(
-                    context, 
-                    "প্রোফাইল সম্পাদনা", 
-                    Icons.person_outline, 
-                    AppTheme.accentCyan,
-                  ),
-                  Divider(height: 1, color: AppTheme.primaryPurple.withValues(alpha: 0.1)),
-                  _buildSettingsTile(
-                    context, 
-                    "ভাষা (Language)", 
-                    Icons.language, 
-                    AppTheme.accentOrange, 
-                    trailing: "বাংলা",
-                  ),
-                  Divider(height: 1, color: AppTheme.primaryPurple.withValues(alpha: 0.1)),
-                  _buildSettingsTile(
-                    context, 
-                    "নোটিফিকেশন", 
-                    Icons.notifications_active, 
-                    AppTheme.accentPink,
-                    isNotificationTile: true,
-                  ),
-                  Divider(height: 1, color: AppTheme.primaryPurple.withValues(alpha: 0.1)),
-                  _buildSettingsTile(
-                    context, 
-                    "প্রাইভেসি ও সিকিউরিটি", 
-                    Icons.lock_outline, 
-                    AppTheme.accentYellow,
-                  ),
-                  Divider(height: 1, color: AppTheme.primaryPurple.withValues(alpha: 0.1)),
-                  _buildSettingsTile(
-                    context, 
-                    "সাহায্য ও সাপোর্ট", 
-                    Icons.help_outline, 
-                    AppTheme.accentLime,
-                  ),
-                ],
-              ),
-            ),
 
-            // Logout Button
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await authService.signOut();
-                    if (context.mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AuthScreen()),
-                        (route) => false,
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.white, size: 24),
-                  label: const Text(
-                    "লগআউট", 
-                    style: TextStyle(
-                      color: Colors.white, 
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+              // Settings Group
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.cardBackgroundColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.errorColor,
-                    elevation: 4,
-                    shadowColor: AppTheme.errorColor.withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    _buildSettingsTile(
+                      context, 
+                      "প্রোফাইল সম্পাদনা", 
+                      Icons.person_outline, 
+                      AppTheme.primaryBlue,
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                    _buildSettingsTile(
+                      context, 
+                      "ভাষা (Language)", 
+                      Icons.language, 
+                      AppTheme.accentOrange, 
+                      trailing: "বাংলা",
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                    _buildSettingsTile(
+                      context, 
+                      "নোটিফিকেশন", 
+                      Icons.notifications_active, 
+                      AppTheme.accentPink,
+                      isNotificationTile: true,
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                    _buildSettingsTile(
+                      context, 
+                      "প্রাইভেসি ও সিকিউরিটি", 
+                      Icons.lock_outline, 
+                      AppTheme.primaryPurple,
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                    _buildSettingsTile(
+                      context, 
+                      "সাহায্য ও সাপোর্ট", 
+                      Icons.help_outline, 
+                      AppTheme.primaryGreen,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Logout Button
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await authService.signOut();
+                      if (context.mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => const AuthScreen()),
+                          (route) => false,
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    label: const Text(
+                      "লগআউট", 
+                      style: TextStyle(
+                        color: Colors.white, 
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.errorColor,
+                      elevation: 4,
+                      shadowColor: AppTheme.errorColor.withValues(alpha: 0.4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
+            ],
+          ),
         ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildStatCard(
+    BuildContext context, 
+    String label, 
+    String value, 
+    IconData icon, 
+    List<Color> gradientColors
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.cardBackgroundColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: gradientColors),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: gradientColors[0].withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(height: 10),
+          FittedBox(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppTheme.textColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppTheme.textLight,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildBadgeItem(
+    String label, 
+    String title, 
+    bool isUnlocked, 
+    IconData icon, 
+    List<Color> colors
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: isUnlocked ? LinearGradient(colors: colors) : null,
+              color: isUnlocked ? null : Colors.grey.withValues(alpha: 0.15),
+              boxShadow: isUnlocked
+                  ? [
+                      BoxShadow(
+                        color: colors[0].withValues(alpha: 0.4),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              isUnlocked ? icon : Icons.lock_outline,
+              color: isUnlocked ? Colors.white : Colors.grey.withValues(alpha: 0.6),
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isUnlocked ? AppTheme.textColor : AppTheme.textLight,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -450,19 +585,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SnackBar(content: Text('"$title" অপশনটি শীঘ্রই চালু হবে।')),
                 );
               },
-        borderRadius: BorderRadius.circular(20),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: iconBgColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: iconBgColor.withValues(alpha: 0.3), width: 1.5),
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(icon, color: iconBgColor, size: 24),
+                child: Icon(icon, color: iconBgColor, size: 20),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -472,8 +605,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Text(
                       title, 
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                         color: AppTheme.textColor,
                       ),
                     ),
@@ -483,10 +616,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ? 'দৈনিক অনুপ্রেরণা, চেক-ইন রিমাইন্ডার চালু'
                             : 'সব নোটিফিকেশন বন্ধ',
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
                           color: _notificationsEnabled
-                              ? AppTheme.accentLime
+                              ? AppTheme.primaryGreen
                               : AppTheme.textLight,
                         ),
                       ),
@@ -497,10 +629,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Switch(
                   value: _notificationsEnabled,
                   onChanged: _toggleNotifications,
-                  activeColor: AppTheme.accentLime,
-                  activeTrackColor: AppTheme.accentLime.withValues(alpha: 0.3),
-                  inactiveThumbColor: Colors.grey,
-                  inactiveTrackColor: Colors.grey.withValues(alpha: 0.3),
+                  activeThumbColor: AppTheme.primaryGreen,
                 )
               else if (trailing != null) ...[
                 Flexible(
@@ -509,7 +638,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: const TextStyle(
                       fontSize: 14,
                       color: AppTheme.textLight,
-                      fontWeight: FontWeight.bold,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -517,9 +645,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textLight),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
               ] else
-                const Icon(Icons.arrow_forward_ios, size: 14, color: AppTheme.textLight),
+                const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
             ],
           ),
         ),
@@ -537,7 +665,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         barrierDismissible: true,
         pageBuilder: (context, _, secondaryAnimation) {
           return Scaffold(
-            backgroundColor: Colors.black.withValues(alpha: 0.9),
+            backgroundColor: Colors.black.withValues(alpha: 0.85),
             body: Stack(
               children: [
                 GestureDetector(

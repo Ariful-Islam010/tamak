@@ -18,6 +18,7 @@ class NotificationService {
   static const int _eveningCheckInId = 2;
   static const int _streakReminderId = 3;
   static const int _motivationId = 4;
+  static const int _planCompletionReminderId = 5;
   static const int _instantId = 99;
 
   /// Initialize the notification service - call this in main()
@@ -190,23 +191,69 @@ class NotificationService {
   // ──────────────────────────────────────────────
 
   /// Schedule all daily reminders (call after login/setup)
-  Future<void> scheduleAllDailyNotifications() async {
-    await scheduleMorningMotivation();
-    await scheduleEveningCheckIn();
+  Future<void> scheduleAllDailyNotifications({
+    DateTime? quitDate,
+    String? currentDayTitle,
+  }) async {
+    await scheduleMorningMotivation(
+      quitDate: quitDate,
+      currentDayTitle: currentDayTitle,
+    );
+    await scheduleEveningCheckIn(quitDate: quitDate);
     await scheduleStreakReminder();
     debugPrint('📅 All daily notifications scheduled');
   }
 
-  /// Morning motivation at 8:00 AM daily
-  Future<void> scheduleMorningMotivation() async {
+  /// Morning motivation at 8:00 AM daily — plan-aware
+  Future<void> scheduleMorningMotivation({
+    DateTime? quitDate,
+    String? currentDayTitle,
+  }) async {
     await _plugin.cancel(_morningReminderId);
 
     final scheduledTime = _nextInstanceOf(8, 0);
 
+    // Determine title and body based on plan status
+    String notifTitle;
+    String notifBody;
+
+    if (quitDate != null) {
+      final today = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
+      final quitDay = DateTime(quitDate.year, quitDate.month, quitDate.day);
+      final diff = today.difference(quitDay).inDays;
+
+      if (diff < 0) {
+        // Plan hasn't started yet
+        final daysLeft = -diff;
+        notifTitle = '⏳ পরিকল্পনা শুরু হতে $daysLeft দিন বাকি!';
+        notifBody = 'প্রস্তুত থাকুন। ধূমপান ছাড়ার যাত্রা শুরু হতে চলেছে! 🜏';
+      } else if (diff == 0) {
+        // Day 1
+        notifTitle = '🌅 আজ আপনার পরিকল্পনার ১ম দিন!';
+        notifBody = currentDayTitle != null
+            ? 'আজকের লক্ষ্য: $currentDayTitle - আপনি পারবেন! 💪'
+            : 'তামাকমুক্ত যাত্রার প্রথম দিনে স্বাগতম! 🌱';
+      } else {
+        // Ongoing plan
+        final dayNum = diff + 1;
+        notifTitle = '🌅 সুপ্রভাত! পরিকল্পনার $dayNum তম দিন';
+        notifBody = currentDayTitle != null
+            ? 'আজকের লক্ষ্য: $currentDayTitle'
+            : _getRandomMorningMessage();
+      }
+    } else {
+      notifTitle = '🌅 সুপ্রভাত! নতুন দিন, নতুন সংকল্প';
+      notifBody = _getRandomMorningMessage();
+    }
+
     await _plugin.zonedSchedule(
       _morningReminderId,
-      '🌅 সুপ্রভাত! নতুন দিন, নতুন সংকল্প',
-      _getRandomMorningMessage(),
+      notifTitle,
+      notifBody,
       scheduledTime,
       _buildDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -218,15 +265,32 @@ class NotificationService {
   }
 
   /// Evening check-in reminder at 8:00 PM daily
-  Future<void> scheduleEveningCheckIn() async {
+  Future<void> scheduleEveningCheckIn({DateTime? quitDate}) async {
     await _plugin.cancel(_eveningCheckInId);
 
     final scheduledTime = _nextInstanceOf(20, 0);
 
+    String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
+
+    if (quitDate != null) {
+      final today = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
+      final quitDay = DateTime(quitDate.year, quitDate.month, quitDate.day);
+      final diff = today.difference(quitDay).inDays;
+      if (diff < 0) {
+        body = 'পরিকল্পনা শুরুর আগে প্রতিদিন নিজেকে প্রস্তুত করুন!';
+      } else {
+        body = '${diff + 1} তম দিনের চেক-ইন করুন এবং স্ট্রিক বজায় রাখুন! 🌟';
+      }
+    }
+
     await _plugin.zonedSchedule(
       _eveningCheckInId,
       '📋 আজকের চেক-ইন করুন',
-      'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟',
+      body,
       scheduledTime,
       _buildDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -298,6 +362,7 @@ class NotificationService {
     await _plugin.cancel(_eveningCheckInId);
     await _plugin.cancel(_streakReminderId);
     await _plugin.cancel(_motivationId);
+    await _plugin.cancel(_planCompletionReminderId);
   }
 
   // ──────────────────────────────────────────────
@@ -357,5 +422,37 @@ class NotificationService {
   Future<int> getPendingNotificationsCount() async {
     final pending = await _plugin.pendingNotificationRequests();
     return pending.length;
+  }
+
+  /// Schedule a one-time reminder at 9:00 PM to complete today's plan if not answered yet
+  Future<void> schedulePlanCompletionReminder({required bool hasAnsweredToday}) async {
+    await _plugin.cancel(_planCompletionReminderId);
+
+    if (hasAnsweredToday) {
+      debugPrint('Plan completion reminder cancelled: User already responded today');
+      return;
+    }
+
+    final now = DateTime.now();
+    final reminderTime = DateTime(now.year, now.month, now.day, 21, 0); // 9:00 PM
+
+    DateTime scheduledTime = reminderTime;
+    if (now.isAfter(reminderTime)) {
+      scheduledTime = reminderTime.add(const Duration(days: 1));
+    }
+
+    final tzDateTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+    await _plugin.zonedSchedule(
+      _planCompletionReminderId,
+      '📋 আজকের পরিকল্পনা সম্পন্ন করেছেন?',
+      'আজকের তামাক বর্জন লক্ষ্য কি সম্পন্ন করেছেন? হ্যাঁ অথবা না ক্লিক করে আপডেট করুন!',
+      tzDateTime,
+      _buildDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+    );
+
+    debugPrint('⏰ Plan completion reminder scheduled for: $scheduledTime');
   }
 }
