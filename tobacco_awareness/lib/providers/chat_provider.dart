@@ -16,12 +16,16 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   ChatProvider() {
-    _loadMessagesFromCache();
-    fetchAndSubscribeMessages();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    _init();
+  }
+
+  Future<void> _init() async {
+    await _loadMessagesFromCache();
+    await fetchAndSubscribeMessages();
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (data.event == AuthChangeEvent.signedIn || data.event == AuthChangeEvent.signedOut) {
-        _loadMessagesFromCache();
-        loadMessages();
+        await _loadMessagesFromCache();
+        await loadMessages();
       }
     });
   }
@@ -54,8 +58,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> fetchAndSubscribeMessages() async {
-    _isLoading = true;
-    notifyListeners();
+    if (_messages.isEmpty) {
+      _isLoading = true;
+      notifyListeners();
+    }
 
     await loadMessages();
 
