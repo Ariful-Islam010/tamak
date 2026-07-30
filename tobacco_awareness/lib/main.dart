@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/app_theme.dart';
-import 'screens/auth_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'providers/chat_provider.dart';
@@ -13,8 +12,7 @@ import 'providers/money_saver_provider.dart';
 import 'providers/check_in_provider.dart';
 import 'providers/quit_plan_provider.dart';
 import 'providers/gamification_provider.dart';
-import 'screens/home_dashboard_screen.dart';
-import 'screens/profile_assessment_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,34 +60,7 @@ class TamakmuktoJibonApp extends StatelessWidget {
       title: 'তামাকমুক্ত জীবন',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: Consumer<AuthService>(
-        builder: (context, authService, _) {
-          final session = Supabase.instance.client.auth.currentSession;
-
-          // No session → show auth screen (no loading spinner)
-          if (session == null) {
-            return const AuthScreen();
-          }
-
-          final user = authService.currentUser;
-
-          // User data still loading → show auth screen instead of spinner
-          // AuthService will notify when user data is ready
-          if (user == null) {
-            return const AuthScreen();
-          }
-
-          // MANDATORY onboarding: User MUST fill all required fields
-          if (user.planDuration == null ||
-              user.age == null ||
-              user.gender == null ||
-              user.quitDate == null) {
-            return const ProfileAssessmentScreen();
-          }
-
-          return const HomeDashboardScreen();
-        },
-      ),
+      home: const SplashScreen(),
     );
   }
 }

@@ -136,13 +136,37 @@ class GamificationProvider extends ChangeNotifier {
     notifyListeners();
 
     final userId = _supabase.auth.currentUser?.id;
+    final cachedUserId = userId ?? 'guest';
+
+    // 1. Load cached values from SharedPreferences immediately for fast startup
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _currentStreak = prefs.getInt('gamification_current_streak_$cachedUserId') ?? 0;
+      _longestStreak = prefs.getInt('gamification_longest_streak_$cachedUserId') ?? 0;
+      _totalSmokeFreeDays = prefs.getInt('gamification_smoke_free_days_$cachedUserId') ?? 0;
+      _totalCheckIns = prefs.getInt('gamification_total_checkins_$cachedUserId') ?? 0;
+      _totalSavingsAmount = prefs.getInt('gamification_total_savings_$cachedUserId') ?? 0;
+      _planDuration = prefs.getInt('gamification_plan_duration_$cachedUserId') ?? 7;
+      _hasPlan = prefs.getBool('gamification_has_plan_$cachedUserId') ?? false;
+      _completedTasksCount = prefs.getInt('gamification_completed_tasks_$cachedUserId') ?? 0;
+      _sosCount = prefs.getInt('gamification_sos_count_$cachedUserId') ?? 0;
+      _messagesCount = prefs.getInt('gamification_messages_count_$cachedUserId') ?? 0;
+      _plantStage = prefs.getInt('gamification_plant_stage_$cachedUserId') ?? 0;
+      _hasPestAttack = prefs.getBool('gamification_has_pest_$cachedUserId') ?? false;
+      _pestDaysClean = prefs.getInt('gamification_pest_days_clean_$cachedUserId') ?? 0;
+      _completedTrees = prefs.getInt('gamification_completed_trees_$cachedUserId') ?? 0;
+    } catch (e) {
+      debugPrint("Error loading cached gamification data: $e");
+    }
+
+    _isLoading = false;
+    notifyListeners();
+
     if (userId == null) {
-      _resetAll();
-      _isLoading = false;
-      notifyListeners();
       return;
     }
 
+    // 2. Fetch fresh data from Supabase in the background
     try {
       // 1. Fetch check-in data sorted by date ascending to build the tree state and streaks
       final checkInsData = await _supabase
@@ -156,18 +180,17 @@ class GamificationProvider extends ChangeNotifier {
       // Calculate streaks and build Tree RPG State
       _calculateStreaksAndTree(checkInsData);
 
-      // 2. Fetch total saved from money_savings table
+      // 2. Fetch total saved from savings_logs table
       final savingsResponse = await _supabase
-          .from('money_savings')
-          .select('total_saved')
-          .eq('user_id', userId)
-          .maybeSingle();
+          .from('savings_logs')
+          .select('amount')
+          .eq('user_id', userId);
 
-      if (savingsResponse != null && savingsResponse['total_saved'] != null) {
-        _totalSavingsAmount = (savingsResponse['total_saved'] as num).toInt();
-      } else {
-        _totalSavingsAmount = 0;
+      int sum = 0;
+      for (var row in savingsResponse) {
+        sum += (row['amount'] as num).toInt();
       }
+      _totalSavingsAmount = sum;
 
       // 3. Fetch plan duration and quit_date from user profile
       final profileResponse = await _supabase
@@ -203,13 +226,32 @@ class GamificationProvider extends ChangeNotifier {
           .eq('sender_id', userId);
       _messagesCount = messagesResponse.length;
 
-      // 6. Sync current stats to gamification_data table
-      await _syncToDatabase(userId);
+      // Cache fresh data to SharedPreferences
+      await prefs.setInt('gamification_current_streak_$userId', _currentStreak);
+      await prefs.setInt('gamification_longest_streak_$userId', _longestStreak);
+      await prefs.setInt('gamification_smoke_free_days_$userId', _totalSmokeFreeDays);
+      await prefs.setInt('gamification_total_checkins_$userId', _totalCheckIns);
+      await prefs.setInt('gamification_total_savings_$userId', _totalSavingsAmount);
+      await prefs.setInt('gamification_plan_duration_$userId', _planDuration);
+      await prefs.setBool('gamification_has_plan_$userId', _hasPlan);
+      await prefs.setInt('gamification_completed_tasks_$userId', _completedTasksCount);
+      await prefs.setInt('gamification_sos_count_$userId', _sosCount);
+      await prefs.setInt('gamification_messages_count_$userId', _messagesCount);
+      await prefs.setInt('gamification_plant_stage_$userId', _plantStage);
+      await prefs.setBool('gamification_has_pest_$userId', _hasPestAttack);
+      await prefs.setInt('gamification_pest_days_clean_$userId', _pestDaysClean);
+      await prefs.setInt('gamification_completed_trees_$userId', _completedTrees);
+
+      // 6. Sync current stats to gamification_progress table
+      String? lastCheckInDate;
+      if (checkInsData.isNotEmpty) {
+        lastCheckInDate = checkInsData.last['check_in_date'].toString().split('T')[0];
+      }
+      await _syncToDatabase(userId, lastCheckInDate: lastCheckInDate);
     } catch (e) {
       debugPrint("Error loading gamification data: $e");
     }
 
-    _isLoading = false;
     notifyListeners();
   }
 
@@ -323,37 +365,26 @@ class GamificationProvider extends ChangeNotifier {
     _completedTrees = 0;
   }
 
-  Future<void> _syncToDatabase(String userId) async {
+  Future<void> _syncToDatabase(String userId, {String? lastCheckInDate}) async {
     try {
-      // Sync to public.gamification_data
-      await _supabase.from('gamification_data').upsert({
+      final Map<String, dynamic> dataToSync = {
         'user_id': userId,
         'current_streak': _currentStreak,
         'longest_streak': _longestStreak,
         'badges': unlockedBadges.map((b) => b.id).toList(),
         'updated_at': DateTime.now().toIso8601String(),
-      });
+      };
+      if (lastCheckInDate != null) {
+        dataToSync['last_check_in_date'] = lastCheckInDate;
+      }
+      // Sync to public.gamification_progress
+      await _supabase.from('gamification_progress').upsert(dataToSync);
     } catch (e) {
       debugPrint("Error syncing gamification data: $e");
     }
   }
 
-  void _resetAll() {
-    _currentStreak = 0;
-    _longestStreak = 0;
-    _totalSmokeFreeDays = 0;
-    _totalCheckIns = 0;
-    _totalSavingsAmount = 0;
-    _planDuration = 7;
-    _sosCount = 0;
-    _messagesCount = 0;
-    _plantStage = 0;
-    _hasPestAttack = false;
-    _pestDaysClean = 0;
-    _completedTrees = 0;
-    _hasPlan = false;
-    _completedTasksCount = 0;
-  }
+
 
   /// Convert number to Bengali numeral string
   String toBengaliNumeral(int number) {

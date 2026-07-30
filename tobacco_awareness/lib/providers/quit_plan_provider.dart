@@ -65,6 +65,7 @@ class QuitPlanProvider extends ChangeNotifier {
 
       // Reschedule plan completion reminder notification dynamically
       await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
+      await NotificationService().scheduleViewPlanReminder(hasAnsweredToday: _hasAnsweredToday);
 
       final storedPlanLocal = prefs.getString('ai_quit_plan_$userId');
       String? storedPlan = storedPlanLocal;
@@ -116,49 +117,12 @@ class QuitPlanProvider extends ChangeNotifier {
       
       if (userId != 'guest') {
         try {
-          // Update user_profiles
+          // Update user_profiles (ai_quit_plan is TEXT type in user_profiles)
           await Supabase.instance.client.from('user_profiles').update({
-            'ai_quit_plan': jsonDecode(jsonPlan),
+            'ai_quit_plan': jsonPlan,
           }).eq('id', userId);
-
-          // Save to quit_plans table
-          final plansList = jsonDecode(jsonPlan);
-          await Supabase.instance.client.from('quit_plans').delete().eq('user_id', userId);
-          await Supabase.instance.client.from('quit_plans').insert({
-            'user_id': userId,
-            'strategy': 'AI Generated Quit Plan',
-            'milestones': plansList,
-          });
-
-          // *** SAVE EACH TASK TO ai_tasks TABLE ***
-          if (plansList is List) {
-            // Delete old AI tasks for this user
-            await Supabase.instance.client.from('ai_tasks').delete().eq('user_id', userId);
-            
-            // Insert each day's task
-            for (var plan in plansList) {
-              final title = plan['title'] ?? 'AI Task';
-              final desc = plan['desc'] ?? '';
-              final userTask = plan['user_task'] ?? '';
-              final aiTask = plan['ai_task'] ?? '';
-              final dailyTarget = plan['daily_target'] ?? '';
-              final day = plan['day']?.toString() ?? '';
-
-              await Supabase.instance.client.from('ai_tasks').insert({
-                'user_id': userId,
-                'task_title': '$day - $title',
-                'task_description': desc,
-                'task_details': jsonEncode({
-                  'user_task': userTask,
-                  'ai_task': aiTask,
-                  'daily_target': dailyTarget,
-                }),
-              });
-            }
-            debugPrint("✅ AI tasks saved to ai_tasks table: ${plansList.length} tasks");
-          }
         } catch (e) {
-          debugPrint("Error syncing plan to Supabase: $e");
+          debugPrint("Error syncing plan to Supabase user_profiles: $e");
         }
       }
       
@@ -196,6 +160,7 @@ class QuitPlanProvider extends ChangeNotifier {
 
       // Reschedule plan completion reminder notification dynamically
       await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: true);
+      await NotificationService().scheduleViewPlanReminder(hasAnsweredToday: true);
 
       notifyListeners();
     } catch (e) {

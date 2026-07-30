@@ -13,8 +13,28 @@ class MoneySaverProvider extends ChangeNotifier {
   List<Map<String, dynamic>> get dreams => _dreams;
   bool get hasAddedMoneyToday => _hasAddedMoneyToday;
 
+  List<int> getAllocatedSavings() {
+    List<int> allocations = List.filled(_dreams.length, 0);
+    int remaining = _totalSavings;
+    // Process from oldest to newest (reverse order of _dreams since index 0 is newest)
+    for (int i = _dreams.length - 1; i >= 0; i--) {
+      int target = _dreams[i]["target"];
+      int allocated = remaining >= target ? target : remaining;
+      allocations[i] = allocated;
+      remaining -= allocated;
+    }
+    return allocations;
+  }
+
   bool get hasUnachievedDream {
-    return _dreams.any((dream) => _totalSavings < dream["target"]);
+    if (_dreams.isEmpty) return false;
+    final allocations = getAllocatedSavings();
+    for (int i = 0; i < _dreams.length; i++) {
+      if (allocations[i] < _dreams[i]["target"]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   MoneySaverProvider() {
@@ -53,17 +73,18 @@ class MoneySaverProvider extends ChangeNotifier {
       // Sync from Supabase if online
       if (userId != 'guest') {
         try {
-          // Select total_saved from money_savings table
+          // Select amount from savings_logs table
           final response = await Supabase.instance.client
-              .from('money_savings')
-              .select('total_saved')
-              .eq('user_id', userId)
-              .maybeSingle();
+              .from('savings_logs')
+              .select('amount')
+              .eq('user_id', userId);
               
-          if (response != null && response['total_saved'] != null) {
-            _totalSavings = (response['total_saved'] as num).toInt();
-            await prefs.setInt('total_savings_$userId', _totalSavings);
+          int sum = 0;
+          for (var row in response) {
+            sum += (row['amount'] as num).toInt();
           }
+          _totalSavings = sum;
+          await prefs.setInt('total_savings_$userId', _totalSavings);
 
           final goalsData = await Supabase.instance.client
               .from('money_saver_goals')
@@ -130,11 +151,10 @@ class MoneySaverProvider extends ChangeNotifier {
 
       if (userId != 'guest') {
         try {
-          // Upsert total_saved to money_savings table matching schema
-          await Supabase.instance.client.from('money_savings').upsert({
+          // Insert a new log entry to savings_logs table
+          await Supabase.instance.client.from('savings_logs').insert({
             'user_id': userId,
-            'total_saved': _totalSavings,
-            'last_calculated': DateTime.now().toIso8601String(),
+            'amount': amount,
           });
         } catch (e) {
           debugPrint("Error syncing savings to Supabase: $e");

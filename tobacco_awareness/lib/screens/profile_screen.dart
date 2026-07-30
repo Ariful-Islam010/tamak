@@ -8,6 +8,8 @@ import '../services/auth_service.dart';
 import '../services/cloudinary_service.dart';
 import '../services/notification_service.dart';
 import 'auth_screen.dart';
+import 'privacy_security_screen.dart';
+import 'help_support_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -204,6 +206,130 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return "$dayStr ${months[date.month - 1]}, $yearStr";
   }
 
+  void _showEditProfileDialog() {
+    final authService = context.read<AuthService>();
+    final user = authService.currentUser;
+    final nameController = TextEditingController(text: user?.displayName ?? "");
+    final eduController = TextEditingController(text: user?.educationalInfo ?? "");
+    final ageController = TextEditingController(text: user?.age?.toString() ?? "");
+    String? selectedGender = user?.gender ?? "পুরুষ";
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "প্রোফাইল সম্পাদনা",
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryGreen,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: "নাম",
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: eduController,
+                      decoration: const InputDecoration(
+                        labelText: "শিক্ষাগত যোগ্যতা",
+                        prefixIcon: Icon(Icons.school),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: ageController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "বয়স",
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedGender,
+                      decoration: const InputDecoration(
+                        labelText: "লিঙ্গ",
+                        prefixIcon: Icon(Icons.wc),
+                      ),
+                      items: ["পুরুষ", "মহিলা", "অন্যান্য"]
+                          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setModalState(() => selectedGender = val);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final int? ageVal = int.tryParse(ageController.text.trim());
+                          if (nameController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("নাম খালি রাখা যাবে না!"), backgroundColor: AppTheme.errorColor),
+                            );
+                            return;
+                          }
+                          
+                          if (user != null) {
+                            final updatedUser = user.copyWith(
+                              displayName: nameController.text.trim(),
+                              educationalInfo: eduController.text.trim().isNotEmpty ? eduController.text.trim() : null,
+                              age: ageVal,
+                              gender: selectedGender,
+                            );
+                            await authService.updateUserData(updatedUser);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("প্রোফাইল সফলভাবে আপডেট করা হয়েছে!"), backgroundColor: AppTheme.primaryGreen),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryGreen,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: const Text("সংরক্ষণ করুন", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = context.watch<AuthService>();
@@ -220,16 +346,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("সেটিংস অপশনটি শীঘ্রই আসছে...")),
-              );
-            },
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -375,14 +491,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       "প্রোফাইল সম্পাদনা", 
                       Icons.person_outline, 
                       AppTheme.primaryBlue,
-                    ),
-                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
-                    _buildSettingsTile(
-                      context, 
-                      "ভাষা (Language)", 
-                      Icons.language, 
-                      AppTheme.accentOrange, 
-                      trailing: "বাংলা",
+                      onTap: _showEditProfileDialog,
                     ),
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
                     _buildSettingsTile(
@@ -398,6 +507,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       "প্রাইভেসি ও সিকিউরিটি", 
                       Icons.lock_outline, 
                       AppTheme.primaryPurple,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const PrivacySecurityScreen()),
+                      ),
                     ),
                     Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
                     _buildSettingsTile(
@@ -405,6 +518,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       "সাহায্য ও সাপোর্ট", 
                       Icons.help_outline, 
                       AppTheme.primaryGreen,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+                      ),
                     ),
                   ],
                 ),
@@ -573,14 +690,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String title, 
     IconData icon, 
     Color iconBgColor, 
-    {String? trailing, bool isNotificationTile = false}
+    {String? trailing, bool isNotificationTile = false, VoidCallback? onTap}
   ) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: isNotificationTile
             ? null
-            : () {
+            : onTap ?? () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('"$title" অপশনটি শীঘ্রই চালু হবে।')),
                 );

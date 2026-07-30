@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../services/cloudinary_service.dart';
 
@@ -14,12 +16,41 @@ class ChatProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   ChatProvider() {
+    _loadMessagesFromCache();
     fetchAndSubscribeMessages();
     Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (data.event == AuthChangeEvent.signedIn || data.event == AuthChangeEvent.signedOut) {
+        _loadMessagesFromCache();
         loadMessages();
       }
     });
+  }
+
+  Future<void> _loadMessagesFromCache() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      final userId = user?.id ?? 'guest';
+      final prefs = await SharedPreferences.getInstance();
+      final cachedStr = prefs.getString('cached_peer_support_messages_$userId');
+      if (cachedStr != null) {
+        final List<dynamic> decoded = jsonDecode(cachedStr);
+        _messages = decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error loading messages from cache: $e");
+    }
+  }
+
+  Future<void> _saveMessagesToCache() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      final userId = user?.id ?? 'guest';
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('cached_peer_support_messages_$userId', jsonEncode(_messages));
+    } catch (e) {
+      debugPrint("Error saving messages to cache: $e");
+    }
   }
 
   Future<void> fetchAndSubscribeMessages() async {
@@ -113,6 +144,9 @@ class ChatProvider extends ChangeNotifier {
       } else {
         _messages = fetchedMessages;
       }
+      
+      // Save messages to local cache
+      await _saveMessagesToCache();
       notifyListeners();
     } catch (e) {
       debugPrint("Error loading messages: $e");

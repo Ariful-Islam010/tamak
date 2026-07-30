@@ -19,6 +19,7 @@ class NotificationService {
   static const int _streakReminderId = 3;
   static const int _motivationId = 4;
   static const int _planCompletionReminderId = 5;
+  static const int _viewPlanReminderId = 6;
   static const int _instantId = 99;
 
   /// Initialize the notification service - call this in main()
@@ -201,6 +202,7 @@ class NotificationService {
     );
     await scheduleEveningCheckIn(quitDate: quitDate);
     await scheduleStreakReminder();
+    await scheduleViewPlanReminder(hasAnsweredToday: false);
     debugPrint('📅 All daily notifications scheduled');
   }
 
@@ -265,10 +267,10 @@ class NotificationService {
   }
 
   /// Evening check-in reminder at 8:00 PM daily
-  Future<void> scheduleEveningCheckIn({DateTime? quitDate}) async {
+  Future<void> scheduleEveningCheckIn({DateTime? quitDate, bool forceTomorrow = false}) async {
     await _plugin.cancel(_eveningCheckInId);
 
-    final scheduledTime = _nextInstanceOf(20, 0);
+    final scheduledTime = _nextInstanceOf(20, 0, forceTomorrow: forceTomorrow);
 
     String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
 
@@ -363,6 +365,7 @@ class NotificationService {
     await _plugin.cancel(_streakReminderId);
     await _plugin.cancel(_motivationId);
     await _plugin.cancel(_planCompletionReminderId);
+    await _plugin.cancel(_viewPlanReminderId);
   }
 
   // ──────────────────────────────────────────────
@@ -370,12 +373,12 @@ class NotificationService {
   // ──────────────────────────────────────────────
 
   /// Get next scheduled time for a given hour:minute
-  tz.TZDateTime _nextInstanceOf(int hour, int minute) {
+  tz.TZDateTime _nextInstanceOf(int hour, int minute, {bool forceTomorrow = false}) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled =
         tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
 
-    if (scheduled.isBefore(now)) {
+    if (scheduled.isBefore(now) || forceTomorrow) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
     return scheduled;
@@ -454,5 +457,27 @@ class NotificationService {
     );
 
     debugPrint('⏰ Plan completion reminder scheduled for: $scheduledTime');
+  }
+
+  /// Schedule daily reminder to view today's quit plan at 10:00 AM
+  Future<void> scheduleViewPlanReminder({required bool hasAnsweredToday}) async {
+    await _plugin.cancel(_viewPlanReminderId);
+
+    // If already answered today, schedule for tomorrow
+    final scheduledTime = _nextInstanceOf(10, 0, forceTomorrow: hasAnsweredToday);
+
+    await _plugin.zonedSchedule(
+      _viewPlanReminderId,
+      '📋 আজকের তামাকমুক্ত পরিকল্পনা',
+      'আপনার আজকের লক্ষ্য ও এআই টাস্কটি দেখে নিন এবং দিনটি সফল করুন! 🌿',
+      scheduledTime,
+      _buildDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+
+    debugPrint('⏰ View plan reminder scheduled. forceTomorrow: $hasAnsweredToday');
   }
 }

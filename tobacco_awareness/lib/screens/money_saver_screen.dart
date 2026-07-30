@@ -208,22 +208,26 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
             ),
             const SizedBox(height: 16),
             
-            ...moneyProvider.dreams.map((dream) => _buildWishlistCard(
-                  context,
-                  dream["title"],
-                  dream["icon"],
-                  dream["target"],
-                  dream["color"],
-                )),
+            ...List.generate(moneyProvider.dreams.length, (index) {
+              final dream = moneyProvider.dreams[index];
+              final allocatedSavings = moneyProvider.getAllocatedSavings()[index];
+              return _buildWishlistCard(
+                context,
+                dream["title"],
+                dream["icon"],
+                dream["target"],
+                dream["color"],
+                allocatedSavings,
+              );
+            }),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWishlistCard(BuildContext context, String title, IconData icon, int targetAmount, Color color) {
-    final totalSavings = context.read<MoneySaverProvider>().totalSavings;
-    double progress = totalSavings / targetAmount;
+  Widget _buildWishlistCard(BuildContext context, String title, IconData icon, int targetAmount, Color color, int allocatedSavings) {
+    double progress = allocatedSavings / targetAmount;
     if (progress > 1.0) progress = 1.0;
     bool isCompleted = progress >= 1.0;
 
@@ -232,7 +236,7 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
         .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
         .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')
         .replaceAll('9', '৯');
-    final String currentStr = totalSavings.toString()
+    final String currentStr = allocatedSavings.toString()
         .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')
         .replaceAll('3', '৩').replaceAll('4', '৪').replaceAll('5', '৫')
         .replaceAll('6', '৬').replaceAll('7', '৭').replaceAll('8', '৮')

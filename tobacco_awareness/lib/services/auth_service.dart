@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -10,9 +11,11 @@ class AuthService extends ChangeNotifier {
 
   UserModel? _currentUser;
   bool _isLoading = false;
+  bool _initialSessionChecked = false;
 
   UserModel? get currentUser => _currentUser;
   bool get isLoading => _isLoading;
+  bool get initialSessionChecked => _initialSessionChecked;
 
   AuthService() {
     _supabase.auth.onAuthStateChange.listen(_onAuthStateChanged);
@@ -32,14 +35,18 @@ class AuthService extends ChangeNotifier {
         await NotificationService().scheduleAllDailyNotifications(
           quitDate: _currentUser?.quitDate,
         );
-        // Show welcome notification
-        if (_currentUser?.displayName != null) {
+        // Show welcome notification only once on first signup / login
+        final prefs = await SharedPreferences.getInstance();
+        final hasShownWelcome = prefs.getBool('welcome_notification_shown_${user.id}') ?? false;
+        if (!hasShownWelcome && _currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(
             _currentUser!.displayName!.split(' ').first,
           );
+          await prefs.setBool('welcome_notification_shown_${user.id}', true);
         }
       }
     }
+    _initialSessionChecked = true;
     notifyListeners();
   }
 
@@ -52,6 +59,14 @@ class AuthService extends ChangeNotifier {
           .maybeSingle();
 
       if (profileData != null) {
+        final quitDateVal = profileData['quit_date'];
+        final prefs = await SharedPreferences.getInstance();
+        if (quitDateVal != null) {
+          await prefs.setString('user_quit_date_${user.id}', quitDateVal);
+        } else {
+          await prefs.remove('user_quit_date_${user.id}');
+        }
+
         _currentUser = UserModel(
           uid: user.id,
           email: user.email,
@@ -59,8 +74,8 @@ class AuthService extends ChangeNotifier {
           photoUrl: profileData['photo_url'] ?? user.userMetadata?['avatar_url'],
           educationalInfo: profileData['educational_info'],
           planDuration: profileData['plan_duration'],
-          quitDate: profileData['quit_date'] != null
-              ? DateTime.parse(profileData['quit_date'])
+          quitDate: quitDateVal != null
+              ? DateTime.parse(quitDateVal)
               : null,
           aiQuitPlan: profileData['ai_quit_plan'],
           age: profileData['age'],
@@ -92,6 +107,13 @@ class AuthService extends ChangeNotifier {
     try {
       final user = _supabase.auth.currentUser;
       if (user != null) {
+        final prefs = await SharedPreferences.getInstance();
+        if (updatedUser.quitDate != null) {
+          await prefs.setString('user_quit_date_${user.id}', updatedUser.quitDate!.toIso8601String());
+        } else {
+          await prefs.remove('user_quit_date_${user.id}');
+        }
+
         await _supabase.from('user_profiles').upsert({
           'id': user.id,
           'email': user.email,

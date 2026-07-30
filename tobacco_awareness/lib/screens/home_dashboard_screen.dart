@@ -44,6 +44,16 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         .replaceAll('9', '৯');
   }
 
+  String _toBengaliOrdinal(int day) {
+    if (day == 1) return "১ম";
+    if (day == 2) return "২য়";
+    if (day == 3) return "৩য়";
+    if (day == 4) return "৪র্থ";
+    if (day == 5) return "৫ম";
+    if (day == 6) return "৬ষ্ঠ";
+    return "${_toBengali(day)}ম";
+  }
+
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) return "সুপ্রভাত,";
@@ -56,13 +66,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<AuthService>().currentUser;
     final moneyProvider = context.watch<MoneySaverProvider>();
-    final gamification = context.watch<GamificationProvider>();
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
     int smokeFreeDays = 0;
     if (user?.quitDate != null) {
-      final diff = DateTime.now().difference(user!.quitDate!).inDays;
-      if (diff >= 0) smokeFreeDays = diff;
+      final diff = DateTime.now().difference(user!.quitDate!).inDays + 1;
+      if (diff >= 1) smokeFreeDays = diff;
     }
 
     final int totalSaved = moneyProvider.totalSavings;
@@ -153,8 +162,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          gamification.currentStreak > 0
-                              ? "দারুণ! ${_toBengali(gamification.currentStreak)} দিন ধরে তামাকমুক্ত! 🌿"
+                          user?.quitDate != null
+                              ? "দারুণ! আপনি তামাকমুক্ত জীবনের ${_toBengaliOrdinal(DateTime.now().difference(user!.quitDate!).inDays + 1)} দিনে আছেন! 🌿"
                               : "আজই হোক তামাকমুক্ত জীবনের প্রথম দিন! 🌿",
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.white, fontWeight: FontWeight.bold, height: 1.4,
