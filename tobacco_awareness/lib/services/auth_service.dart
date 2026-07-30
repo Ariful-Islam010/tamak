@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'notification_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'database_helper.dart';
 
 class AuthService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -36,13 +36,13 @@ class AuthService extends ChangeNotifier {
           quitDate: _currentUser?.quitDate,
         );
         // Show welcome notification only once on first signup / login
-        final prefs = await SharedPreferences.getInstance();
-        final hasShownWelcome = prefs.getBool('welcome_notification_shown_${user.id}') ?? false;
+        final hasShownWelcomeStr = await DatabaseHelper().getSetting('welcome_notification_shown_${user.id}');
+        final hasShownWelcome = hasShownWelcomeStr == 'true';
         if (!hasShownWelcome && _currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(
             _currentUser!.displayName!.split(' ').first,
           );
-          await prefs.setBool('welcome_notification_shown_${user.id}', true);
+          await DatabaseHelper().saveSetting('welcome_notification_shown_${user.id}', 'true');
         }
       }
     }
@@ -60,11 +60,10 @@ class AuthService extends ChangeNotifier {
 
       if (profileData != null) {
         final quitDateVal = profileData['quit_date'];
-        final prefs = await SharedPreferences.getInstance();
         if (quitDateVal != null) {
-          await prefs.setString('user_quit_date_${user.id}', quitDateVal);
+          await DatabaseHelper().saveSetting('user_quit_date_${user.id}', quitDateVal);
         } else {
-          await prefs.remove('user_quit_date_${user.id}');
+          await DatabaseHelper().removeSetting('user_quit_date_${user.id}');
         }
 
         _currentUser = UserModel(
@@ -107,11 +106,10 @@ class AuthService extends ChangeNotifier {
     try {
       final user = _supabase.auth.currentUser;
       if (user != null) {
-        final prefs = await SharedPreferences.getInstance();
         if (updatedUser.quitDate != null) {
-          await prefs.setString('user_quit_date_${user.id}', updatedUser.quitDate!.toIso8601String());
+          await DatabaseHelper().saveSetting('user_quit_date_${user.id}', updatedUser.quitDate!.toIso8601String());
         } else {
-          await prefs.remove('user_quit_date_${user.id}');
+          await DatabaseHelper().removeSetting('user_quit_date_${user.id}');
         }
 
         await _supabase.from('user_profiles').upsert({

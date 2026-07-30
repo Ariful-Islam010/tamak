@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/notification_service.dart';
+import '../services/database_helper.dart';
 
 class CheckInProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -30,19 +30,18 @@ class CheckInProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      final lastCheckIn = prefs.getString('last_check_in_date_$userId');
       final today = DateTime.now().toIso8601String().split('T')[0];
       
-      _hasCheckedInToday = (lastCheckIn == today);
+      final cachedCheckIn = await DatabaseHelper().getCheckIn(userId, today);
       
-      if (_hasCheckedInToday) {
-        _usedTobacco = prefs.getBool('check_in_used_tobacco_$userId');
-        _cravingLevel = prefs.getDouble('check_in_craving_level_$userId') ?? 5.0;
-        _selectedMood = prefs.getString('check_in_mood_$userId');
+      if (cachedCheckIn != null) {
+        _hasCheckedInToday = true;
+        _usedTobacco = cachedCheckIn['used_tobacco'] as bool?;
+        _cravingLevel = cachedCheckIn['craving_level'] as double? ?? 5.0;
+        _selectedMood = cachedCheckIn['mood'] as String?;
       } else {
-        // Reset daily checkin state if not checked in today
+        _hasCheckedInToday = false;
         _usedTobacco = null;
         _cravingLevel = 5.0;
         _selectedMood = null;
@@ -52,7 +51,7 @@ class CheckInProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      final quitDateStr = prefs.getString('user_quit_date_$userId');
+      final quitDateStr = await DatabaseHelper().getSetting('user_quit_date_$userId');
       final quitDate = quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(
         quitDate: quitDate,
@@ -62,12 +61,11 @@ class CheckInProvider extends ChangeNotifier {
       // If logged in, fetch from Supabase in background to verify/sync
       if (userId != 'guest') {
         try {
-          final todayStr = DateTime.now().toIso8601String().split('T')[0];
           final response = await Supabase.instance.client
               .from('daily_checkins')
               .select('used_tobacco, craving_level, mood')
               .eq('user_id', userId)
-              .eq('check_in_date', todayStr)
+              .eq('check_in_date', today)
               .maybeSingle();
 
           if (response != null) {
@@ -76,19 +74,14 @@ class CheckInProvider extends ChangeNotifier {
             _cravingLevel = (response['craving_level'] as num?)?.toDouble() ?? 5.0;
             _selectedMood = response['mood'] as String?;
 
-            // Update SharedPreferences cache
-            await prefs.setString('last_check_in_date_$userId', todayStr);
-            if (_usedTobacco != null) {
-              await prefs.setBool('check_in_used_tobacco_$userId', _usedTobacco!);
-            } else {
-              await prefs.remove('check_in_used_tobacco_$userId');
-            }
-            await prefs.setDouble('check_in_craving_level_$userId', _cravingLevel);
-            if (_selectedMood != null) {
-              await prefs.setString('check_in_mood_$userId', _selectedMood!);
-            } else {
-              await prefs.remove('check_in_mood_$userId');
-            }
+            // Update SQLite cache
+            await DatabaseHelper().saveCheckIn(
+              userId,
+              today,
+              _selectedMood ?? 'Normal',
+              _cravingLevel,
+              _usedTobacco ?? false,
+            );
             notifyListeners();
           }
         } catch (e) {
@@ -117,24 +110,22 @@ class CheckInProvider extends ChangeNotifier {
 
   Future<void> submitCheckIn() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
       
-      // Save locally first for speed
-      await prefs.setString('last_check_in_date_$userId', today);
-      if (_usedTobacco != null) {
-        await prefs.setBool('check_in_used_tobacco_$userId', _usedTobacco!);
-      }
-      await prefs.setDouble('check_in_craving_level_$userId', _cravingLevel);
-      if (_selectedMood != null) {
-        await prefs.setString('check_in_mood_$userId', _selectedMood!);
-      }
+      // Save locally to SQLite first for speed
+      await DatabaseHelper().saveCheckIn(
+        userId,
+        today,
+        _selectedMood ?? 'Normal',
+        _cravingLevel,
+        _usedTobacco ?? false,
+      );
       
       _hasCheckedInToday = true;
       notifyListeners();
 
-      final quitDateStr = prefs.getString('user_quit_date_$userId');
+      final quitDateStr = await DatabaseHelper().getSetting('user_quit_date_$userId');
       final quitDate = quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(
         quitDate: quitDate,
@@ -164,12 +155,14 @@ class CheckInProvider extends ChangeNotifier {
     _cravingLevel = 5.0;
     _selectedMood = null;
     try {
-      final prefs = await SharedPreferences.getInstance();
       final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      await prefs.remove('last_check_in_date_$userId');
-      await prefs.remove('check_in_used_tobacco_$userId');
-      await prefs.remove('check_in_craving_level_$userId');
-      await prefs.remove('check_in_mood_$userId');
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final db = await DatabaseHelper().database;
+      await db.delete(
+        'daily_checkins',
+        where: 'user_id = ? AND check_in_date = ?',
+        whereArgs: [userId, today],
+      );
     } catch (e) {
       debugPrint("Error resetting check-in cache: $e");
     }

@@ -1,6 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/database_helper.dart';
 
 class DynamicBadge {
   final String id;
@@ -131,6 +132,65 @@ class GamificationProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> _loadFromDatabaseCache(String userId) async {
+    try {
+      final cached = await DatabaseHelper().getGamification(userId);
+      if (cached != null) {
+        _currentStreak = cached['streak'] as int? ?? 0;
+        
+        final badgesJsonStr = cached['badges'] as String?;
+        if (badgesJsonStr != null && badgesJsonStr.isNotEmpty) {
+          final Map<String, dynamic> stats = jsonDecode(badgesJsonStr);
+          _longestStreak = stats['longest_streak'] as int? ?? 0;
+          _totalSmokeFreeDays = stats['total_smoke_free_days'] as int? ?? 0;
+          _totalCheckIns = stats['total_checkins'] as int? ?? 0;
+          _totalSavingsAmount = stats['total_savings'] as int? ?? 0;
+          _planDuration = stats['plan_duration'] as int? ?? 7;
+          _hasPlan = stats['has_plan'] as bool? ?? false;
+          _completedTasksCount = stats['completed_tasks'] as int? ?? 0;
+          _sosCount = stats['sos_count'] as int? ?? 0;
+          _messagesCount = stats['messages_count'] as int? ?? 0;
+          _plantStage = stats['plant_stage'] as int? ?? 0;
+          _hasPestAttack = stats['has_pest'] as bool? ?? false;
+          _pestDaysClean = stats['pest_days_clean'] as int? ?? 0;
+          _completedTrees = stats['completed_trees'] as int? ?? 0;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading gamification cache from SQLite: $e");
+    }
+  }
+
+  Future<void> _saveToDatabaseCache(String userId) async {
+    try {
+      final Map<String, dynamic> stats = {
+        'longest_streak': _longestStreak,
+        'total_smoke_free_days': _totalSmokeFreeDays,
+        'total_checkins': _totalCheckIns,
+        'total_savings': _totalSavingsAmount,
+        'plan_duration': _planDuration,
+        'has_plan': _hasPlan,
+        'completed_tasks': _completedTasksCount,
+        'sos_count': _sosCount,
+        'messages_count': _messagesCount,
+        'plant_stage': _plantStage,
+        'has_pest': _hasPestAttack,
+        'pest_days_clean': _pestDaysClean,
+        'completed_trees': _completedTrees,
+      };
+      
+      await DatabaseHelper().saveGamification(
+        userId,
+        _currentStreak * 10, // points
+        _currentStreak,
+        null,
+        jsonEncode(stats),
+      );
+    } catch (e) {
+      debugPrint("Error saving gamification cache to SQLite: $e");
+    }
+  }
+
   Future<void> loadGamificationData() async {
     _isLoading = true;
     notifyListeners();
@@ -138,26 +198,8 @@ class GamificationProvider extends ChangeNotifier {
     final userId = _supabase.auth.currentUser?.id;
     final cachedUserId = userId ?? 'guest';
 
-    // 1. Load cached values from SharedPreferences immediately for fast startup
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      _currentStreak = prefs.getInt('gamification_current_streak_$cachedUserId') ?? 0;
-      _longestStreak = prefs.getInt('gamification_longest_streak_$cachedUserId') ?? 0;
-      _totalSmokeFreeDays = prefs.getInt('gamification_smoke_free_days_$cachedUserId') ?? 0;
-      _totalCheckIns = prefs.getInt('gamification_total_checkins_$cachedUserId') ?? 0;
-      _totalSavingsAmount = prefs.getInt('gamification_total_savings_$cachedUserId') ?? 0;
-      _planDuration = prefs.getInt('gamification_plan_duration_$cachedUserId') ?? 7;
-      _hasPlan = prefs.getBool('gamification_has_plan_$cachedUserId') ?? false;
-      _completedTasksCount = prefs.getInt('gamification_completed_tasks_$cachedUserId') ?? 0;
-      _sosCount = prefs.getInt('gamification_sos_count_$cachedUserId') ?? 0;
-      _messagesCount = prefs.getInt('gamification_messages_count_$cachedUserId') ?? 0;
-      _plantStage = prefs.getInt('gamification_plant_stage_$cachedUserId') ?? 0;
-      _hasPestAttack = prefs.getBool('gamification_has_pest_$cachedUserId') ?? false;
-      _pestDaysClean = prefs.getInt('gamification_pest_days_clean_$cachedUserId') ?? 0;
-      _completedTrees = prefs.getInt('gamification_completed_trees_$cachedUserId') ?? 0;
-    } catch (e) {
-      debugPrint("Error loading cached gamification data: $e");
-    }
+    // 1. Load cached values from SQLite immediately for fast startup
+    await _loadFromDatabaseCache(cachedUserId);
 
     _isLoading = false;
     notifyListeners();
@@ -207,10 +249,14 @@ class GamificationProvider extends ChangeNotifier {
         _hasPlan = false;
       }
 
-      // Load task completions from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final completedDates = prefs.getStringList('completed_task_dates_$userId') ?? [];
-      _completedTasksCount = completedDates.length;
+      // Load task completions from SQLite
+      final planState = await DatabaseHelper().getQuitPlanState(userId);
+      if (planState != null && planState['completed_task_dates'] != null) {
+        final List<dynamic> completedDates = jsonDecode(planState['completed_task_dates']);
+        _completedTasksCount = completedDates.length;
+      } else {
+        _completedTasksCount = 0;
+      }
 
       // 4. Fetch SOS logs count
       final sosResponse = await _supabase
@@ -226,21 +272,8 @@ class GamificationProvider extends ChangeNotifier {
           .eq('sender_id', userId);
       _messagesCount = messagesResponse.length;
 
-      // Cache fresh data to SharedPreferences
-      await prefs.setInt('gamification_current_streak_$userId', _currentStreak);
-      await prefs.setInt('gamification_longest_streak_$userId', _longestStreak);
-      await prefs.setInt('gamification_smoke_free_days_$userId', _totalSmokeFreeDays);
-      await prefs.setInt('gamification_total_checkins_$userId', _totalCheckIns);
-      await prefs.setInt('gamification_total_savings_$userId', _totalSavingsAmount);
-      await prefs.setInt('gamification_plan_duration_$userId', _planDuration);
-      await prefs.setBool('gamification_has_plan_$userId', _hasPlan);
-      await prefs.setInt('gamification_completed_tasks_$userId', _completedTasksCount);
-      await prefs.setInt('gamification_sos_count_$userId', _sosCount);
-      await prefs.setInt('gamification_messages_count_$userId', _messagesCount);
-      await prefs.setInt('gamification_plant_stage_$userId', _plantStage);
-      await prefs.setBool('gamification_has_pest_$userId', _hasPestAttack);
-      await prefs.setInt('gamification_pest_days_clean_$userId', _pestDaysClean);
-      await prefs.setInt('gamification_completed_trees_$userId', _completedTrees);
+      // Cache fresh data to SQLite
+      await _saveToDatabaseCache(userId);
 
       // 6. Sync current stats to gamification_progress table
       String? lastCheckInDate;
