@@ -9,6 +9,7 @@ import '../services/backend_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
+  final Set<String> _deletedFallbackIds = {};
   bool _isLoading = false;
   Timer? _pollTimer;
 
@@ -114,7 +115,7 @@ class ChatProvider extends ChangeNotifier {
         // Fallback to local default messages if database is empty
         if (fetchedMessages.isEmpty) {
           final now = DateTime.now();
-          _messages = [
+          final allFallbacks = [
             {
               "id": "fallback-1",
               "isMe": false,
@@ -139,6 +140,7 @@ class ChatProvider extends ChangeNotifier {
               "createdAt": now.subtract(const Duration(minutes: 20)),
             },
           ];
+          _messages = allFallbacks.where((m) => !_deletedFallbackIds.contains(m["id"])).toList();
         } else {
           _messages = fetchedMessages;
         }
@@ -213,17 +215,22 @@ class ChatProvider extends ChangeNotifier {
   Future<void> deleteMessage(dynamic messageId) async {
     try {
       if (messageId == null) return;
+      final targetIdStr = messageId.toString();
+
+      if (targetIdStr.startsWith("fallback")) {
+        _deletedFallbackIds.add(targetIdStr);
+      }
       
       // Optimistically remove from local state
-      _messages.removeWhere((msg) => msg["id"] == messageId);
+      _messages.removeWhere((msg) => msg["id"].toString() == targetIdStr);
       notifyListeners();
       await _saveMessagesToCache();
 
-      if (BackendService.token != null) {
+      if (!targetIdStr.startsWith("fallback") && BackendService.token != null) {
         final response = await http
             .delete(
               Uri.parse(
-                  '${BackendService.baseUrl}/api/chat/messages/$messageId'),
+                  '${BackendService.baseUrl}/api/chat/messages/$targetIdStr'),
               headers: BackendService.headers(),
             )
             .timeout(const Duration(seconds: 10));
