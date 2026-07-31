@@ -15,7 +15,6 @@ class PeerSupportScreen extends StatefulWidget {
 }
 
 class _PeerSupportScreenState extends State<PeerSupportScreen> {
-  bool _isAnonymous = false;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -110,61 +109,9 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
             Text("অনলাইন গ্রুপ চ্যাট", style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70)),
           ],
         ),
-        actions: [
-          Row(
-            children: [
-              const Text(
-                "অজ্ঞাত",
-                style: TextStyle(fontSize: 12, color: Colors.white),
-              ),
-              Switch(
-                value: _isAnonymous,
-                activeThumbColor: AppTheme.accentYellow,
-                inactiveThumbColor: Colors.grey.shade300,
-                inactiveTrackColor: Colors.grey.shade600,
-                onChanged: (val) {
-                  setState(() {
-                    _isAnonymous = val;
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(_isAnonymous ? "আপনি এখন অজ্ঞাত হিসেবে চ্যাট করছেন" : "আপনার নাম দৃশ্যমান")),
-                  );
-                },
-              ),
-            ],
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Emergency Help Button
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            color: AppTheme.backgroundColor,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("কাউন্সেলরকে জানানো হয়েছে, দ্রুতই কেউ যোগাযোগ করবে!")),
-                );
-              },
-              icon: const Icon(Icons.support_agent, size: 28),
-              label: const Text(
-                "সরাসরি সাহায্য নিন (Ask for Help Now)",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.errorColor,
-                foregroundColor: AppTheme.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-          
           Expanded(
             child: Consumer2<ChatProvider, AuthService>(
               builder: (context, chatProvider, authService, child) {
@@ -181,7 +128,10 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                     String? imageUrl = msg["imageUrl"];
                     bool isMe = msg["isMe"] ?? false;
                     bool isCounselor = msg["isCounselor"] ?? false;
-                
+                    DateTime? createdAt = msg["createdAt"] is DateTime
+                        ? msg["createdAt"]
+                        : null;
+
                     if (isMe) {
                       final currentUser = authService.currentUser;
                       sender = currentUser?.displayName ?? "আমি";
@@ -200,6 +150,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                       senderPhoto,
                       imageUrl,
                       msg["time"] ?? "",
+                      createdAt,
                       isMe,
                       isCounselor,
                     );
@@ -277,6 +228,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
     String? senderPhoto,
     String? imageUrl,
     String time, 
+    DateTime? createdAt,
     bool isMe, 
     bool isCounselor
   ) {
@@ -318,7 +270,8 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
           Flexible(
             child: GestureDetector(
               onLongPress: () {
-                _showMessageOptions(context, messageId, text, isMe, imageUrl);
+                HapticFeedback.mediumImpact();
+                _showMessageOptions(context, messageId, text, isMe, imageUrl, createdAt);
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -420,7 +373,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4),
                                     child: Text(
-                                      _isAnonymous && !isCounselor ? "অজ্ঞাত ব্যবহারকারী" : sender,
+                                      sender,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: isCounselor ? AppTheme.accentOrange : const Color(0xFF075E54),
@@ -503,14 +456,33 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
     );
   }
 
-  void _showMessageOptions(BuildContext context, dynamic messageId, String text, bool isMe, String? imageUrl) {
+  void _showMessageOptions(
+    BuildContext context, 
+    dynamic messageId, 
+    String text, 
+    bool isMe, 
+    String? imageUrl,
+    DateTime? createdAt,
+  ) {
+    bool canEdit = false;
+    if (isMe && imageUrl == null) {
+      if (createdAt != null) {
+        final diffInMinutes = DateTime.now().difference(createdAt).inMinutes;
+        if (diffInMinutes < 5) {
+          canEdit = true;
+        }
+      } else {
+        canEdit = true;
+      }
+    }
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       backgroundColor: Colors.white,
-      builder: (context) {
+      builder: (modalCtx) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -529,7 +501,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                   leading: const Icon(Icons.copy_rounded, color: Color(0xFF075E54)),
                   title: const Text("কপি করুন", style: TextStyle(fontWeight: FontWeight.w600)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(modalCtx);
                     Clipboard.setData(ClipboardData(text: text));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("মেসেজ কপি করা হয়েছে!")),
@@ -538,11 +510,29 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                 ),
               if (isMe && imageUrl == null)
                 ListTile(
-                  leading: const Icon(Icons.edit_rounded, color: Colors.blue),
-                  title: const Text("সম্পাদনা করুন (Edit)", style: TextStyle(fontWeight: FontWeight.w600)),
+                  leading: Icon(
+                    Icons.edit_rounded, 
+                    color: canEdit ? Colors.blue : Colors.grey,
+                  ),
+                  title: Text(
+                    "সম্পাদনা করুন (Edit)", 
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: canEdit ? Colors.black87 : Colors.grey,
+                    ),
+                  ),
                   onTap: () {
-                    Navigator.pop(context);
-                    _showEditMessageDialog(context, messageId, text);
+                    Navigator.pop(modalCtx);
+                    if (canEdit) {
+                      _showEditMessageDialog(context, messageId, text);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("মেসেজ দেওয়ার ৫ মিনিটের বেশি সময় পার হয়ে গেছে! এটি আর এডিট করা সম্ভব নয়।"),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
                   },
                 ),
               if (isMe)
@@ -550,7 +540,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                   leading: const Icon(Icons.delete_rounded, color: Colors.red),
                   title: const Text("ডিলিট করুন", style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(modalCtx);
                     _confirmDeleteMessage(context, messageId);
                   },
                 ),

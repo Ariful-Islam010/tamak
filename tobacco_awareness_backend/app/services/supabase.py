@@ -15,7 +15,7 @@ def supabase_req(method: str, path: str, token: str = None, json_data=None, para
     else:
         headers["Authorization"] = f"Bearer {settings.SUPABASE_ANON_KEY}"
 
-    if method in ["POST", "PATCH", "PUT"]:
+    if method in ["POST", "PATCH", "PUT", "DELETE"]:
         headers["Prefer"] = "return=representation"
 
     try:
