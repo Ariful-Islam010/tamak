@@ -30,14 +30,19 @@ async def send_chat_message(message_data: dict, authorization: str = Depends(req
 @router.delete("/messages/{message_id}")
 async def delete_chat_message(message_id: str, authorization: str = Depends(require_auth)):
     """Delete a specific message by ID."""
-    # Attempt delete using service role key to bypass restrictive RLS policies
-    res = supabase_req("DELETE", f"/rest/v1/peer_support_messages?id=eq.{message_id}", token=authorization, use_service_role=True)
-    if res.status_code >= 400:
-        # Fallback to user token
-        res = supabase_req("DELETE", f"/rest/v1/peer_support_messages?id=eq.{message_id}", token=authorization)
-        if res.status_code >= 400:
-            raise HTTPException(status_code=res.status_code, detail=res.text)
-    return {"status": "success"}
+    # First attempt deletion using user token so RLS policy (auth.uid() = sender_id) matches
+    res = supabase_req("DELETE", f"/rest/v1/peer_support_messages?id=eq.{message_id}", token=authorization)
+    
+    # Check if deletion succeeded and actually deleted rows
+    if res.status_code < 400 and isinstance(res.json(), list) and len(res.json()) > 0:
+        return {"status": "success"}
+
+    # Fallback to service role key to bypass restrictive RLS policies if user token failed or returned 0 rows
+    res_sr = supabase_req("DELETE", f"/rest/v1/peer_support_messages?id=eq.{message_id}", token=authorization, use_service_role=True)
+    if res_sr.status_code < 400:
+        return {"status": "success"}
+    
+    raise HTTPException(status_code=res.status_code if res.status_code >= 400 else 400, detail=res.text or "Message deletion failed")
 
 
 @router.put("/messages/{message_id}")

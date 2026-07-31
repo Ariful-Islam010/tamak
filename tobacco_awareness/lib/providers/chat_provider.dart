@@ -21,6 +21,8 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    final savedDeleted = await DatabaseHelper().getDeletedMessageIds();
+    _deletedMessageIds.addAll(savedDeleted);
     await _loadMessagesFromCache();
     await loadMessages();
     // Poll every 4 seconds for new messages (replaces Supabase Realtime)
@@ -221,6 +223,7 @@ class ChatProvider extends ChangeNotifier {
       final targetIdStr = messageId.toString();
 
       _deletedMessageIds.add(targetIdStr);
+      await DatabaseHelper().saveDeletedMessageIds(_deletedMessageIds);
       
       // Optimistically remove from local state
       _messages.removeWhere((msg) => msg["id"].toString() == targetIdStr);

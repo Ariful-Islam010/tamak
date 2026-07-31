@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
@@ -241,5 +242,21 @@ class DatabaseHelper {
       where: 'key = ?',
       whereArgs: [key],
     );
+  }
+
+  // ─── DELETED CHAT MESSAGES HELPERS ───
+  Future<void> saveDeletedMessageIds(Set<String> ids) async {
+    await saveSetting('deleted_chat_message_ids', jsonEncode(ids.toList()));
+  }
+
+  Future<Set<String>> getDeletedMessageIds() async {
+    final raw = await getSetting('deleted_chat_message_ids');
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final List<dynamic> list = jsonDecode(raw);
+      return list.map((e) => e.toString()).toSet();
+    } catch (_) {
+      return {};
+    }
   }
 }
