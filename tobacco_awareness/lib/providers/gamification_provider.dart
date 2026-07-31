@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
+import '../utils/time_utils.dart';
 
 class DynamicBadge {
   final String id;
@@ -287,12 +288,11 @@ class GamificationProvider extends ChangeNotifier {
     smokeFreeDates.sort((a, b) => b.compareTo(a)); // Descending
 
     if (smokeFreeDates.isNotEmpty) {
-      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      final todayStr = TimeUtils.todayBstDateString;
       final latestStr =
           smokeFreeDates[0].toIso8601String().split('T')[0];
-      final daysDiff = DateTime.parse(todayStr)
-          .difference(DateTime.parse(latestStr))
-          .inDays;
+      final daysDiff = TimeUtils.daysDifferenceBst(
+          DateTime.parse(todayStr), DateTime.parse(latestStr));
 
       if (daysDiff <= 1) {
         currentStreak = 1;
@@ -374,7 +374,7 @@ class GamificationProvider extends ChangeNotifier {
         'current_streak': _currentStreak,
         'longest_streak': _longestStreak,
         'badges': unlockedBadges.map((b) => b.id).toList(),
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': TimeUtils.nowBst.toIso8601String(),
       };
       if (lastCheckInDate != null) {
         dataToSync['last_check_in_date'] = lastCheckInDate;

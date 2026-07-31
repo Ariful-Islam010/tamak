@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../services/backend_service.dart';
+import '../utils/time_utils.dart';
 
 class MoneySaverProvider extends ChangeNotifier {
   int _totalSavings = 0;
@@ -50,7 +51,7 @@ class MoneySaverProvider extends ChangeNotifier {
       _totalSavings = prefs.getInt('total_savings_$userId') ?? 0;
 
       final lastAddedDate = prefs.getString('last_money_added_date_$userId');
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
       _hasAddedMoneyToday = (lastAddedDate == today);
 
       final dreamsStr = prefs.getString('dreams_$userId');
@@ -150,7 +151,7 @@ class MoneySaverProvider extends ChangeNotifier {
       _totalSavings += amount;
 
       final userId = BackendService.userId ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_money_added_date_$userId', today);
       _hasAddedMoneyToday = true;

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
+import '../utils/time_utils.dart';
 
 class QuitPlanProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -49,7 +50,7 @@ class QuitPlanProvider extends ChangeNotifier {
 
     try {
       final userId = BackendService.userId ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
 
       final planState = await DatabaseHelper().getQuitPlanState(userId);
 
@@ -187,7 +188,7 @@ class QuitPlanProvider extends ChangeNotifier {
   Future<void> submitPlanResponse(bool completed) async {
     try {
       final userId = BackendService.userId ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
 
       final planState = await DatabaseHelper().getQuitPlanState(userId);
       List<String> completedDates = [];

@@ -6,6 +6,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
+import '../utils/time_utils.dart';
 
 class SosEmergencyScreen extends StatefulWidget {
   const SosEmergencyScreen({super.key});
@@ -64,7 +65,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
 
   Future<void> _loadData() async {
     final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now().toIso8601String().split('T')[0];
+    final today = TimeUtils.todayBstDateString;
     final friendsJson = prefs.getString('sos_friends') ?? '[]';
     setState(() {
       _waterDone = prefs.getString('water_done_date') == today;
@@ -82,7 +83,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
 
   Future<void> _markWaterDone() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('water_done_date', DateTime.now().toIso8601String().split('T')[0]);
+    await prefs.setString('water_done_date', TimeUtils.todayBstDateString);
     setState(() => _waterDone = true);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,7 +94,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
 
   Future<void> _markWalkingDone() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('walking_done_date', DateTime.now().toIso8601String().split('T')[0]);
+    await prefs.setString('walking_done_date', TimeUtils.todayBstDateString);
     setState(() => _walkingDone = true);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

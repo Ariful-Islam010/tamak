@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
+import '../utils/time_utils.dart';
 
 class CheckInProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -28,7 +29,7 @@ class CheckInProvider extends ChangeNotifier {
 
     try {
       final userId = BackendService.userId ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
 
       final cachedCheckIn = await DatabaseHelper().getCheckIn(userId, today);
 
@@ -114,7 +115,7 @@ class CheckInProvider extends ChangeNotifier {
   Future<void> submitCheckIn() async {
     try {
       final userId = BackendService.userId ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
+      final today = TimeUtils.todayBstDateString;
 
       // Save locally to SQLite first for speed
       await DatabaseHelper().saveCheckIn(

@@ -13,6 +13,7 @@ import 'gamification_screen.dart';
 import 'peer_support_screen.dart';
 import 'profile_screen.dart';
 import 'education_info_screen.dart';
+import '../utils/time_utils.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -55,7 +56,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   String _getGreeting() {
-    final hour = DateTime.now().hour;
+    final hour = TimeUtils.nowBst.hour;
     if (hour < 12) return "সুপ্রভাত,";
     if (hour < 17) return "শুভ দুপুর,";
     if (hour < 20) return "শুভ সন্ধ্যা,";
@@ -70,7 +71,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
     int smokeFreeDays = 0;
     if (user?.quitDate != null) {
-      final diff = DateTime.now().difference(user!.quitDate!).inDays + 1;
+      final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1;
       if (diff >= 1) smokeFreeDays = diff;
     }
 
@@ -163,7 +164,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       Expanded(
                         child: Text(
                           user?.quitDate != null
-                              ? "দারুণ! আপনি তামাকমুক্ত জীবনের ${_toBengaliOrdinal(DateTime.now().difference(user!.quitDate!).inDays + 1)} দিনে আছেন! 🌿"
+                              ? "দারুণ! আপনি তামাকমুক্ত জীবনের ${_toBengaliOrdinal(TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1)} দিনে আছেন! 🌿"
                               : "আজই হোক তামাকমুক্ত জীবনের প্রথম দিন! 🌿",
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.white, fontWeight: FontWeight.bold, height: 1.4,
