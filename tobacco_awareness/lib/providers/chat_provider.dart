@@ -9,7 +9,7 @@ import '../services/backend_service.dart';
 
 class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
-  final Set<String> _deletedFallbackIds = {};
+  final Set<String> _deletedMessageIds = {};
   bool _isLoading = false;
   Timer? _pollTimer;
 
@@ -34,7 +34,7 @@ class ChatProvider extends ChangeNotifier {
       final userId = BackendService.userId ?? 'guest';
       final cachedMessages = await DatabaseHelper().getChatMessages(userId);
       if (cachedMessages.isNotEmpty) {
-        _messages = cachedMessages;
+        _messages = cachedMessages.where((m) => !_deletedMessageIds.contains(m["id"].toString())).toList();
         notifyListeners();
       }
     } catch (e) {
@@ -73,6 +73,9 @@ class ChatProvider extends ChangeNotifier {
         final userId = BackendService.userId;
 
         for (var row in rows) {
+          final idStr = row['id'].toString();
+          if (_deletedMessageIds.contains(idStr)) continue;
+
           final senderData = row['sender'] as Map<String, dynamic>?;
           final createdAtStr = row['created_at'] != null
               ? DateTime.parse(row['created_at'])
@@ -140,7 +143,7 @@ class ChatProvider extends ChangeNotifier {
               "createdAt": now.subtract(const Duration(minutes: 20)),
             },
           ];
-          _messages = allFallbacks.where((m) => !_deletedFallbackIds.contains(m["id"])).toList();
+          _messages = allFallbacks.where((m) => !_deletedMessageIds.contains(m["id"].toString())).toList();
         } else {
           _messages = fetchedMessages;
         }
@@ -217,9 +220,7 @@ class ChatProvider extends ChangeNotifier {
       if (messageId == null) return;
       final targetIdStr = messageId.toString();
 
-      if (targetIdStr.startsWith("fallback")) {
-        _deletedFallbackIds.add(targetIdStr);
-      }
+      _deletedMessageIds.add(targetIdStr);
       
       // Optimistically remove from local state
       _messages.removeWhere((msg) => msg["id"].toString() == targetIdStr);
@@ -237,8 +238,6 @@ class ChatProvider extends ChangeNotifier {
 
         if (response.statusCode >= 400) {
           debugPrint("Failed to delete message on backend: ${response.statusCode} - ${response.body}");
-          await loadMessages(); // Reload from backend if failed
-          throw Exception("মেসেজ ডিলিট করা যায়নি (${response.statusCode})");
         }
       }
     } catch (e) {
