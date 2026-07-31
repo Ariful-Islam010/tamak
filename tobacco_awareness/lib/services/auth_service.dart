@@ -1,12 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'notification_service.dart';
 import 'database_helper.dart';
+import 'backend_service.dart';
 
 class AuthService extends ChangeNotifier {
-  final SupabaseClient _supabase = Supabase.instance.client;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   UserModel? _currentUser;
@@ -18,103 +20,168 @@ class AuthService extends ChangeNotifier {
   bool get initialSessionChecked => _initialSessionChecked;
 
   AuthService() {
-    _supabase.auth.onAuthStateChange.listen(_onAuthStateChanged);
+    _restoreSession();
   }
 
-  Future<void> _onAuthStateChanged(AuthState data) async {
-    final user = data.session?.user;
-    if (user == null) {
-      _currentUser = null;
-      // Cancel notifications when user logs out
-      await NotificationService().cancelDailyNotifications();
-    } else {
-      await _fetchAndSetProfile(user);
-      // Schedule daily notifications when user logs in
+  // ─── SESSION MANAGEMENT ───
+  Future<void> _loadCachedProfile(String userId) async {
+    try {
+      final cachedProfileJson =
+          await DatabaseHelper().getSetting('cached_user_profile_$userId');
+      if (cachedProfileJson != null && cachedProfileJson.isNotEmpty) {
+        final data = jsonDecode(cachedProfileJson);
+        if (data is Map<String, dynamic>) {
+          final quitDateVal = data['quit_date'];
+          _currentUser = UserModel(
+            uid: userId,
+            email: data['email'],
+            displayName: data['display_name'],
+            photoUrl: data['photo_url'],
+            educationalInfo: data['educational_info'],
+            planDuration: data['plan_duration'],
+            quitDate: quitDateVal != null ? DateTime.parse(quitDateVal) : null,
+            aiQuitPlan: data['ai_quit_plan'],
+            age: data['age'],
+            gender: data['gender'],
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading cached profile: $e");
+    }
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final token = await DatabaseHelper().getSetting('auth_access_token');
+      final userId = await DatabaseHelper().getSetting('auth_user_id');
+      if (token != null && userId != null) {
+        BackendService.setAuth(token, userId);
+        await _loadCachedProfile(userId);
+        await _fetchAndSetProfile();
+      }
+    } catch (e) {
+      debugPrint("Error restoring session: $e");
+    } finally {
+      _initialSessionChecked = true;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveSession(String token, String userId) async {
+    BackendService.setAuth(token, userId);
+    await DatabaseHelper().saveSetting('auth_access_token', token);
+    await DatabaseHelper().saveSetting('auth_user_id', userId);
+  }
+
+  Future<void> _clearSession() async {
+    final uid = BackendService.userId;
+    if (uid != null) {
+      await DatabaseHelper().removeSetting('cached_user_profile_$uid');
+    }
+    BackendService.setAuth(null, null);
+    _currentUser = null;
+    await DatabaseHelper().removeSetting('auth_access_token');
+    await DatabaseHelper().removeSetting('auth_user_id');
+  }
+
+  // ─── PROFILE FETCHING ───
+  Future<void> _fetchAndSetProfile() async {
+    if (BackendService.token == null || BackendService.userId == null) return;
+    try {
+      final response = await http.get(
+        Uri.parse('${BackendService.baseUrl}/api/profile'),
+        headers: BackendService.headers(),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final rawBody = response.body;
+        if (rawBody == 'null' || rawBody.isEmpty) {
+          _currentUser ??= UserModel(uid: BackendService.userId!);
+          return;
+        }
+        final data = jsonDecode(rawBody);
+        if (data == null) {
+          _currentUser ??= UserModel(uid: BackendService.userId!);
+          return;
+        }
+
+        await DatabaseHelper().saveSetting(
+            'cached_user_profile_${BackendService.userId}', rawBody);
+
+        final quitDateVal = data['quit_date'];
+        if (quitDateVal != null) {
+          await DatabaseHelper().saveSetting(
+              'user_quit_date_${BackendService.userId}', quitDateVal);
+        } else {
+          await DatabaseHelper()
+              .removeSetting('user_quit_date_${BackendService.userId}');
+        }
+        _currentUser = UserModel(
+          uid: BackendService.userId!,
+          email: data['email'],
+          displayName: data['display_name'],
+          photoUrl: data['photo_url'],
+          educationalInfo: data['educational_info'],
+          planDuration: data['plan_duration'],
+          quitDate: quitDateVal != null ? DateTime.parse(quitDateVal) : null,
+          aiQuitPlan: data['ai_quit_plan'],
+          age: data['age'],
+          gender: data['gender'],
+        );
+        await _setupNotificationsAndWelcome();
+      } else if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint("Auth error in _fetchAndSetProfile. Clearing session.");
+        await _clearSession();
+      }
+    } catch (e) {
+      debugPrint("Error fetching profile from backend: $e");
+    }
+  }
+
+  Future<void> _setupNotificationsAndWelcome() async {
+    try {
       final permission = await NotificationService().requestPermission();
       if (permission) {
         await NotificationService().scheduleAllDailyNotifications(
           quitDate: _currentUser?.quitDate,
         );
-        // Show welcome notification only once on first signup / login
-        final hasShownWelcomeStr = await DatabaseHelper().getSetting('welcome_notification_shown_${user.id}');
+        final uid = BackendService.userId;
+        final hasShownWelcomeStr =
+            await DatabaseHelper().getSetting('welcome_notification_shown_$uid');
         final hasShownWelcome = hasShownWelcomeStr == 'true';
         if (!hasShownWelcome && _currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(
             _currentUser!.displayName!.split(' ').first,
           );
-          await DatabaseHelper().saveSetting('welcome_notification_shown_${user.id}', 'true');
+          await DatabaseHelper()
+              .saveSetting('welcome_notification_shown_$uid', 'true');
         }
-      }
-    }
-    _initialSessionChecked = true;
-    notifyListeners();
-  }
-
-  Future<void> _fetchAndSetProfile(User user) async {
-    try {
-      final profileData = await _supabase
-          .from('user_profiles')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (profileData != null) {
-        final quitDateVal = profileData['quit_date'];
-        if (quitDateVal != null) {
-          await DatabaseHelper().saveSetting('user_quit_date_${user.id}', quitDateVal);
-        } else {
-          await DatabaseHelper().removeSetting('user_quit_date_${user.id}');
-        }
-
-        _currentUser = UserModel(
-          uid: user.id,
-          email: user.email,
-          displayName: profileData['display_name'] ?? user.userMetadata?['full_name'],
-          photoUrl: profileData['photo_url'] ?? user.userMetadata?['avatar_url'],
-          educationalInfo: profileData['educational_info'],
-          planDuration: profileData['plan_duration'],
-          quitDate: quitDateVal != null
-              ? DateTime.parse(quitDateVal)
-              : null,
-          aiQuitPlan: profileData['ai_quit_plan'],
-          age: profileData['age'],
-          gender: profileData['gender'],
-        );
-      } else {
-        _currentUser = UserModel(
-          uid: user.id,
-          email: user.email,
-          displayName: user.userMetadata?['full_name'],
-          photoUrl: user.userMetadata?['avatar_url'],
-        );
       }
     } catch (e) {
-      debugPrint("Error fetching profile: $e");
-      _currentUser = UserModel(
-        uid: user.id,
-        email: user.email,
-        displayName: user.userMetadata?['full_name'],
-        photoUrl: user.userMetadata?['avatar_url'],
-      );
+      debugPrint("Error in _setupNotificationsAndWelcome: $e");
     }
   }
+
+  // ─── PUBLIC API ───
 
   /// Call this after onboarding to persist all profile fields.
   Future<void> updateUserData(UserModel updatedUser) async {
     _currentUser = updatedUser;
     notifyListeners();
     try {
-      final user = _supabase.auth.currentUser;
-      if (user != null) {
+      if (BackendService.token != null && BackendService.userId != null) {
         if (updatedUser.quitDate != null) {
-          await DatabaseHelper().saveSetting('user_quit_date_${user.id}', updatedUser.quitDate!.toIso8601String());
+          await DatabaseHelper().saveSetting(
+              'user_quit_date_${BackendService.userId}',
+              updatedUser.quitDate!.toIso8601String());
         } else {
-          await DatabaseHelper().removeSetting('user_quit_date_${user.id}');
+          await DatabaseHelper()
+              .removeSetting('user_quit_date_${BackendService.userId}');
         }
-
-        await _supabase.from('user_profiles').upsert({
-          'id': user.id,
-          'email': user.email,
+        final body = {
+          'id': BackendService.userId,
+          'email': updatedUser.email,
           'display_name': updatedUser.displayName,
           'photo_url': updatedUser.photoUrl,
           'educational_info': updatedUser.educationalInfo,
@@ -124,33 +191,60 @@ class AuthService extends ChangeNotifier {
           'age': updatedUser.age,
           'gender': updatedUser.gender,
           'updated_at': DateTime.now().toIso8601String(),
-        });
+        };
+        await DatabaseHelper().saveSetting(
+            'cached_user_profile_${BackendService.userId}', jsonEncode(body));
+        await http
+            .post(
+              Uri.parse('${BackendService.baseUrl}/api/profile'),
+              headers: BackendService.headers(),
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 15));
       }
     } catch (e) {
-      debugPrint("Error syncing user data with Supabase: $e");
+      debugPrint("Error syncing user data with backend: $e");
     }
   }
 
-  /// Refresh profile from database (call this after login if needed).
+  /// Refresh profile from backend.
   Future<void> refreshProfile() async {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      await _fetchAndSetProfile(user);
+    if (BackendService.token != null) {
+      await _fetchAndSetProfile();
       notifyListeners();
     }
   }
 
-  Future<AuthResponse?> signInWithEmail(String email, String password) async {
+  Future<Map<String, dynamic>?> signInWithEmail(
+      String email, String password) async {
     try {
       _isLoading = true;
       notifyListeners();
-      final AuthResponse response = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      _isLoading = false;
-      notifyListeners();
-      return response;
+      final response = await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/auth/signin'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['access_token'] as String?;
+        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        if (token != null && userId != null) {
+          await _saveSession(token, userId);
+          await _fetchAndSetProfile();
+        }
+        _isLoading = false;
+        notifyListeners();
+        return data;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        final err = jsonDecode(response.body);
+        throw err is Map ? err['detail'] ?? err.toString() : err.toString();
+      }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -159,17 +253,36 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<AuthResponse?> signUpWithEmail(String email, String password) async {
+  Future<Map<String, dynamic>?> signUpWithEmail(
+      String email, String password) async {
     try {
       _isLoading = true;
       notifyListeners();
-      final AuthResponse response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
-      _isLoading = false;
-      notifyListeners();
-      return response;
+      final response = await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/auth/signup'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['access_token'] as String?;
+        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        if (token != null && userId != null) {
+          await _saveSession(token, userId);
+          await _fetchAndSetProfile();
+        }
+        _isLoading = false;
+        notifyListeners();
+        return data;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        final err = jsonDecode(response.body);
+        throw err is Map ? err['detail'] ?? err.toString() : err.toString();
+      }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -178,27 +291,34 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Upload photo to backend (which uploads to Cloudinary) and update profile.
   Future<void> updateProfilePhoto(String photoUrl) async {
     try {
       _isLoading = true;
       notifyListeners();
-      final user = _supabase.auth.currentUser;
-      if (user != null) {
-        await _supabase.from('user_profiles').upsert({
-          'id': user.id,
-          'email': user.email,
+      if (BackendService.token != null && BackendService.userId != null) {
+        final body = {
+          'id': BackendService.userId,
+          'email': _currentUser?.email,
+          'display_name': _currentUser?.displayName,
           'photo_url': photoUrl,
-          'display_name': _currentUser?.displayName ?? user.userMetadata?['full_name'],
           'updated_at': DateTime.now().toIso8601String(),
-        });
+        };
+        await http
+            .post(
+              Uri.parse('${BackendService.baseUrl}/api/profile'),
+              headers: BackendService.headers(),
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 15));
         if (_currentUser != null) {
           _currentUser = _currentUser!.copyWith(photoUrl: photoUrl);
         } else {
           _currentUser = UserModel(
-            uid: user.id,
-            email: user.email,
+            uid: BackendService.userId!,
+            email: _currentUser?.email,
             photoUrl: photoUrl,
-            displayName: user.userMetadata?['full_name'],
+            displayName: _currentUser?.displayName,
           );
         }
       }
@@ -212,7 +332,31 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  Future<AuthResponse?> signInWithGoogle() async {
+  /// Upload an image File to the backend and return the secure URL.
+  Future<String?> uploadProfilePhoto(File file) async {
+    if (BackendService.token == null) return null;
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${BackendService.baseUrl}/api/upload'),
+      );
+      request.headers['Authorization'] = 'Bearer ${BackendService.token}';
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final responseData = await streamed.stream.bytesToString();
+      if (streamed.statusCode == 200) {
+        final data = jsonDecode(responseData);
+        return data['secure_url'] as String?;
+      }
+      debugPrint('Upload failed: ${streamed.statusCode} $responseData');
+      return null;
+    } catch (e) {
+      debugPrint('Error uploading photo: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> signInWithGoogle() async {
     try {
       _isLoading = true;
       notifyListeners();
@@ -232,19 +376,40 @@ class AuthService extends ChangeNotifier {
       }
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
-      final accessToken = googleAuth.accessToken;
       final idToken = googleAuth.idToken;
-      if (accessToken == null || idToken == null) {
-        throw 'No Access Token or ID Token found.';
+      final accessToken = googleAuth.accessToken;
+      if (idToken == null) {
+        throw 'No ID Token found.';
       }
-      final AuthResponse response = await _supabase.auth.signInWithIdToken(
-        provider: OAuthProvider.google,
-        idToken: idToken,
-        accessToken: accessToken,
-      );
-      _isLoading = false;
-      notifyListeners();
-      return response;
+
+      final body = <String, String>{'idToken': idToken};
+      if (accessToken != null) body['accessToken'] = accessToken;
+
+      final response = await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/auth/signin-google'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final token = data['access_token'] as String?;
+        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        if (token != null && userId != null) {
+          await _saveSession(token, userId);
+          await _fetchAndSetProfile();
+        }
+        _isLoading = false;
+        notifyListeners();
+        return data;
+      } else {
+        _isLoading = false;
+        notifyListeners();
+        final err = jsonDecode(response.body);
+        throw err is Map ? err['detail'] ?? err.toString() : err.toString();
+      }
     } catch (e) {
       _isLoading = false;
       notifyListeners();
@@ -263,8 +428,10 @@ class AuthService extends ChangeNotifier {
         debugPrint("Google disconnect error: $e");
       }
       await _googleSignIn.signOut();
-      await _supabase.auth.signOut();
-      _currentUser = null;
+      await _clearSession();
+      NotificationService().cancelDailyNotifications().catchError((e) {
+        debugPrint("Error cancelling notifications: $e");
+      });
       _isLoading = false;
       notifyListeners();
     } catch (e) {

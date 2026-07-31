@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
+import 'backend_service.dart';
 
 class GroqAiService {
-  // For physical device testing, use your computer's local IP address
-  static const String _baseUrl = 'http://192.168.10.55:8000';
+  static String get _baseUrl => BackendService.baseUrl;
 
   static Future<String?> generateQuitPlan({
     required int durationInDays,

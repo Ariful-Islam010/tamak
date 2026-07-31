@@ -4,9 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
-import 'profile_assessment_screen.dart';
 import 'home_dashboard_screen.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -76,15 +74,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     // Wait at least 1.5 seconds for a premium feel
     Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-      
-      final session = Supabase.instance.client.auth.currentSession;
-      if (session == null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const AuthScreen()),
-        );
-        return;
-      }
 
       final user = context.read<AuthService>().currentUser;
       if (user == null) {
@@ -99,9 +88,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           user.age == null ||
           user.gender == null ||
           user.quitDate == null) {
+        // Profile incomplete - sign out and redirect to Auth screen
+        context.read<AuthService>().signOut();
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const ProfileAssessmentScreen()),
+          MaterialPageRoute(builder: (_) => const AuthScreen()),
         );
         return;
       }

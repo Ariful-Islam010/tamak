@@ -233,7 +233,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   String _getNetworkErrorMessage(dynamic error) {
     final errorStr = error.toString().toLowerCase();
 
-    // Network / internet connection errors
+    // Google Sign-In SHA-1 / Developer Error (ApiException 10)
+    if (errorStr.contains('10:') ||
+        errorStr.contains('developer_error') ||
+        errorStr.contains('api_exception')) {
+      return 'Google Sign-In কনফিগারেশন ত্রুটি!\n\nFirebase Console-এ অ্যাপের SHA-1 Fingerprint যোগ করা হয়নি।';
+    }
+
+    // Network / internet connection / Backend URL unreachable errors
     if (error is SocketException ||
         errorStr.contains('socketexception') ||
         errorStr.contains('network is unreachable') ||
@@ -243,14 +250,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
         errorStr.contains('no route to host') ||
         errorStr.contains('network_error') ||
         errorStr.contains('networkerror')) {
-      return 'ইন্টারনেট সংযোগ নেই!\n\nঅনুগ্রহ করে আপনার নেটওয়ার্ক চেক করুন এবং আবার চেষ্টা করুন।';
+      return 'সার্ভার বা ইন্টারনেট সংযোগে সমস্যা!\n\nআপনার backend (BACKEND_URL) সঠিক আছে কিনা অথবা মোবাইল ইন্টারনেটের সংযোগ চেক করুন।';
     }
 
     // Timeout errors
     if (error is TimeoutException ||
         errorStr.contains('timeout') ||
         errorStr.contains('timed out')) {
-      return 'সংযোগ স্থাপনে অনেক সময় লাগছে!\n\nইন্টারনেট সংযোগ দুর্বল হতে পারে। একটু পরে আবার চেষ্টা করুন।';
+      return 'সংযোজক সার্ভারে সাড়া পাওয়া যাচ্ছে না!\n\nBACKEND_URL অথবা ইন্টারনেট সংযোগ দুর্বল হতে পারে।';
     }
 
     // Google Sign-In cancelled
@@ -263,7 +270,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     // Google Sign-In failed
     if (errorStr.contains('sign_in_failed') ||
         errorStr.contains('google')) {
-      return 'গুগল সাইন-ইন ব্যর্থ হয়েছে!\n\nইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।';
+      return 'গুগল সাইন-ইন ব্যর্থ হয়েছে!\n\nFirebase/Google Credentials এবং নেটওয়ার্ক চেক করুন।';
     }
 
     // Server/API errors
@@ -274,8 +281,8 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       return 'সার্ভারে সমস্যা হচ্ছে!\n\nকিছুক্ষণ পরে আবার চেষ্টা করুন।';
     }
 
-    // Default network-related message (no raw exception shown)
-    return 'লগইন করতে সমস্যা হয়েছে!\n\nইন্টারনেট সংযোগ চেক করুন এবং আবার চেষ্টা করুন।';
+    // Default message
+    return 'লগইন করতে সমস্যা হয়েছে: $error';
   }
 
   /// Error dialog দেখায় - snackbar এর চেয়ে বেশি visible

@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
-import '../services/cloudinary_service.dart';
 import '../services/notification_service.dart';
 import 'auth_screen.dart';
 import 'privacy_security_screen.dart';
@@ -79,6 +78,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
+    // Capture before any async gap
+    final authService = context.read<AuthService>();
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
@@ -114,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       final File file = File(pickedFile.path);
-      final String? secureUrl = await CloudinaryService.uploadImage(file);
+      final String? secureUrl = await authService.uploadProfilePhoto(file);
 
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();

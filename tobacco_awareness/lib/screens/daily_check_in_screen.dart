@@ -35,7 +35,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
     _animController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CheckInProvider>().reset();
+      context.read<CheckInProvider>().clearDraft();
     });
   }
 

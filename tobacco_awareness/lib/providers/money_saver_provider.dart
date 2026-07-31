@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
+import '../services/backend_service.dart';
 
 class MoneySaverProvider extends ChangeNotifier {
   int _totalSavings = 0;
@@ -39,24 +40,19 @@ class MoneySaverProvider extends ChangeNotifier {
 
   MoneySaverProvider() {
     loadSavingsData();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn || data.event == AuthChangeEvent.signedOut) {
-        loadSavingsData();
-      }
-    });
   }
 
   Future<void> loadSavingsData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      
+      final userId = BackendService.userId ?? 'guest';
+
       _totalSavings = prefs.getInt('total_savings_$userId') ?? 0;
-      
+
       final lastAddedDate = prefs.getString('last_money_added_date_$userId');
       final today = DateTime.now().toIso8601String().split('T')[0];
       _hasAddedMoneyToday = (lastAddedDate == today);
-      
+
       final dreamsStr = prefs.getString('dreams_$userId');
       if (dreamsStr != null) {
         final List<dynamic> decoded = json.decode(dreamsStr);
@@ -70,45 +66,55 @@ class MoneySaverProvider extends ChangeNotifier {
         _dreams = [];
       }
 
-      // Sync from Supabase if online
-      if (userId != 'guest') {
+      // Sync from backend if online
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          // Select amount from savings_logs table
-          final response = await Supabase.instance.client
-              .from('savings_logs')
-              .select('amount')
-              .eq('user_id', userId);
-              
-          int sum = 0;
-          for (var row in response) {
-            sum += (row['amount'] as num).toInt();
+          // Select amount from savings_logs via backend
+          final savingsRes = await http
+              .get(
+                Uri.parse('${BackendService.baseUrl}/api/savings'),
+                headers: BackendService.headers(),
+              )
+              .timeout(const Duration(seconds: 10));
+
+          if (savingsRes.statusCode == 200) {
+            final List<dynamic> rows = jsonDecode(savingsRes.body);
+            int sum = 0;
+            for (var row in rows) {
+              sum += (row['amount'] as num).toInt();
+            }
+            _totalSavings = sum;
+            await prefs.setInt('total_savings_$userId', _totalSavings);
           }
-          _totalSavings = sum;
-          await prefs.setInt('total_savings_$userId', _totalSavings);
 
-          final goalsData = await Supabase.instance.client
-              .from('money_saver_goals')
-              .select()
-              .eq('user_id', userId)
-              .order('created_at', ascending: false);
-          if (goalsData.isNotEmpty) {
-            _dreams = goalsData.map((e) => {
-              "title": e["title"],
-              "icon": Icons.star,
-              "target": (e["target_amount"] as num).toInt(),
-              "color": AppTheme.primaryBlue,
-            }).toList();
+          final goalsRes = await http
+              .get(
+                Uri.parse('${BackendService.baseUrl}/api/goals'),
+                headers: BackendService.headers(),
+              )
+              .timeout(const Duration(seconds: 10));
 
-            final dreamsEncoded = _dreams.map((e) => {
-              "title": e["title"],
-              "icon": (e["icon"] as IconData).codePoint,
-              "target": e["target"],
-              "color": (e["color"] as Color).toARGB32(),
-            }).toList();
-            await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
+          if (goalsRes.statusCode == 200) {
+            final List<dynamic> goalsData = jsonDecode(goalsRes.body);
+            if (goalsData.isNotEmpty) {
+              _dreams = goalsData.map((e) => {
+                "title": e["title"],
+                "icon": Icons.star,
+                "target": (e["target_amount"] as num).toInt(),
+                "color": AppTheme.primaryBlue,
+              }).toList();
+
+              final dreamsEncoded = _dreams.map((e) => {
+                "title": e["title"],
+                "icon": (e["icon"] as IconData).codePoint,
+                "target": e["target"],
+                "color": (e["color"] as Color).toARGB32(),
+              }).toList();
+              await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
+            }
           }
         } catch (e) {
-          debugPrint("Error syncing savings data from Supabase: $e");
+          debugPrint("Error syncing savings data from backend: $e");
         }
       }
     } catch (e) {
@@ -120,10 +126,10 @@ class MoneySaverProvider extends ChangeNotifier {
   Future<void> _saveData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      
+      final userId = BackendService.userId ?? 'guest';
+
       await prefs.setInt('total_savings_$userId', _totalSavings);
-      
+
       final dreamsEncoded = _dreams.map((e) => {
         "title": e["title"],
         "icon": (e["icon"] as IconData).codePoint,
@@ -142,22 +148,27 @@ class MoneySaverProvider extends ChangeNotifier {
     }
     if (amount > 0) {
       _totalSavings += amount;
-      
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+
+      final userId = BackendService.userId ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('last_money_added_date_$userId', today);
       _hasAddedMoneyToday = true;
 
-      if (userId != 'guest') {
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          // Insert a new log entry to savings_logs table
-          await Supabase.instance.client.from('savings_logs').insert({
-            'user_id': userId,
-            'amount': amount,
-          });
+          await http
+              .post(
+                Uri.parse('${BackendService.baseUrl}/api/savings'),
+                headers: BackendService.headers(),
+                body: jsonEncode({
+                  'user_id': userId,
+                  'amount': amount,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
         } catch (e) {
-          debugPrint("Error syncing savings to Supabase: $e");
+          debugPrint("Error syncing savings to backend: $e");
         }
       }
 
@@ -180,19 +191,25 @@ class MoneySaverProvider extends ChangeNotifier {
         "color": color,
       });
 
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      if (userId != 'guest') {
+      final userId = BackendService.userId ?? 'guest';
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          await Supabase.instance.client.from('money_saver_goals').insert({
-            'user_id': userId,
-            'title': title,
-            'target_amount': targetAmount,
-            'current_amount': 0,
-            'is_completed': false,
-            'icon_name': 'star',
-          });
+          await http
+              .post(
+                Uri.parse('${BackendService.baseUrl}/api/goals'),
+                headers: BackendService.headers(),
+                body: jsonEncode({
+                  'user_id': userId,
+                  'title': title,
+                  'target_amount': targetAmount,
+                  'current_amount': 0,
+                  'is_completed': false,
+                  'icon_name': 'star',
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
         } catch (e) {
-          debugPrint("Error syncing goal to Supabase: $e");
+          debugPrint("Error syncing goal to backend: $e");
         }
       }
 

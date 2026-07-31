@@ -44,3 +44,22 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Node (should not be in a Flutter project)
+node_modules/
+package-lock.json
+package.json
+
+# Android signing key (NEVER commit this!)
+android/key.properties
+*.jks
+*.keystore
+
+# Google services (contains sensitive data)
+google-services.json
+
+# Backend secrets
+.env
+venv/
+__pycache__/
+*.pyc

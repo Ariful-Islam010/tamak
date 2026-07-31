@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
+import '../services/backend_service.dart';
 
 class CheckInProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -18,11 +20,6 @@ class CheckInProvider extends ChangeNotifier {
 
   CheckInProvider() {
     loadCheckInStatus();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn || data.event == AuthChangeEvent.signedOut) {
-        loadCheckInStatus();
-      }
-    });
   }
 
   Future<void> loadCheckInStatus() async {
@@ -30,11 +27,11 @@ class CheckInProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+      final userId = BackendService.userId ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       final cachedCheckIn = await DatabaseHelper().getCheckIn(userId, today);
-      
+
       if (cachedCheckIn != null) {
         _hasCheckedInToday = true;
         _usedTobacco = cachedCheckIn['used_tobacco'] as bool?;
@@ -51,41 +48,47 @@ class CheckInProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      final quitDateStr = await DatabaseHelper().getSetting('user_quit_date_$userId');
-      final quitDate = quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
+      final quitDateStr =
+          await DatabaseHelper().getSetting('user_quit_date_$userId');
+      final quitDate =
+          quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(
         quitDate: quitDate,
         forceTomorrow: _hasCheckedInToday,
       );
 
-      // If logged in, fetch from Supabase in background to verify/sync
-      if (userId != 'guest') {
+      // If logged in, fetch from backend in background to verify/sync
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          final response = await Supabase.instance.client
-              .from('daily_checkins')
-              .select('used_tobacco, craving_level, mood')
-              .eq('user_id', userId)
-              .eq('check_in_date', today)
-              .maybeSingle();
+          final response = await http
+              .get(
+                Uri.parse('${BackendService.baseUrl}/api/checkins/today'),
+                headers: BackendService.headers(),
+              )
+              .timeout(const Duration(seconds: 10));
 
-          if (response != null) {
-            _hasCheckedInToday = true;
-            _usedTobacco = response['used_tobacco'] as bool?;
-            _cravingLevel = (response['craving_level'] as num?)?.toDouble() ?? 5.0;
-            _selectedMood = response['mood'] as String?;
+          if (response.statusCode == 200 && response.body != 'null') {
+            final data = jsonDecode(response.body);
+            if (data != null) {
+              _hasCheckedInToday = true;
+              _usedTobacco = data['used_tobacco'] as bool?;
+              _cravingLevel =
+                  (data['craving_level'] as num?)?.toDouble() ?? 5.0;
+              _selectedMood = data['mood'] as String?;
 
-            // Update SQLite cache
-            await DatabaseHelper().saveCheckIn(
-              userId,
-              today,
-              _selectedMood ?? 'Normal',
-              _cravingLevel,
-              _usedTobacco ?? false,
-            );
-            notifyListeners();
+              // Update SQLite cache
+              await DatabaseHelper().saveCheckIn(
+                userId,
+                today,
+                _selectedMood ?? 'Normal',
+                _cravingLevel,
+                _usedTobacco ?? false,
+              );
+              notifyListeners();
+            }
           }
         } catch (e) {
-          debugPrint("Error syncing check-in from Supabase: $e");
+          debugPrint("Error syncing check-in from backend: $e");
         }
       }
     } catch (e) {
@@ -110,9 +113,9 @@ class CheckInProvider extends ChangeNotifier {
 
   Future<void> submitCheckIn() async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+      final userId = BackendService.userId ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       // Save locally to SQLite first for speed
       await DatabaseHelper().saveCheckIn(
         userId,
@@ -121,28 +124,36 @@ class CheckInProvider extends ChangeNotifier {
         _cravingLevel,
         _usedTobacco ?? false,
       );
-      
+
       _hasCheckedInToday = true;
       notifyListeners();
 
-      final quitDateStr = await DatabaseHelper().getSetting('user_quit_date_$userId');
-      final quitDate = quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
+      final quitDateStr =
+          await DatabaseHelper().getSetting('user_quit_date_$userId');
+      final quitDate =
+          quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(
         quitDate: quitDate,
         forceTomorrow: true,
       );
-      
-      if (userId != 'guest') {
+
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          await Supabase.instance.client.from('daily_checkins').insert({
-            'user_id': userId,
-            'check_in_date': today,
-            'craving_level': _cravingLevel.toInt(),
-            'mood': _selectedMood ?? 'Normal',
-            'used_tobacco': _usedTobacco ?? false,
-          });
+          await http
+              .post(
+                Uri.parse('${BackendService.baseUrl}/api/checkins'),
+                headers: BackendService.headers(),
+                body: jsonEncode({
+                  'user_id': userId,
+                  'check_in_date': today,
+                  'craving_level': _cravingLevel.toInt(),
+                  'mood': _selectedMood ?? 'Normal',
+                  'used_tobacco': _usedTobacco ?? false,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
         } catch (e) {
-          debugPrint("Error syncing check-in to Supabase: $e");
+          debugPrint("Error syncing check-in to backend: $e");
         }
       }
     } catch (e) {
@@ -150,22 +161,12 @@ class CheckInProvider extends ChangeNotifier {
     }
   }
 
-  void reset() async {
-    _usedTobacco = null;
-    _cravingLevel = 5.0;
-    _selectedMood = null;
-    try {
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final db = await DatabaseHelper().database;
-      await db.delete(
-        'daily_checkins',
-        where: 'user_id = ? AND check_in_date = ?',
-        whereArgs: [userId, today],
-      );
-    } catch (e) {
-      debugPrint("Error resetting check-in cache: $e");
+  void clearDraft() {
+    if (!_hasCheckedInToday) {
+      _usedTobacco = null;
+      _cravingLevel = 5.0;
+      _selectedMood = null;
+      notifyListeners();
     }
-    notifyListeners();
   }
 }

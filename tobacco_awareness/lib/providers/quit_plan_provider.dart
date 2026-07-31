@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
+import '../services/backend_service.dart';
 
 class QuitPlanProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -19,11 +20,6 @@ class QuitPlanProvider extends ChangeNotifier {
 
   QuitPlanProvider() {
     loadGoalStatus();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn || data.event == AuthChangeEvent.signedOut) {
-        loadGoalStatus();
-      }
-    });
   }
 
   static const List<Map<String, String>> _fallbackPlans = [
@@ -52,9 +48,9 @@ class QuitPlanProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+      final userId = BackendService.userId ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       final planState = await DatabaseHelper().getQuitPlanState(userId);
 
       List<String> completedDates = [];
@@ -65,10 +61,11 @@ class QuitPlanProvider extends ChangeNotifier {
 
       if (planState != null) {
         lastAnsweredDate = planState['last_answered_date'] as String?;
-        lastAnsweredStatus = (planState['last_answered_status'] as int? ?? 0) == 1;
+        lastAnsweredStatus =
+            (planState['last_answered_status'] as int? ?? 0) == 1;
         lastStartedDate = planState['last_started_date'] as String?;
         storedPlan = planState['ai_plan'] as String?;
-        
+
         final completedDatesJson = planState['completed_task_dates'] as String?;
         if (completedDatesJson != null) {
           completedDates = List<String>.from(jsonDecode(completedDatesJson));
@@ -80,35 +77,42 @@ class QuitPlanProvider extends ChangeNotifier {
       _isGoalStarted = _isCompletedToday;
 
       // Reschedule reminders
-      await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
-      await NotificationService().scheduleViewPlanReminder(hasAnsweredToday: _hasAnsweredToday);
+      await NotificationService()
+          .schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
+      await NotificationService()
+          .scheduleViewPlanReminder(hasAnsweredToday: _hasAnsweredToday);
 
-      // Try fetching fresh plan from Supabase in the background
-      if (userId != 'guest') {
+      // Try fetching fresh plan from backend in the background
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          final profileData = await Supabase.instance.client
-              .from('user_profiles')
-              .select('ai_quit_plan')
-              .eq('id', userId)
-              .maybeSingle();
-          if (profileData != null && profileData['ai_quit_plan'] != null) {
-            final fetchedPlan = profileData['ai_quit_plan'];
-            final String freshPlanJson = (fetchedPlan is String) ? fetchedPlan : jsonEncode(fetchedPlan);
-            if (freshPlanJson != storedPlan) {
-              storedPlan = freshPlanJson;
-              // Save updated plan to SQLite
-              await DatabaseHelper().saveQuitPlanState(
-                userId: userId,
-                aiPlanJson: freshPlanJson,
-                lastAnsweredDate: lastAnsweredDate,
-                lastAnsweredStatus: lastAnsweredStatus,
-                completedTaskDatesJson: jsonEncode(completedDates),
-                lastStartedDate: lastStartedDate,
-              );
+          final response = await http
+              .get(
+                Uri.parse('${BackendService.baseUrl}/api/profile'),
+                headers: BackendService.headers(),
+              )
+              .timeout(const Duration(seconds: 10));
+          if (response.statusCode == 200 && response.body != 'null') {
+            final profileData = jsonDecode(response.body);
+            if (profileData != null && profileData['ai_quit_plan'] != null) {
+              final fetchedPlan = profileData['ai_quit_plan'];
+              final String freshPlanJson = (fetchedPlan is String)
+                  ? fetchedPlan
+                  : jsonEncode(fetchedPlan);
+              if (freshPlanJson != storedPlan) {
+                storedPlan = freshPlanJson;
+                await DatabaseHelper().saveQuitPlanState(
+                  userId: userId,
+                  aiPlanJson: freshPlanJson,
+                  lastAnsweredDate: lastAnsweredDate,
+                  lastAnsweredStatus: lastAnsweredStatus,
+                  completedTaskDatesJson: jsonEncode(completedDates),
+                  lastStartedDate: lastStartedDate,
+                );
+              }
             }
           }
         } catch (e) {
-          debugPrint("Error fetching plan from Supabase: $e");
+          debugPrint("Error fetching plan from backend: $e");
         }
       }
 
@@ -130,10 +134,10 @@ class QuitPlanProvider extends ChangeNotifier {
     try {
       _dailyPlans = jsonDecode(jsonPlan);
       notifyListeners();
-      
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+
+      final userId = BackendService.userId ?? 'guest';
       final planState = await DatabaseHelper().getQuitPlanState(userId);
-      
+
       List<String> completedDates = [];
       String? lastAnsweredDate;
       bool lastAnsweredStatus = false;
@@ -141,7 +145,8 @@ class QuitPlanProvider extends ChangeNotifier {
 
       if (planState != null) {
         lastAnsweredDate = planState['last_answered_date'] as String?;
-        lastAnsweredStatus = (planState['last_answered_status'] as int? ?? 0) == 1;
+        lastAnsweredStatus =
+            (planState['last_answered_status'] as int? ?? 0) == 1;
         lastStartedDate = planState['last_started_date'] as String?;
         final completedDatesJson = planState['completed_task_dates'] as String?;
         if (completedDatesJson != null) {
@@ -158,13 +163,20 @@ class QuitPlanProvider extends ChangeNotifier {
         lastStartedDate: lastStartedDate,
       );
 
-      if (userId != 'guest') {
+      if (userId != 'guest' && BackendService.token != null) {
         try {
-          await Supabase.instance.client.from('user_profiles').update({
-            'ai_quit_plan': jsonPlan,
-          }).eq('id', userId);
+          await http
+              .post(
+                Uri.parse('${BackendService.baseUrl}/api/profile'),
+                headers: BackendService.headers(),
+                body: jsonEncode({
+                  'id': userId,
+                  'ai_quit_plan': jsonPlan,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
         } catch (e) {
-          debugPrint("Error saving AI plan to Supabase: $e");
+          debugPrint("Error saving AI plan to backend: $e");
         }
       }
     } catch (e) {
@@ -174,9 +186,9 @@ class QuitPlanProvider extends ChangeNotifier {
 
   Future<void> submitPlanResponse(bool completed) async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser?.id ?? 'guest';
+      final userId = BackendService.userId ?? 'guest';
       final today = DateTime.now().toIso8601String().split('T')[0];
-      
+
       final planState = await DatabaseHelper().getQuitPlanState(userId);
       List<String> completedDates = [];
       String? lastStartedDate;
@@ -200,7 +212,7 @@ class QuitPlanProvider extends ChangeNotifier {
       } else {
         _isGoalStarted = false;
       }
-      
+
       _hasAnsweredToday = true;
       _isCompletedToday = completed;
 
@@ -214,8 +226,10 @@ class QuitPlanProvider extends ChangeNotifier {
       );
 
       // Reschedule reminders
-      await NotificationService().schedulePlanCompletionReminder(hasAnsweredToday: true);
-      await NotificationService().scheduleViewPlanReminder(hasAnsweredToday: true);
+      await NotificationService()
+          .schedulePlanCompletionReminder(hasAnsweredToday: true);
+      await NotificationService()
+          .scheduleViewPlanReminder(hasAnsweredToday: true);
 
       notifyListeners();
     } catch (e) {

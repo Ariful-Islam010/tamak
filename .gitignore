@@ -1,43 +1,59 @@
-# Ignore environment files
+# ============================================================
+# Tobacco_Awareness Monorepo — .gitignore
+# ============================================================
+
+# --- Secrets & Environment ---
 .env
 **/.env
 .env.*
 !.env.example
 !**/.env.example
 
+# --- Android Signing Keys (NEVER commit) ---
+*.jks
+*.keystore
+tobacco_awareness/android/key.properties
 
-# Large zip backup files
-*.zip
-*.rar
-tobacco_awareness_backend.zip
-
-# Flutter & Dart build artifacts
+# --- Flutter & Dart ---
 tobacco_awareness/.dart_tool/
 tobacco_awareness/.flutter-plugins-dependencies
 tobacco_awareness/.pub-cache/
 tobacco_awareness/.pub/
 tobacco_awareness/build/
+tobacco_awareness/pubspec.lock
 
-# Node.js modules
+# --- Node.js (should not be in Flutter project) ---
 node_modules/
-tobacco_awareness/node_modules/
+**/node_modules/
+package-lock.json
 
-# Python Cache and Virtual Environments
+# --- Python Backend ---
+tobacco_awareness_backend/venv/
+tobacco_awareness_backend/.venv/
 __pycache__/
 **/__pycache__/
 *.pyc
-.venv/
-env/
-venv/
-ENV/
+*.pyo
+*.pyd
 
-# IDE files
+# --- IDE & Editor ---
 .idea/
 .vscode/
 *.iml
 *.ipr
 *.iws
 
-# OS files
+# --- OS Files ---
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# --- Build / Release ---
+*.zip
+*.rar
+*.apk
+*.aab
+*.ipa
+
+# --- Supabase CLI cache ---
+tobacco_awareness/supabase/.temp/

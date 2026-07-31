@@ -1,8 +1,6 @@
-name: tobacco_awareness
-description: "A new Flutter project."
-# The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+name: tamakmukto_jibon
+description: "তামাকমুক্ত জীবন - ধূমপান ছাড়ার AI সহায়ক অ্যাপ। Quit smoking with AI-powered daily plans, streak tracking, peer support and more."
+publish_to: 'none'
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -36,13 +34,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^8.1.0
   intl: ^0.20.2
-  supabase_flutter: ^2.5.4
   flutter_dotenv: ^5.1.0
   google_sign_in: ^6.2.1
   provider: ^6.1.5+1
   image_picker: ^1.1.2
   http: ^1.2.2
-  crypto: ^3.0.5
   shared_preferences: ^2.5.5
   sqflite: ^2.3.0
   path: ^1.9.0

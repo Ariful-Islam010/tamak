@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../services/database_helper.dart';
+import '../services/backend_service.dart';
 
 class DynamicBadge {
   final String id;
@@ -22,8 +23,6 @@ class DynamicBadge {
 }
 
 class GamificationProvider extends ChangeNotifier {
-  final SupabaseClient _supabase = Supabase.instance.client;
-
   int _currentStreak = 0;
   int _longestStreak = 0;
   int _totalSmokeFreeDays = 0;
@@ -76,7 +75,7 @@ class GamificationProvider extends ChangeNotifier {
           title: '৩ দিনের যোদ্ধা',
           icon: Icons.shield,
           color: const Color(0xFF00A36C),
-          description: 'পরিকল্পনা অনুযায়ী ৩ দিনের টাস্ক সম্পন্ন করা',
+          description: 'পরিকল্পনা অনুযায়ী ৩ দিনের টাস্ক সম্পন্ন করা',
           unlockCondition: (p) => p.hasPlan && p.completedTasksCount >= 3,
         ),
         DynamicBadge(
@@ -88,8 +87,9 @@ class GamificationProvider extends ChangeNotifier {
                   : '১ মাসের মুক্ত বাতাস',
           icon: Icons.emoji_events,
           color: const Color(0xFFFBBF24),
-          description: 'পরিকল্পনা অনুযায়ী $_planDuration দিনের টাস্ক সম্পন্ন করা',
-          unlockCondition: (p) => p.hasPlan && p.completedTasksCount >= _planDuration,
+          description: 'পরিকল্পনা অনুযায়ী $_planDuration দিনের টাস্ক সম্পন্ন করা',
+          unlockCondition: (p) =>
+              p.hasPlan && p.completedTasksCount >= _planDuration,
         ),
         DynamicBadge(
           id: 'money_saver',
@@ -112,7 +112,7 @@ class GamificationProvider extends ChangeNotifier {
           title: 'গ্রুপের প্রাণ',
           icon: Icons.forum,
           color: const Color(0xFF8B5CF6),
-          description: 'সহায়তা গ্রুপে ১০টি মেসেজ পাঠানো',
+          description: 'সহায়তা গ্রুপে ১০টি মেসেজ পাঠানো',
           unlockCondition: (p) => p._messagesCount >= 10,
         ),
       ];
@@ -124,12 +124,6 @@ class GamificationProvider extends ChangeNotifier {
 
   GamificationProvider() {
     loadGamificationData();
-    _supabase.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.signedIn ||
-          data.event == AuthChangeEvent.signedOut) {
-        loadGamificationData();
-      }
-    });
   }
 
   Future<void> _loadFromDatabaseCache(String userId) async {
@@ -137,7 +131,7 @@ class GamificationProvider extends ChangeNotifier {
       final cached = await DatabaseHelper().getGamification(userId);
       if (cached != null) {
         _currentStreak = cached['streak'] as int? ?? 0;
-        
+
         final badgesJsonStr = cached['badges'] as String?;
         if (badgesJsonStr != null && badgesJsonStr.isNotEmpty) {
           final Map<String, dynamic> stats = jsonDecode(badgesJsonStr);
@@ -178,7 +172,7 @@ class GamificationProvider extends ChangeNotifier {
         'pest_days_clean': _pestDaysClean,
         'completed_trees': _completedTrees,
       };
-      
+
       await DatabaseHelper().saveGamification(
         userId,
         _currentStreak * 10, // points
@@ -195,7 +189,7 @@ class GamificationProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    final userId = _supabase.auth.currentUser?.id;
+    final userId = BackendService.userId;
     final cachedUserId = userId ?? 'guest';
 
     // 1. Load cached values from SQLite immediately for fast startup
@@ -204,83 +198,55 @@ class GamificationProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
 
-    if (userId == null) {
+    if (userId == null || BackendService.token == null) {
       return;
     }
 
-    // 2. Fetch fresh data from Supabase in the background
+    // 2. Fetch fresh stats from backend in the background
     try {
-      // 1. Fetch check-in data sorted by date ascending to build the tree state and streaks
-      final checkInsData = await _supabase
-          .from('daily_checkins')
-          .select('check_in_date, used_tobacco')
-          .eq('user_id', userId)
-          .order('check_in_date', ascending: true);
+      final statsRes = await http
+          .get(
+            Uri.parse('${BackendService.baseUrl}/api/gamification/stats'),
+            headers: BackendService.headers(),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      _totalCheckIns = checkInsData.length;
+      if (statsRes.statusCode == 200) {
+        final stats = jsonDecode(statsRes.body) as Map<String, dynamic>;
 
-      // Calculate streaks and build Tree RPG State
-      _calculateStreaksAndTree(checkInsData);
+        final checkInsData =
+            (stats['checkins'] as List<dynamic>?) ?? [];
+        _totalCheckIns = checkInsData.length;
+        _calculateStreaksAndTree(checkInsData);
 
-      // 2. Fetch total saved from savings_logs table
-      final savingsResponse = await _supabase
-          .from('savings_logs')
-          .select('amount')
-          .eq('user_id', userId);
+        _totalSavingsAmount = (stats['total_savings'] as num?)?.toInt() ?? 0;
+        _planDuration = (stats['plan_duration'] as num?)?.toInt() ?? 7;
+        _hasPlan = stats['quit_date'] != null;
+        _sosCount = (stats['sos_count'] as num?)?.toInt() ?? 0;
+        _messagesCount = (stats['messages_count'] as num?)?.toInt() ?? 0;
 
-      int sum = 0;
-      for (var row in savingsResponse) {
-        sum += (row['amount'] as num).toInt();
+        // Load task completions from SQLite
+        final planState = await DatabaseHelper().getQuitPlanState(userId);
+        if (planState != null && planState['completed_task_dates'] != null) {
+          final List<dynamic> completedDates =
+              jsonDecode(planState['completed_task_dates']);
+          _completedTasksCount = completedDates.length;
+        } else {
+          _completedTasksCount = 0;
+        }
+
+        // Cache fresh data to SQLite
+        await _saveToDatabaseCache(userId);
+
+        // Sync progress to backend gamification_progress table
+        String? lastCheckInDate;
+        if (checkInsData.isNotEmpty) {
+          lastCheckInDate = checkInsData.last['check_in_date']
+              .toString()
+              .split('T')[0];
+        }
+        await _syncToBackend(userId, lastCheckInDate: lastCheckInDate);
       }
-      _totalSavingsAmount = sum;
-
-      // 3. Fetch plan duration and quit_date from user profile
-      final profileResponse = await _supabase
-          .from('user_profiles')
-          .select('plan_duration, quit_date')
-          .eq('id', userId)
-          .maybeSingle();
-
-      if (profileResponse != null) {
-        _planDuration = (profileResponse['plan_duration'] as num?)?.toInt() ?? 7;
-        _hasPlan = profileResponse['quit_date'] != null;
-      } else {
-        _planDuration = 7;
-        _hasPlan = false;
-      }
-
-      // Load task completions from SQLite
-      final planState = await DatabaseHelper().getQuitPlanState(userId);
-      if (planState != null && planState['completed_task_dates'] != null) {
-        final List<dynamic> completedDates = jsonDecode(planState['completed_task_dates']);
-        _completedTasksCount = completedDates.length;
-      } else {
-        _completedTasksCount = 0;
-      }
-
-      // 4. Fetch SOS logs count
-      final sosResponse = await _supabase
-          .from('sos_logs')
-          .select('id')
-          .eq('user_id', userId);
-      _sosCount = sosResponse.length;
-
-      // 5. Fetch message count from peer_support_messages
-      final messagesResponse = await _supabase
-          .from('peer_support_messages')
-          .select('id')
-          .eq('sender_id', userId);
-      _messagesCount = messagesResponse.length;
-
-      // Cache fresh data to SQLite
-      await _saveToDatabaseCache(userId);
-
-      // 6. Sync current stats to gamification_progress table
-      String? lastCheckInDate;
-      if (checkInsData.isNotEmpty) {
-        lastCheckInDate = checkInsData.last['check_in_date'].toString().split('T')[0];
-      }
-      await _syncToDatabase(userId, lastCheckInDate: lastCheckInDate);
     } catch (e) {
       debugPrint("Error loading gamification data: $e");
     }
@@ -300,7 +266,6 @@ class GamificationProvider extends ChangeNotifier {
       return;
     }
 
-    // Sort descending for current streak calculation
     List<DateTime> smokeFreeDates = [];
     int smokeFreeDays = 0;
 
@@ -323,13 +288,17 @@ class GamificationProvider extends ChangeNotifier {
 
     if (smokeFreeDates.isNotEmpty) {
       final todayStr = DateTime.now().toIso8601String().split('T')[0];
-      final latestStr = smokeFreeDates[0].toIso8601String().split('T')[0];
-      final daysDiff = DateTime.parse(todayStr).difference(DateTime.parse(latestStr)).inDays;
+      final latestStr =
+          smokeFreeDates[0].toIso8601String().split('T')[0];
+      final daysDiff = DateTime.parse(todayStr)
+          .difference(DateTime.parse(latestStr))
+          .inDays;
 
       if (daysDiff <= 1) {
         currentStreak = 1;
         for (int i = 1; i < smokeFreeDates.length; i++) {
-          final diff = smokeFreeDates[i - 1].difference(smokeFreeDates[i]).inDays;
+          final diff =
+              smokeFreeDates[i - 1].difference(smokeFreeDates[i]).inDays;
           if (diff == 1) {
             currentStreak++;
           } else {
@@ -343,8 +312,8 @@ class GamificationProvider extends ChangeNotifier {
     if (smokeFreeDates.isNotEmpty) {
       tempStreak = 1;
       longestStreak = 1;
-      // Need ascending order of smoke free dates to calculate longest streak
-      final ascDates = List<DateTime>.from(smokeFreeDates).reversed.toList();
+      final ascDates =
+          List<DateTime>.from(smokeFreeDates).reversed.toList();
       for (int i = 1; i < ascDates.length; i++) {
         final diff = ascDates[i].difference(ascDates[i - 1]).inDays;
         if (diff == 1) {
@@ -361,7 +330,7 @@ class GamificationProvider extends ChangeNotifier {
     _currentStreak = currentStreak;
     _longestStreak = longestStreak;
 
-    // 🌲 Build Tree RPG state from chronological check-in list (ascending)
+    // Build Tree RPG state from chronological check-in list (ascending)
     bool hasPestAttack = false;
     int pestDaysClean = 0;
 
@@ -377,14 +346,14 @@ class GamificationProvider extends ChangeNotifier {
           }
         }
       } else {
-        // Smoked! Tree gets pest attack
         hasPestAttack = true;
         pestDaysClean = 0;
       }
     }
 
-    // Tree grows strictly based on the progress towards the plan duration
-    double progress = _planDuration > 0 ? (_totalSmokeFreeDays / _planDuration) : 0.0;
+    // Tree grows strictly based on progress towards plan duration
+    double progress =
+        _planDuration > 0 ? (_totalSmokeFreeDays / _planDuration) : 0.0;
     int plantStage = 0;
     if (progress >= 1.0) {
       plantStage = 5;
@@ -398,7 +367,7 @@ class GamificationProvider extends ChangeNotifier {
     _completedTrees = 0;
   }
 
-  Future<void> _syncToDatabase(String userId, {String? lastCheckInDate}) async {
+  Future<void> _syncToBackend(String userId, {String? lastCheckInDate}) async {
     try {
       final Map<String, dynamic> dataToSync = {
         'user_id': userId,
@@ -410,18 +379,22 @@ class GamificationProvider extends ChangeNotifier {
       if (lastCheckInDate != null) {
         dataToSync['last_check_in_date'] = lastCheckInDate;
       }
-      // Sync to public.gamification_progress
-      await _supabase.from('gamification_progress').upsert(dataToSync);
+      await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/gamification'),
+            headers: BackendService.headers(),
+            body: jsonEncode(dataToSync),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (e) {
-      debugPrint("Error syncing gamification data: $e");
+      debugPrint("Error syncing gamification data to backend: $e");
     }
   }
 
-
-
   /// Convert number to Bengali numeral string
   String toBengaliNumeral(int number) {
-    return number.toString()
+    return number
+        .toString()
         .replaceAll('0', '০')
         .replaceAll('1', '১')
         .replaceAll('2', '২')
