@@ -1,8 +1,6 @@
-import requests
 from fastapi import APIRouter, HTTPException, Depends
 from app.services.supabase import supabase_req
 from app.dependencies import require_auth
-from app.config import settings
 
 router = APIRouter(prefix="/api/gamification", tags=["Gamification"])
 
@@ -22,22 +20,16 @@ async def get_gamification(authorization: str = Depends(require_auth)):
 @router.post("")
 async def save_gamification(data: dict, authorization: str = Depends(require_auth)):
     """Upsert gamification progress for the authenticated user."""
-    url = f"{settings.SUPABASE_URL}/rest/v1/gamification_progress"
-    headers = {
-        "apikey": settings.SUPABASE_ANON_KEY,
-        "Authorization": authorization,
-        "Content-Type": "application/json",
-        "Prefer": "resolution=merge-duplicates,return=representation",
-    }
-    try:
-        res = requests.post(url, headers=headers, json=data)
-        if res.status_code >= 400:
-            raise HTTPException(status_code=res.status_code, detail=res.text)
-        return res.json()
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    res = supabase_req(
+        "POST",
+        "/rest/v1/gamification_progress",
+        token=authorization,
+        json_data=data,
+        prefer="resolution=merge-duplicates,return=representation",
+    )
+    if res.status_code >= 400:
+        raise HTTPException(status_code=res.status_code, detail=res.text)
+    return res.json()
 
 
 @router.get("/stats")

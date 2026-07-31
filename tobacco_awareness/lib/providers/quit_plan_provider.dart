@@ -5,6 +5,7 @@ import '../services/notification_service.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
 import '../utils/time_utils.dart';
+import '../utils/fallback_constants.dart';
 
 class QuitPlanProvider extends ChangeNotifier {
   bool _isLoading = true;
@@ -22,27 +23,6 @@ class QuitPlanProvider extends ChangeNotifier {
   QuitPlanProvider() {
     loadGoalStatus();
   }
-
-  static const List<Map<String, String>> _fallbackPlans = [
-    {
-      "title": "মানসিক চাপ নিয়ন্ত্রণ",
-      "desc": "আপনার প্রোফাইলের তথ্য অনুযায়ী, আজ আপনার মূল ফোকাস হবে স্ট্রেস বা মানসিক চাপ কমানো। যখনই ধূমপান করতে ইচ্ছা করবে, লম্বা শ্বাস নিন এবং অন্য কাজে মনোযোগ দিন।",
-      "user_task": "যখনই ধূমপান করার ইচ্ছা হবে, তখন এক গ্লাস পানি পান করুন এবং ১০ বার লম্বা করে শ্বাস নিন।",
-      "ai_task": "আমি আপনার জন্য ৫ মিনিটের একটি মানসিক শান্তির অডিও গাইড সাজিয়েছি।"
-    },
-    {
-      "title": "ট্রিগার এড়িয়ে চলা",
-      "desc": "আজকের লক্ষ্য হলো আপনার ধূমপানের ট্রিগারগুলো চিহ্নিত করা এবং সেগুলো এড়িয়ে চলা। চা বা কফির বদলে আজ পানি বা ফলের রস পান করুন।",
-      "user_task": "আপনার ধূমপানের ট্রিগারগুলো চিহ্নিত করে একটি লিস্ট করুন এবং সেগুলো থেকে দূরে থাকুন।",
-      "ai_task": "আমি আপনার জন্য বিকল্প স্বাস্থ্যকর পনীয়ের একটি তালিকা তৈরি করেছি।"
-    },
-    {
-      "title": "নতুন অভ্যাস তৈরি",
-      "desc": "ধূমপানের বদলে একটি নতুন স্বাস্থ্যকর অভ্যাস শুরু করুন। যেমন: হাঁটা, বই পড়া বা গান শোনা।",
-      "user_task": "আজ অন্তত ২০ মিনিট হাঁটাহাঁটি করুন বা পছন্দের একটি গান শুনুন।",
-      "ai_task": "আপনার জন্য কিছু স্ট্রেস রিলিভিং মিউজিকের সাজেসন প্রস্তুত করা হয়েছে।"
-    },
-  ];
 
   Future<void> loadGoalStatus() async {
     _isLoading = true;
@@ -120,11 +100,11 @@ class QuitPlanProvider extends ChangeNotifier {
       if (storedPlan != null) {
         _dailyPlans = jsonDecode(storedPlan);
       } else {
-        _dailyPlans = List.from(_fallbackPlans);
+        _dailyPlans = List.from(FallbackConstants.quitPlans);
       }
     } catch (e) {
       debugPrint("Error loading goal status: $e");
-      _dailyPlans = List.from(_fallbackPlans);
+      _dailyPlans = List.from(FallbackConstants.quitPlans);
     }
 
     _isLoading = false;

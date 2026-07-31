@@ -3,7 +3,7 @@ from fastapi import HTTPException
 from app.config import settings
 
 
-def supabase_req(method: str, path: str, token: str = None, json_data=None, params=None, use_service_role: bool = False):
+def supabase_req(method: str, path: str, token: str = None, json_data=None, params=None, use_service_role: bool = False, prefer: str = None):
     """Central Supabase HTTP helper used by all routers."""
     url = f"{settings.SUPABASE_URL}{path}"
     
@@ -20,7 +20,9 @@ def supabase_req(method: str, path: str, token: str = None, json_data=None, para
     else:
         headers["Authorization"] = f"Bearer {key}"
 
-    if method in ["POST", "PATCH", "PUT", "DELETE"]:
+    if prefer:
+        headers["Prefer"] = prefer
+    elif method in ["POST", "PATCH", "PUT", "DELETE"]:
         headers["Prefer"] = "return=representation"
 
     try:
