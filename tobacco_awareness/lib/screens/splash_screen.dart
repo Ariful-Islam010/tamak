@@ -217,7 +217,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                               shape: BoxShape.circle,
                               gradient: RadialGradient(
                                 colors: [
-                                  Colors.emerald.shade300.withValues(alpha: 0.2),
+                                  const Color(0xFF6EE7B7).withValues(alpha: 0.2),
                                   Colors.transparent,
                                 ],
                               ),
