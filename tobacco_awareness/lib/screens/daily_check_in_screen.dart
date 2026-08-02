@@ -1,16 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/check_in_provider.dart';
 
-class DailyCheckInScreen extends StatefulWidget {
+class DailyCheckInScreen extends ConsumerStatefulWidget {
   const DailyCheckInScreen({super.key});
 
   @override
-  State<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
+  ConsumerState<DailyCheckInScreen> createState() => _DailyCheckInScreenState();
 }
 
-class _DailyCheckInScreenState extends State<DailyCheckInScreen>
+class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
     with SingleTickerProviderStateMixin {
   final TextEditingController _reflectionController = TextEditingController();
   late AnimationController _animController;
@@ -35,7 +35,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
     _animController.forward();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CheckInProvider>().loadCheckInStatus();
+      ref.read(checkInProvider).loadCheckInStatus();
     });
   }
 
@@ -48,13 +48,13 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
 
   @override
   Widget build(BuildContext context) {
-    final checkInProvider = context.watch<CheckInProvider>();
+    final checkInProviderData = ref.watch(checkInProvider);
 
-    if (checkInProvider.isLoading) {
+    if (checkInProviderData.isLoading) {
       return _buildLoadingScaffold();
     }
 
-    if (checkInProvider.hasCheckedInToday) {
+    if (checkInProviderData.hasCheckedInToday) {
       return _buildAlreadyCheckedIn(context);
     }
 
@@ -107,8 +107,8 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                         "না",
                                         Icons.thumb_up_rounded,
                                         const Color(0xFF00A36C),
-                                        checkInProvider.usedTobacco == false,
-                                        () => checkInProvider
+                                        checkInProviderData.usedTobacco == false,
+                                        () => ref.read(checkInProvider)
                                             .setUsedTobacco(false),
                                       ),
                                     ),
@@ -118,9 +118,9 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                         "হ্যাঁ",
                                         Icons.thumb_down_rounded,
                                         const Color(0xFFE8325A),
-                                        checkInProvider.usedTobacco == true,
+                                        checkInProviderData.usedTobacco == true,
                                         () =>
-                                            checkInProvider.setUsedTobacco(true),
+                                            ref.read(checkInProvider).setUsedTobacco(true),
                                       ),
                                     ),
                                   ],
@@ -162,7 +162,7 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                       borderRadius: BorderRadius.circular(30),
                                     ),
                                     child: Text(
-                                      "${checkInProvider.cravingLevel.round()}",
+                                      "${checkInProviderData.cravingLevel.round()}",
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 22,
@@ -185,15 +185,15 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                         enabledThumbRadius: 10),
                                   ),
                                   child: Slider(
-                                    value: checkInProvider.cravingLevel,
+                                    value: checkInProviderData.cravingLevel,
                                     min: 1,
                                     max: 10,
                                     divisions: 9,
-                                    label: checkInProvider.cravingLevel
+                                    label: checkInProviderData.cravingLevel
                                         .round()
                                         .toString(),
                                     onChanged: (value) {
-                                      checkInProvider.setCravingLevel(value);
+                                      ref.read(checkInProvider).setCravingLevel(value);
                                     },
                                   ),
                                 ),
@@ -216,10 +216,10 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                       MainAxisAlignment.spaceAround,
                                   children: _moods.map((mood) {
                                     final isSelected =
-                                        checkInProvider.selectedMood ==
+                                        checkInProviderData.selectedMood ==
                                             mood["label"];
                                     return GestureDetector(
-                                      onTap: () => checkInProvider
+                                      onTap: () => ref.read(checkInProvider)
                                           .setSelectedMood(mood["label"]),
                                       child: AnimatedContainer(
                                         duration:
@@ -323,12 +323,12 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                             width: double.infinity,
                             height: 54,
                             child: ElevatedButton(
-                              onPressed: checkInProvider.usedTobacco == null
+                              onPressed: checkInProviderData.usedTobacco == null
                                   ? null
                                   : () async {
                                       final messenger = ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
-                                      await checkInProvider.submitCheckIn();
+                                      await ref.read(checkInProvider).submitCheckIn();
                                       if (mounted) {
                                         messenger.showSnackBar(const SnackBar(
                                             content: Text(
@@ -338,11 +338,11 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen>
                                     },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
-                                    checkInProvider.usedTobacco == null
+                                    checkInProviderData.usedTobacco == null
                                         ? Colors.grey[300]
                                         : const Color(0xFF00A36C),
                                 foregroundColor: Colors.white,
-                                elevation: checkInProvider.usedTobacco == null
+                                elevation: checkInProviderData.usedTobacco == null
                                     ? 0
                                     : 4,
                                 shadowColor: const Color(0xFF00A36C)

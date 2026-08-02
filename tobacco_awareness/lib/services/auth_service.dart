@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'notification_service.dart';
 import 'database_helper.dart';
 import 'backend_service.dart';
+
+final authServiceProvider = ChangeNotifierProvider<AuthService>((ref) => AuthService());
 
 class AuthService extends ChangeNotifier {
   final GoogleSignIn _googleSignIn = GoogleSignIn();

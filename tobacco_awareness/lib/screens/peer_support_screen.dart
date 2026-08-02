@@ -1,20 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../providers/chat_provider.dart';
 
-class PeerSupportScreen extends StatefulWidget {
+class PeerSupportScreen extends ConsumerStatefulWidget {
   const PeerSupportScreen({super.key});
 
   @override
-  State<PeerSupportScreen> createState() => _PeerSupportScreenState();
+  ConsumerState<PeerSupportScreen> createState() => _PeerSupportScreenState();
 }
 
-class _PeerSupportScreenState extends State<PeerSupportScreen> {
+class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -28,7 +28,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
   Future<void> _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    final user = context.read<AuthService>().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     final userName = user?.displayName ?? "ব্যবহারকারী";
     final text = _messageController.text;
 
@@ -36,7 +36,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
     _scrollToBottom();
 
     try {
-      await context.read<ChatProvider>().sendMessage(text, userName);
+      await ref.read(chatProvider).sendMessage(text, userName);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -63,10 +63,10 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       }
 
       if (!mounted) return;
-      final user = context.read<AuthService>().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       final userName = user?.displayName ?? "ব্যবহারকারী";
 
-      await context.read<ChatProvider>().sendImage(File(pickedFile.path), userName);
+      await ref.read(chatProvider).sendImage(File(pickedFile.path), userName);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +90,9 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final chatData = ref.watch(chatProvider);
+    final authData = ref.watch(authServiceProvider);
+
     // Scroll to bottom when screen loads or updates
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -113,10 +116,10 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
       body: Column(
         children: [
           Expanded(
-            child: Consumer2<ChatProvider, AuthService>(
-              builder: (context, chatProvider, authService, child) {
-                final messages = chatProvider.messages;
-                if (chatProvider.isLoading && messages.isEmpty) {
+            child: Builder(
+              builder: (context) {
+                final messages = chatData.messages;
+                if (chatData.isLoading && messages.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (messages.isEmpty) {
@@ -156,7 +159,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                         : null;
 
                     if (isMe) {
-                      final currentUser = authService.currentUser;
+                      final currentUser = authData.currentUser;
                       sender = currentUser?.displayName ?? "আমি";
                       senderPhoto = currentUser?.photoUrl;
                     }
@@ -602,7 +605,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
                 if (newText.isEmpty) return;
                 Navigator.pop(ctx);
                 try {
-                  await context.read<ChatProvider>().editMessage(messageId, newText);
+                  await ref.read(chatProvider).editMessage(messageId, newText);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("মেসেজ সফলভাবে আপডেট করা হয়েছে!")),
@@ -641,7 +644,7 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
               onPressed: () async {
                 Navigator.pop(ctx);
                 try {
-                  await context.read<ChatProvider>().deleteMessage(messageId);
+                  await ref.read(chatProvider).deleteMessage(messageId);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("মেসেজটি ডিলিট করা হয়েছে!")),

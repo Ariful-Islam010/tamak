@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/app_theme.dart';
@@ -10,14 +10,14 @@ import 'auth_screen.dart';
 import 'privacy_security_screen.dart';
 import 'help_support_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isUploading = false;
   bool _notificationsEnabled = true;
 
@@ -39,7 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     await prefs.setBool('notifications_enabled', value);
 
     if (!mounted) return;
-    final authService = context.read<AuthService>();
+    final authService = ref.read(authServiceProvider);
 
     if (value) {
       final granted = await NotificationService().requestPermission();
@@ -79,7 +79,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _pickAndUploadImage(ImageSource source) async {
     // Capture before any async gap
-    final authService = context.read<AuthService>();
+    final authService = ref.read(authServiceProvider);
     try {
       final ImagePicker picker = ImagePicker();
       final XFile? pickedFile = await picker.pickImage(
@@ -123,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (secureUrl != null) {
         if (mounted) {
-          await context.read<AuthService>().updateProfilePhoto(secureUrl);
+          await ref.read(authServiceProvider).updateProfilePhoto(secureUrl);
         }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -208,7 +208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditProfileDialog() {
-    final authService = context.read<AuthService>();
+    final authService = ref.read(authServiceProvider);
     final user = authService.currentUser;
     final nameController = TextEditingController(text: user?.displayName ?? "");
     final eduController = TextEditingController(text: user?.educationalInfo ?? "");
@@ -333,7 +333,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = context.watch<AuthService>();
+    final authService = ref.watch(authServiceProvider);
     final user = authService.currentUser;
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
@@ -762,7 +762,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _viewProfileImage() {
-    final user = context.read<AuthService>().currentUser;
+    final user = ref.read(authServiceProvider).currentUser;
     if (user?.photoUrl == null) return;
 
     Navigator.of(context).push(

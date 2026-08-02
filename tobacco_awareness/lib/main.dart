@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme/app_theme.dart';
-import 'services/auth_service.dart';
 import 'services/notification_service.dart';
-import 'providers/chat_provider.dart';
-import 'providers/money_saver_provider.dart';
-import 'providers/check_in_provider.dart';
-import 'providers/quit_plan_provider.dart';
-import 'providers/gamification_provider.dart';
 import 'screens/splash_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -27,7 +21,6 @@ void main() async {
   try {
     await Supabase.initialize(
       url: supabaseUrl,
-      anonKey: supabaseAnonKey,
       publishableKey: supabaseAnonKey,
     );
     debugPrint('⚡ Supabase Realtime initialized successfully');
@@ -39,16 +32,8 @@ void main() async {
   await NotificationService().initialize();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => ChatProvider()),
-        ChangeNotifierProvider(create: (_) => MoneySaverProvider()),
-        ChangeNotifierProvider(create: (_) => CheckInProvider()),
-        ChangeNotifierProvider(create: (_) => QuitPlanProvider()),
-        ChangeNotifierProvider(create: (_) => GamificationProvider()),
-      ],
-      child: const TamakmuktoJibonApp(),
+    const ProviderScope(
+      child: TamakmuktoJibonApp(),
     ),
   );
 }

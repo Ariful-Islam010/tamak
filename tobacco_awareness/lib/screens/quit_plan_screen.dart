@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/quit_plan_provider.dart';
 import '../services/auth_service.dart';
 
-class QuitPlanScreen extends StatelessWidget {
+class QuitPlanScreen extends ConsumerWidget {
   const QuitPlanScreen({super.key});
 
   String _toBengali(int number) {
@@ -22,11 +22,11 @@ class QuitPlanScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final quitPlanProvider = context.watch<QuitPlanProvider>();
-    final authService = context.watch<AuthService>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quitPlan = ref.watch(quitPlanProvider);
+    final authService = ref.watch(authServiceProvider);
 
-    if (quitPlanProvider.isLoading) {
+    if (quitPlan.isLoading) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
@@ -39,7 +39,7 @@ class QuitPlanScreen extends StatelessWidget {
       );
     }
 
-    if (quitPlanProvider.dailyPlans.isEmpty) {
+    if (quitPlan.dailyPlans.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
         appBar: AppBar(
@@ -79,12 +79,12 @@ class QuitPlanScreen extends StatelessWidget {
       }
     }
 
-    if (dayIndex >= quitPlanProvider.dailyPlans.length) {
-      dayIndex = quitPlanProvider.dailyPlans.length - 1;
+    if (dayIndex >= quitPlan.dailyPlans.length) {
+      dayIndex = quitPlan.dailyPlans.length - 1;
     }
     if (dayIndex < 0) dayIndex = 0;
 
-    final plan = quitPlanProvider.dailyPlans[dayIndex];
+    final plan = quitPlan.dailyPlans[dayIndex];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -144,7 +144,7 @@ class QuitPlanScreen extends StatelessWidget {
                   ),
 
                   // Show completion buttons only if plan has started and not answered today yet
-                  if (daysUntilStart == 0 && !quitPlanProvider.hasAnsweredToday) ...[
+                  if (daysUntilStart == 0 && !quitPlan.hasAnsweredToday) ...[
                     const SizedBox(height: 28),
 
                     // Completion Question
@@ -161,9 +161,9 @@ class QuitPlanScreen extends StatelessWidget {
 
                     // Yes / No Buttons
                     _CompletionButtons(
-                      isGoalStarted: quitPlanProvider.isGoalStarted,
+                      isGoalStarted: quitPlan.isGoalStarted,
                       onYes: () async {
-                        await quitPlanProvider.submitPlanResponse(true);
+                        await quitPlan.submitPlanResponse(true);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -175,7 +175,7 @@ class QuitPlanScreen extends StatelessWidget {
                         }
                       },
                       onNo: () async {
-                        await quitPlanProvider.submitPlanResponse(false);
+                        await quitPlan.submitPlanResponse(false);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(

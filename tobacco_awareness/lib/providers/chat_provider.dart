@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
+
+final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) => ChatProvider());
 
 class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];

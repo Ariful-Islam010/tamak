@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/groq_ai_service.dart';
@@ -7,14 +7,14 @@ import '../providers/quit_plan_provider.dart';
 import '../models/user_model.dart';
 import 'home_dashboard_screen.dart';
 
-class ProfileAssessmentScreen extends StatefulWidget {
+class ProfileAssessmentScreen extends ConsumerStatefulWidget {
   const ProfileAssessmentScreen({super.key});
 
   @override
-  State<ProfileAssessmentScreen> createState() => _ProfileAssessmentScreenState();
+  ConsumerState<ProfileAssessmentScreen> createState() => _ProfileAssessmentScreenState();
 }
 
-class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
+class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
@@ -152,8 +152,8 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
       return;
     }
 
-    final authService = context.read<AuthService>();
-    final quitPlanProvider = context.read<QuitPlanProvider>();
+    final authService = ref.read(authServiceProvider);
+    final quitPlan = ref.read(quitPlanProvider);
     final currentUser = authService.currentUser;
     
     // Show loading indicator
@@ -174,7 +174,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
     );
 
     if (aiPlan != null) {
-      await quitPlanProvider.saveAiPlan(aiPlan);
+      await quitPlan.saveAiPlan(aiPlan);
     }
     
     if (mounted) {

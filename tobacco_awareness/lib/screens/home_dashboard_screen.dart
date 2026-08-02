@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../providers/money_saver_provider.dart';
@@ -15,14 +15,14 @@ import 'profile_screen.dart';
 import 'education_info_screen.dart';
 import '../utils/time_utils.dart';
 
-class HomeDashboardScreen extends StatefulWidget {
+class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
 
   @override
-  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+  ConsumerState<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
 }
 
-class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   @override
   void initState() {
     super.initState();
@@ -32,9 +32,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
   }
 
   Future<void> _refreshAllData() async {
-    context.read<MoneySaverProvider>().loadSavingsData();
-    context.read<CheckInProvider>().loadCheckInStatus();
-    context.read<GamificationProvider>().loadGamificationData();
+    ref.read(moneySaverProvider).loadSavingsData();
+    ref.read(checkInProvider).loadCheckInStatus();
+    ref.read(gamificationProvider).loadGamificationData();
   }
 
   String _toBengali(int number) {
@@ -65,8 +65,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthService>().currentUser;
-    final moneyProvider = context.watch<MoneySaverProvider>();
+    final user = ref.watch(authServiceProvider).currentUser;
+    final moneyProvider = ref.watch(moneySaverProvider);
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
     int smokeFreeDays = 0;

@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/fallback_constants.dart';
+
+final quitPlanProvider = ChangeNotifierProvider<QuitPlanProvider>((ref) => QuitPlanProvider());
 
 class QuitPlanProvider extends ChangeNotifier {
   bool _isLoading = true;

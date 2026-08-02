@@ -1,19 +1,19 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
 import 'home_dashboard_screen.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProviderStateMixin {
   late AnimationController _mainController;
   late AnimationController _pulseController;
   late AnimationController _rotateController;
@@ -102,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   }
 
   void _checkAuthAndNavigate() {
-    final authService = context.read<AuthService>();
+    final authService = ref.read(authServiceProvider);
 
     void listener() {
       if (authService.initialSessionChecked && !_navigationStarted) {
@@ -123,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     Timer(const Duration(milliseconds: 2400), () {
       if (!mounted) return;
 
-      final user = context.read<AuthService>().currentUser;
+      final user = ref.read(authServiceProvider).currentUser;
       if (user == null) {
         Navigator.pushReplacement(
           context,
@@ -140,7 +140,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           user.age == null ||
           user.gender == null ||
           user.quitDate == null) {
-        context.read<AuthService>().signOut();
+        ref.read(authServiceProvider).signOut();
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(

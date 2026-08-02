@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../providers/money_saver_provider.dart';
 
-class MoneySaverScreen extends StatefulWidget {
+class MoneySaverScreen extends ConsumerStatefulWidget {
   const MoneySaverScreen({super.key});
 
   @override
-  State<MoneySaverScreen> createState() => _MoneySaverScreenState();
+  ConsumerState<MoneySaverScreen> createState() => _MoneySaverScreenState();
 }
 
-class _MoneySaverScreenState extends State<MoneySaverScreen> {
+class _MoneySaverScreenState extends ConsumerState<MoneySaverScreen> {
 
   void _showAddDreamDialog() {
     final TextEditingController titleController = TextEditingController();
@@ -45,7 +45,7 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
               onPressed: () {
                 final int? amount = int.tryParse(amountController.text);
                 if (titleController.text.isNotEmpty && amount != null && amount > 0) {
-                  context.read<MoneySaverProvider>().addDream(titleController.text, amount, AppTheme.primaryBlue);
+                  ref.read(moneySaverProvider).addDream(titleController.text, amount, AppTheme.primaryBlue);
                 }
                 Navigator.pop(context);
               },
@@ -82,7 +82,7 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
               onPressed: () {
                 final int? amount = int.tryParse(amountController.text);
                 if (amount != null && amount > 0) {
-                  context.read<MoneySaverProvider>().addMoney(amount);
+                  ref.read(moneySaverProvider).addMoney(amount);
                 }
                 Navigator.pop(context);
               },
@@ -96,7 +96,7 @@ class _MoneySaverScreenState extends State<MoneySaverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final moneyProvider = context.watch<MoneySaverProvider>();
+    final moneyProvider = ref.watch(moneySaverProvider);
     // English numerals to Bengali
     final String savingsStr = moneyProvider.totalSavings.toString()
         .replaceAll('0', '০').replaceAll('1', '১').replaceAll('2', '২')

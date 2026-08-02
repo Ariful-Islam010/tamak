@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../providers/gamification_provider.dart';
 
-class GamificationScreen extends StatelessWidget {
+class GamificationScreen extends ConsumerWidget {
   const GamificationScreen({super.key});
 
   /// Helper to get the tree name/emoji by stage
@@ -70,8 +70,8 @@ class GamificationScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final gamification = context.watch<GamificationProvider>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final gamification = ref.watch(gamificationProvider);
 
     if (gamification.isLoading) {
       return Scaffold(
