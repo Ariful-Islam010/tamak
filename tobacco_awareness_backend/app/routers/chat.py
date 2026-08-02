@@ -48,17 +48,19 @@ async def delete_chat_message(message_id: str, authorization: str = Depends(requ
 @router.put("/messages/{message_id}")
 async def edit_chat_message(message_id: str, message_data: dict, authorization: str = Depends(require_auth)):
     """Edit a specific message by ID."""
+    # Attempt edit using user token first
     res = supabase_req(
         "PATCH",
         f"/rest/v1/peer_support_messages?id=eq.{message_id}",
         token=authorization,
         json_data=message_data,
     )
-    # If user token succeeded and updated at least 1 row, return result
-    if res.status_code < 400 and isinstance(res.json(), list) and len(res.json()) > 0:
-        return res.json()
+    if res.status_code < 400:
+        data = res.json()
+        if isinstance(data, list) and len(data) > 0:
+            return data
 
-    # Fallback: use service role to bypass RLS restrictions
+    # Service role fallback guarantees update in Supabase
     res_sr = supabase_req(
         "PATCH",
         f"/rest/v1/peer_support_messages?id=eq.{message_id}",
@@ -69,5 +71,6 @@ async def edit_chat_message(message_id: str, message_data: dict, authorization: 
     if res_sr.status_code < 400:
         return res_sr.json()
 
-    raise HTTPException(status_code=res.status_code if res.status_code >= 400 else 400, detail=res.text or "Message edit failed")
+    raise HTTPException(status_code=res_sr.status_code if res_sr.status_code >= 400 else 400, detail=res_sr.text or "Message edit failed")
+
 

@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'auth_screen.dart';
 import 'home_dashboard_screen.dart';
@@ -130,8 +129,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           context,
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (_, __, ___) => const AuthScreen(),
-            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+            pageBuilder: (_, _, _) => const AuthScreen(),
+            transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
           ),
         );
         return;
@@ -146,8 +145,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
           context,
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (_, __, ___) => const AuthScreen(),
-            transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+            pageBuilder: (_, _, _) => const AuthScreen(),
+            transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
           ),
         );
         return;
@@ -157,8 +156,8 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
         context,
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (_, __, ___) => const HomeDashboardScreen(),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+          pageBuilder: (_, _, _) => const HomeDashboardScreen(),
+          transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
         ),
       );
     });
@@ -282,43 +281,21 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                       position: _titleSlide,
                       child: FadeTransition(
                         opacity: _quoteFade,
-                        child: Column(
-                          children: [
-                            const Text(
-                              "তামাকমুক্ত জীবন",
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1.3,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black38,
-                                    offset: Offset(0, 2),
-                                    blurRadius: 4,
-                                  ),
-                                ],
+                        child: const Text(
+                          "তামাকমুক্ত জীবন",
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 1.3,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black38,
+                                offset: Offset(0, 2),
+                                blurRadius: 4,
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                              ),
-                              child: const Text(
-                                "AI-Powered Quit Tobacco Assistant",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                  fontWeight: FontWeight.w500,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

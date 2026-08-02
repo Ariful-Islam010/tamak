@@ -28,6 +28,7 @@ void main() async {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseAnonKey,
+      publishableKey: supabaseAnonKey,
     );
     debugPrint('⚡ Supabase Realtime initialized successfully');
   } catch (e) {
