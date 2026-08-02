@@ -54,8 +54,8 @@ async def edit_chat_message(message_id: str, message_data: dict, authorization: 
         token=authorization,
         json_data=message_data,
     )
-    # If user token succeeded (RLS passed), return directly
-    if res.status_code < 400:
+    # If user token succeeded and updated at least 1 row, return result
+    if res.status_code < 400 and isinstance(res.json(), list) and len(res.json()) > 0:
         return res.json()
 
     # Fallback: use service role to bypass RLS restrictions
@@ -69,4 +69,5 @@ async def edit_chat_message(message_id: str, message_data: dict, authorization: 
     if res_sr.status_code < 400:
         return res_sr.json()
 
-    raise HTTPException(status_code=res.status_code, detail=res.text)
+    raise HTTPException(status_code=res.status_code if res.status_code >= 400 else 400, detail=res.text or "Message edit failed")
+
