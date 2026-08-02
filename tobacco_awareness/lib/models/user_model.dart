@@ -26,6 +26,7 @@ class UserModel {
   });
 
   UserModel copyWith({
+    String? email,
     String? displayName,
     String? photoUrl,
     String? educationalInfo,
@@ -37,7 +38,7 @@ class UserModel {
   }) {
     return UserModel(
       uid: uid,
-      email: email,
+      email: email ?? this.email,
       displayName: displayName ?? this.displayName,
       photoUrl: photoUrl ?? this.photoUrl,
       educationalInfo: educationalInfo ?? this.educationalInfo,

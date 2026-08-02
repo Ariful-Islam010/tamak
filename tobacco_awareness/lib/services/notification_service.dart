@@ -272,22 +272,9 @@ class NotificationService {
 
     final scheduledTime = _nextInstanceOf(20, 0, forceTomorrow: forceTomorrow);
 
-    String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
-
-    if (quitDate != null) {
-      final today = DateTime(
-        DateTime.now().year,
-        DateTime.now().month,
-        DateTime.now().day,
-      );
-      final quitDay = DateTime(quitDate.year, quitDate.month, quitDate.day);
-      final diff = today.difference(quitDay).inDays;
-      if (diff < 0) {
-        body = 'পরিকল্পনা শুরুর আগে প্রতিদিন নিজেকে প্রস্তুত করুন!';
-      } else {
-        body = '${diff + 1} তম দিনের চেক-ইন করুন এবং স্ট্রিক বজায় রাখুন! 🌟';
-      }
-    }
+    // Use a generic body — since this repeats daily via matchDateTimeComponents,
+    // a static day-number would become stale (always show "Day 2" etc).
+    const String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
 
     await _plugin.zonedSchedule(
       _eveningCheckInId,

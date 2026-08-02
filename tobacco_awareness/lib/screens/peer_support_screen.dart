@@ -116,6 +116,29 @@ class _PeerSupportScreenState extends State<PeerSupportScreen> {
             child: Consumer2<ChatProvider, AuthService>(
               builder: (context, chatProvider, authService, child) {
                 final messages = chatProvider.messages;
+                if (chatProvider.isLoading && messages.isEmpty) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey.shade400),
+                        const SizedBox(height: 12),
+                        Text(
+                          "এখনো কোনো মেসেজ নেই",
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          "প্রথম মেসেজ পাঠিয়ে শুরু করুন!",
+                          style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                        ),
+                      ],
+                    ),
+                  );
+                }
                 return ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),

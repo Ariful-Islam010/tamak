@@ -396,14 +396,54 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final token = data['access_token'] as String?;
-        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        final userMap = data['user'] as Map<String, dynamic>?;
+        final userId = userMap?['id'] as String?;
+
+        // Extract email from multiple sources (Google > Supabase user object)
+        final googleEmail = googleUser.email;
+        final supabaseEmail = userMap?['email'] as String?;
+        final resolvedEmail = googleEmail.isNotEmpty ? googleEmail : supabaseEmail;
+
+        // Extract display name from Google account
+        final googleName = googleUser.displayName;
+        final googlePhoto = googleUser.photoUrl;
+
         if (token != null && userId != null) {
           await _saveSession(token, userId);
           await _fetchAndSetProfile();
+
+          // If email is still missing after profile fetch, save Google info directly
+          if (_currentUser != null && (_currentUser!.email == null || _currentUser!.email!.isEmpty)) {
+            final updated = _currentUser!.copyWith(
+              email: resolvedEmail,
+              displayName: _currentUser!.displayName ?? googleName,
+              photoUrl: _currentUser!.photoUrl ?? googlePhoto,
+            );
+            _currentUser = updated;
+            // Persist to backend profile
+            final body2 = {
+              'id': userId,
+              'email': resolvedEmail,
+              'display_name': updated.displayName,
+              'photo_url': updated.photoUrl,
+            };
+            await DatabaseHelper().saveSetting(
+                'cached_user_profile_$userId', jsonEncode(body2));
+            try {
+              await http.post(
+                Uri.parse('${BackendService.baseUrl}/api/profile'),
+                headers: BackendService.headers(),
+                body: jsonEncode(body2),
+              ).timeout(const Duration(seconds: 10));
+            } catch (e) {
+              debugPrint("Error saving Google profile to backend: $e");
+            }
+          }
         }
         _isLoading = false;
         notifyListeners();
         return data;
+
       } else {
         _isLoading = false;
         notifyListeners();

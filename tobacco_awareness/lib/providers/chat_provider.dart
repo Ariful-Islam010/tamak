@@ -117,38 +117,8 @@ class ChatProvider extends ChangeNotifier {
           });
         }
 
-        // Fallback to local default messages if database is empty
-        if (fetchedMessages.isEmpty) {
-          final now = DateTime.now();
-          final allFallbacks = [
-            {
-              "id": "fallback-1",
-              "isMe": false,
-              "sender": "রহিম উদ্দিন",
-              "senderPhoto": null,
-              "isCounselor": false,
-              "text": "আজ আমার ৪র্থ দিন তামাক ছাড়া! বেশ ভালো লাগছে।",
-              "imageUrl": null,
-              "time": "১০:৩০ এএম",
-              "createdAt": now.subtract(const Duration(minutes: 30)),
-            },
-            {
-              "id": "fallback-2",
-              "isMe": false,
-              "sender": "পিয়ার কাউন্সেলর (অ্যাডমিন)",
-              "senderPhoto": null,
-              "isCounselor": true,
-              "text":
-                  "অভিনন্দন ভাই! প্রথম কয়েকদিন একটু কঠিন হয়। প্রচুর পানি পান করুন আর এস.ও.এস (SOS) ফিচারটি ব্যবহার করুন। আমরা আপনার সাথে আছি!",
-              "imageUrl": null,
-              "time": "১০:৪০ এএম",
-              "createdAt": now.subtract(const Duration(minutes: 20)),
-            },
-          ];
-          _messages = allFallbacks.where((m) => !_deletedMessageIds.contains(m["id"].toString())).toList();
-        } else {
-          _messages = fetchedMessages;
-        }
+        // No fallback: show real messages only (empty list if no messages yet)
+        _messages = fetchedMessages;
 
         await _saveMessagesToCache();
         notifyListeners();
