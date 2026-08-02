@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 import 'notification_service.dart';
-import 'database_helper.dart';
+import 'hive_helper.dart';
 import 'backend_service.dart';
 
 final authServiceProvider = ChangeNotifierProvider<AuthService>((ref) => AuthService());
@@ -30,7 +30,7 @@ class AuthService extends ChangeNotifier {
   Future<void> _loadCachedProfile(String userId) async {
     try {
       final cachedProfileJson =
-          await DatabaseHelper().getSetting('cached_user_profile_$userId');
+          await HiveHelper().getSetting('cached_user_profile_$userId');
       if (cachedProfileJson != null && cachedProfileJson.isNotEmpty) {
         final data = jsonDecode(cachedProfileJson);
         if (data is Map<String, dynamic>) {
@@ -56,8 +56,8 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _restoreSession() async {
     try {
-      final token = await DatabaseHelper().getSetting('auth_access_token');
-      final userId = await DatabaseHelper().getSetting('auth_user_id');
+      final token = await HiveHelper().getSetting('auth_access_token');
+      final userId = await HiveHelper().getSetting('auth_user_id');
       if (token != null && userId != null) {
         BackendService.setAuth(token, userId);
         await _loadCachedProfile(userId);
@@ -73,19 +73,19 @@ class AuthService extends ChangeNotifier {
 
   Future<void> _saveSession(String token, String userId) async {
     BackendService.setAuth(token, userId);
-    await DatabaseHelper().saveSetting('auth_access_token', token);
-    await DatabaseHelper().saveSetting('auth_user_id', userId);
+    await HiveHelper().saveSetting('auth_access_token', token);
+    await HiveHelper().saveSetting('auth_user_id', userId);
   }
 
   Future<void> _clearSession() async {
     final uid = BackendService.userId;
     if (uid != null) {
-      await DatabaseHelper().removeSetting('cached_user_profile_$uid');
+      await HiveHelper().removeSetting('cached_user_profile_$uid');
     }
     BackendService.setAuth(null, null);
     _currentUser = null;
-    await DatabaseHelper().removeSetting('auth_access_token');
-    await DatabaseHelper().removeSetting('auth_user_id');
+    await HiveHelper().removeSetting('auth_access_token');
+    await HiveHelper().removeSetting('auth_user_id');
   }
 
   // ─── PROFILE FETCHING ───
@@ -109,15 +109,15 @@ class AuthService extends ChangeNotifier {
           return;
         }
 
-        await DatabaseHelper().saveSetting(
+        await HiveHelper().saveSetting(
             'cached_user_profile_${BackendService.userId}', rawBody);
 
         final quitDateVal = data['quit_date'];
         if (quitDateVal != null) {
-          await DatabaseHelper().saveSetting(
+          await HiveHelper().saveSetting(
               'user_quit_date_${BackendService.userId}', quitDateVal);
         } else {
-          await DatabaseHelper()
+          await HiveHelper()
               .removeSetting('user_quit_date_${BackendService.userId}');
         }
         _currentUser = UserModel(
@@ -151,13 +151,13 @@ class AuthService extends ChangeNotifier {
         );
         final uid = BackendService.userId;
         final hasShownWelcomeStr =
-            await DatabaseHelper().getSetting('welcome_notification_shown_$uid');
+            await HiveHelper().getSetting('welcome_notification_shown_$uid');
         final hasShownWelcome = hasShownWelcomeStr == 'true';
         if (!hasShownWelcome && _currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(
             _currentUser!.displayName!.split(' ').first,
           );
-          await DatabaseHelper()
+          await HiveHelper()
               .saveSetting('welcome_notification_shown_$uid', 'true');
         }
       }
@@ -175,11 +175,11 @@ class AuthService extends ChangeNotifier {
     try {
       if (BackendService.token != null && BackendService.userId != null) {
         if (updatedUser.quitDate != null) {
-          await DatabaseHelper().saveSetting(
+          await HiveHelper().saveSetting(
               'user_quit_date_${BackendService.userId}',
               updatedUser.quitDate!.toIso8601String());
         } else {
-          await DatabaseHelper()
+          await HiveHelper()
               .removeSetting('user_quit_date_${BackendService.userId}');
         }
         final body = {
@@ -195,7 +195,7 @@ class AuthService extends ChangeNotifier {
           'gender': updatedUser.gender,
           'updated_at': DateTime.now().toIso8601String(),
         };
-        await DatabaseHelper().saveSetting(
+        await HiveHelper().saveSetting(
             'cached_user_profile_${BackendService.userId}', jsonEncode(body));
         await http
             .post(
@@ -428,7 +428,7 @@ class AuthService extends ChangeNotifier {
                 'photo_url': updated.photoUrl,
                 'updated_at': DateTime.now().toIso8601String(),
               };
-              await DatabaseHelper().saveSetting(
+              await HiveHelper().saveSetting(
                   'cached_user_profile_$userId', jsonEncode(body2));
               try {
                 await http.post(
@@ -455,7 +455,7 @@ class AuthService extends ChangeNotifier {
               'photo_url': null,
               'updated_at': DateTime.now().toIso8601String(),
             };
-            await DatabaseHelper().saveSetting(
+            await HiveHelper().saveSetting(
                 'cached_user_profile_$userId', jsonEncode(body2));
             try {
               await http.post(

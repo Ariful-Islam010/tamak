@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
-import '../services/database_helper.dart';
+import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/fallback_constants.dart';
@@ -35,7 +35,7 @@ class QuitPlanProvider extends ChangeNotifier {
       final userId = BackendService.userId ?? 'guest';
       final today = TimeUtils.todayBstDateString;
 
-      final planState = await DatabaseHelper().getQuitPlanState(userId);
+      final planState = await HiveHelper().getQuitPlanState(userId);
 
       List<String> completedDates = [];
       String? lastAnsweredDate;
@@ -84,7 +84,7 @@ class QuitPlanProvider extends ChangeNotifier {
                   : jsonEncode(fetchedPlan);
               if (freshPlanJson != storedPlan) {
                 storedPlan = freshPlanJson;
-                await DatabaseHelper().saveQuitPlanState(
+                await HiveHelper().saveQuitPlanState(
                   userId: userId,
                   aiPlanJson: freshPlanJson,
                   lastAnsweredDate: lastAnsweredDate,
@@ -120,7 +120,7 @@ class QuitPlanProvider extends ChangeNotifier {
       notifyListeners();
 
       final userId = BackendService.userId ?? 'guest';
-      final planState = await DatabaseHelper().getQuitPlanState(userId);
+      final planState = await HiveHelper().getQuitPlanState(userId);
 
       List<String> completedDates = [];
       String? lastAnsweredDate;
@@ -138,7 +138,7 @@ class QuitPlanProvider extends ChangeNotifier {
         }
       }
 
-      await DatabaseHelper().saveQuitPlanState(
+      await HiveHelper().saveQuitPlanState(
         userId: userId,
         aiPlanJson: jsonPlan,
         lastAnsweredDate: lastAnsweredDate,
@@ -173,7 +173,7 @@ class QuitPlanProvider extends ChangeNotifier {
       final userId = BackendService.userId ?? 'guest';
       final today = TimeUtils.todayBstDateString;
 
-      final planState = await DatabaseHelper().getQuitPlanState(userId);
+      final planState = await HiveHelper().getQuitPlanState(userId);
       List<String> completedDates = [];
       String? lastStartedDate;
       String? storedPlan;
@@ -200,7 +200,7 @@ class QuitPlanProvider extends ChangeNotifier {
       _hasAnsweredToday = true;
       _isCompletedToday = completed;
 
-      await DatabaseHelper().saveQuitPlanState(
+      await HiveHelper().saveQuitPlanState(
         userId: userId,
         aiPlanJson: storedPlan ?? jsonEncode(_dailyPlans),
         lastAnsweredDate: today,

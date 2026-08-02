@@ -194,16 +194,12 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
       );
       await authService.updateUserData(updatedUser);
     } else {
-      final dummyUser = UserModel(
-        uid: 'dummy',
-        displayName: enteredName.isNotEmpty ? enteredName : "ব্যবহারকারী",
-        educationalInfo: _classController.text.isNotEmpty ? _classController.text : "শিক্ষাগত তথ্য নেই",
-        planDuration: _selectedDuration ?? 7,
-        quitDate: _selectedDate,
-        age: int.tryParse(_ageController.text) ?? 19,
-        gender: _selectedGender ?? "পুরুষ",
-      );
-      await authService.updateUserData(dummyUser);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('অনুগ্রহ করে আগে লগইন করুন')),
+        );
+      }
+      return;
     }
     
     if (mounted) {

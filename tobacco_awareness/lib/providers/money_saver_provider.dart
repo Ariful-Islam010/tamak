@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../services/backend_service.dart';
+import '../services/hive_helper.dart';
 import '../utils/time_utils.dart';
 
 final moneySaverProvider = ChangeNotifierProvider<MoneySaverProvider>((ref) => MoneySaverProvider());
@@ -48,16 +48,16 @@ class MoneySaverProvider extends ChangeNotifier {
 
   Future<void> loadSavingsData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = HiveHelper();
       final userId = BackendService.userId ?? 'guest';
 
       _totalSavings = prefs.getInt('total_savings_$userId') ?? 0;
 
-      final lastAddedDate = prefs.getString('last_money_added_date_$userId');
+      final lastAddedDate = await prefs.getSetting('last_money_added_date_$userId');
       final today = TimeUtils.todayBstDateString;
       _hasAddedMoneyToday = (lastAddedDate == today);
 
-      final dreamsStr = prefs.getString('dreams_$userId');
+      final dreamsStr = await prefs.getSetting('dreams_$userId');
       if (dreamsStr != null) {
         final List<dynamic> decoded = json.decode(dreamsStr);
         _dreams = decoded.map((e) => {
@@ -91,7 +91,7 @@ class MoneySaverProvider extends ChangeNotifier {
               sum += (row['amount'] as num).toInt();
             }
             _totalSavings = sum;
-            await prefs.setInt('total_savings_$userId', _totalSavings);
+            await prefs.saveInt('total_savings_$userId', _totalSavings);
           }
 
           final goalsRes = await http
@@ -117,7 +117,7 @@ class MoneySaverProvider extends ChangeNotifier {
                 "target": e["target"],
                 "color": (e["color"] as Color).toARGB32(),
               }).toList();
-              await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
+              await prefs.saveSetting('dreams_$userId', json.encode(dreamsEncoded));
             }
           }
         } catch (e) {
@@ -132,10 +132,10 @@ class MoneySaverProvider extends ChangeNotifier {
 
   Future<void> _saveData() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final prefs = HiveHelper();
       final userId = BackendService.userId ?? 'guest';
 
-      await prefs.setInt('total_savings_$userId', _totalSavings);
+      await prefs.saveInt('total_savings_$userId', _totalSavings);
 
       final dreamsEncoded = _dreams.map((e) => {
         "title": e["title"],
@@ -143,7 +143,7 @@ class MoneySaverProvider extends ChangeNotifier {
         "target": e["target"],
         "color": (e["color"] as Color).toARGB32(),
       }).toList();
-      await prefs.setString('dreams_$userId', json.encode(dreamsEncoded));
+      await prefs.saveSetting('dreams_$userId', json.encode(dreamsEncoded));
     } catch (e) {
       debugPrint("Error saving data: $e");
     }
@@ -158,8 +158,8 @@ class MoneySaverProvider extends ChangeNotifier {
 
       final userId = BackendService.userId ?? 'guest';
       final today = TimeUtils.todayBstDateString;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_money_added_date_$userId', today);
+      final prefs = HiveHelper();
+      await prefs.saveSetting('last_money_added_date_$userId', today);
       _hasAddedMoneyToday = true;
 
       if (userId != 'guest' && BackendService.token != null) {

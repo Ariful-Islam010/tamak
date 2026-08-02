@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/database_helper.dart';
+import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
 
 final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) => ChatProvider());
@@ -26,7 +26,7 @@ class ChatProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    final savedDeleted = await DatabaseHelper().getDeletedMessageIds();
+    final savedDeleted = await HiveHelper().getDeletedMessageIds();
     _deletedMessageIds.addAll(savedDeleted);
     await _loadMessagesFromCache();
     await loadMessages();
@@ -63,7 +63,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> _loadMessagesFromCache() async {
     try {
       final userId = BackendService.userId ?? 'guest';
-      final cachedMessages = await DatabaseHelper().getChatMessages(userId);
+      final cachedMessages = await HiveHelper().getChatMessages(userId);
       if (cachedMessages.isNotEmpty) {
         _messages = cachedMessages.where((m) => !_deletedMessageIds.contains(m["id"].toString())).toList();
         notifyListeners();
@@ -76,7 +76,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> _saveMessagesToCache() async {
     try {
       final userId = BackendService.userId ?? 'guest';
-      await DatabaseHelper().saveChatMessages(userId, _messages);
+      await HiveHelper().saveChatMessages(userId, _messages);
     } catch (e) {
       debugPrint("Error saving messages to cache: $e");
     }
@@ -230,7 +230,7 @@ class ChatProvider extends ChangeNotifier {
       final targetIdStr = messageId.toString();
 
       _deletedMessageIds.add(targetIdStr);
-      await DatabaseHelper().saveDeletedMessageIds(_deletedMessageIds);
+      await HiveHelper().saveDeletedMessageIds(_deletedMessageIds);
       
       // Optimistically remove from local state
       _messages.removeWhere((msg) => msg["id"].toString() == targetIdStr);

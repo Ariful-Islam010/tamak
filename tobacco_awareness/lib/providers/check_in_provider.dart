@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
-import '../services/database_helper.dart';
+import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
 import '../utils/time_utils.dart';
 
@@ -34,7 +34,7 @@ class CheckInProvider extends ChangeNotifier {
       final userId = BackendService.userId ?? 'guest';
       final today = TimeUtils.todayBstDateString;
 
-      final cachedCheckIn = await DatabaseHelper().getCheckIn(userId, today);
+      final cachedCheckIn = await HiveHelper().getCheckIn(userId, today);
 
       if (cachedCheckIn != null) {
         _hasCheckedInToday = true;
@@ -53,7 +53,7 @@ class CheckInProvider extends ChangeNotifier {
       notifyListeners();
 
       final quitDateStr =
-          await DatabaseHelper().getSetting('user_quit_date_$userId');
+          await HiveHelper().getSetting('user_quit_date_$userId');
       final quitDate =
           quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(
@@ -81,7 +81,7 @@ class CheckInProvider extends ChangeNotifier {
               _selectedMood = data['mood'] as String?;
 
               // Update SQLite cache
-              await DatabaseHelper().saveCheckIn(
+              await HiveHelper().saveCheckIn(
                 userId,
                 today,
                 _selectedMood ?? 'Normal',
@@ -121,7 +121,7 @@ class CheckInProvider extends ChangeNotifier {
       final today = TimeUtils.todayBstDateString;
 
       // Save locally to SQLite first for speed
-      await DatabaseHelper().saveCheckIn(
+      await HiveHelper().saveCheckIn(
         userId,
         today,
         _selectedMood ?? 'Normal',
@@ -133,7 +133,7 @@ class CheckInProvider extends ChangeNotifier {
       notifyListeners();
 
       final quitDateStr =
-          await DatabaseHelper().getSetting('user_quit_date_$userId');
+          await HiveHelper().getSetting('user_quit_date_$userId');
       final quitDate =
           quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
       await NotificationService().scheduleEveningCheckIn(

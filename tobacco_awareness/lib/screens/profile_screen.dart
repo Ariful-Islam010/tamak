@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/hive_helper.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
@@ -28,15 +28,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Future<void> _loadNotificationPreference() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = HiveHelper();
     final enabled = prefs.getBool('notifications_enabled') ?? true;
     if (mounted) setState(() => _notificationsEnabled = enabled);
   }
 
   Future<void> _toggleNotifications(bool value) async {
     setState(() => _notificationsEnabled = value);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('notifications_enabled', value);
+    final prefs = HiveHelper();
+    await prefs.saveBool('notifications_enabled', value);
 
     if (!mounted) return;
     final authService = ref.read(authServiceProvider);
@@ -57,7 +57,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         }
       } else {
         setState(() => _notificationsEnabled = false);
-        await prefs.setBool('notifications_enabled', false);
+        await prefs.saveBool('notifications_enabled', false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

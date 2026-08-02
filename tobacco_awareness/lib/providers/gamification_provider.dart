@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import '../services/database_helper.dart';
+import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
 import '../utils/time_utils.dart';
 
@@ -132,7 +132,7 @@ class GamificationProvider extends ChangeNotifier {
 
   Future<void> _loadFromDatabaseCache(String userId) async {
     try {
-      final cached = await DatabaseHelper().getGamification(userId);
+      final cached = await HiveHelper().getGamification(userId);
       if (cached != null) {
         _currentStreak = cached['streak'] as int? ?? 0;
 
@@ -177,7 +177,7 @@ class GamificationProvider extends ChangeNotifier {
         'completed_trees': _completedTrees,
       };
 
-      await DatabaseHelper().saveGamification(
+      await HiveHelper().saveGamification(
         userId,
         _currentStreak * 10, // points
         _currentStreak,
@@ -230,7 +230,7 @@ class GamificationProvider extends ChangeNotifier {
         _messagesCount = (stats['messages_count'] as num?)?.toInt() ?? 0;
 
         // Load task completions from SQLite
-        final planState = await DatabaseHelper().getQuitPlanState(userId);
+        final planState = await HiveHelper().getQuitPlanState(userId);
         if (planState != null && planState['completed_task_dates'] != null) {
           final List<dynamic> completedDates =
               jsonDecode(planState['completed_task_dates']);

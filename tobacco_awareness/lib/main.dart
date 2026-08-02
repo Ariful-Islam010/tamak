@@ -4,12 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'theme/app_theme.dart';
 import 'services/notification_service.dart';
+import 'services/hive_helper.dart';
 import 'screens/splash_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Hive
+  await HiveHelper().init();
 
   // Load environment variables (still needed for any remaining frontend env vars)
   await dotenv.load(fileName: ".env");

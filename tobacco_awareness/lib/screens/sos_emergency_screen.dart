@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/hive_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_utils.dart';
@@ -64,12 +64,15 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
   }
 
   Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = HiveHelper();
     final today = TimeUtils.todayBstDateString;
-    final friendsJson = prefs.getString('sos_friends') ?? '[]';
+    final friendsJson = await prefs.getSetting('sos_friends') ?? '[]';
+    final waterDoneDate = await prefs.getSetting('water_done_date');
+    final walkingDoneDate = await prefs.getSetting('walking_done_date');
+    
     setState(() {
-      _waterDone = prefs.getString('water_done_date') == today;
-      _walkingDone = prefs.getString('walking_done_date') == today;
+      _waterDone = waterDoneDate == today;
+      _walkingDone = walkingDoneDate == today;
       _friends = List<Map<String, String>>.from(
         (jsonDecode(friendsJson) as List).map((e) => Map<String, String>.from(e)),
       );
@@ -77,13 +80,13 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
   }
 
   Future<void> _saveFriends() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('sos_friends', jsonEncode(_friends));
+    final prefs = HiveHelper();
+    await prefs.saveSetting('sos_friends', jsonEncode(_friends));
   }
 
   Future<void> _markWaterDone() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('water_done_date', TimeUtils.todayBstDateString);
+    final prefs = HiveHelper();
+    await prefs.saveSetting('water_done_date', TimeUtils.todayBstDateString);
     setState(() => _waterDone = true);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -93,8 +96,8 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
   }
 
   Future<void> _markWalkingDone() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('walking_done_date', TimeUtils.todayBstDateString);
+    final prefs = HiveHelper();
+    await prefs.saveSetting('walking_done_date', TimeUtils.todayBstDateString);
     setState(() => _walkingDone = true);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
