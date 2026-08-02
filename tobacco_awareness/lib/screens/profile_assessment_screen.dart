@@ -18,6 +18,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _classController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _cigarettesPerDayController = TextEditingController();
@@ -35,6 +36,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   @override
   void initState() {
     super.initState();
+    _nameController.text = ""; // Empty by default
     _ageController.text = ""; // Empty by default
     _cigarettesPerDayController.text = ""; // Empty by default
     _selectedGender = _genders[0]; // Default: পুরুষ
@@ -44,6 +46,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _nameController.dispose();
     _classController.dispose();
     _ageController.dispose();
     _cigarettesPerDayController.dispose();
@@ -53,7 +56,19 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   /// Validate current page before moving forward
   bool _validateCurrentPage() {
     switch (_currentPage) {
-      case 0: // Educational info - MUST be entered
+      case 0: // Name - MUST be entered
+        if (_nameController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("অনুগ্রহ করে আপনার নাম প্রবেশ করান!"),
+              backgroundColor: AppTheme.errorColor,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return false;
+        }
+        return true;
+      case 1: // Educational info - MUST be entered
         if (_classController.text.trim().isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -65,12 +80,12 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
           return false;
         }
         return true;
-      case 1: // Age - MUST be entered
+      case 2: // Age - MUST be entered
         final age = int.tryParse(_ageController.text.trim());
         if (age == null || age <= 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("অনুগ্রহ করে আপনার বয়স সঠিকভাবে টাইপ করুন!"),
+              content: Text("অনুগ্রহ করে আপনার বয়স সঠিকভাবে টাইপ করুন!"),
               backgroundColor: AppTheme.errorColor,
               behavior: SnackBarBehavior.floating,
             ),
@@ -78,9 +93,9 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
           return false;
         }
         return true;
-      case 2: // Gender - always has a default
+      case 3: // Gender - always has a default
         return _selectedGender != null;
-      case 3: // Cigarettes per day - MUST be entered
+      case 4: // Cigarettes per day - MUST be entered
         final cigs = int.tryParse(_cigarettesPerDayController.text.trim());
         if (cigs == null || cigs < 0) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -93,9 +108,9 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
           return false;
         }
         return true;
-      case 4: // Plan duration - always has a default
+      case 5: // Plan duration - always has a default
         return _selectedDuration != null;
-      case 5: // Quit date - MUST be selected
+      case 6: // Quit date - MUST be selected
         if (_selectedDate == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -115,7 +130,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
   void _nextPage() {
     if (!_validateCurrentPage()) return;
 
-    if (_currentPage < 5) {
+    if (_currentPage < 6) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
@@ -166,8 +181,11 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
       Navigator.pop(context); // Dismiss loading dialog
     }
 
+    final enteredName = _nameController.text.trim();
+
     if (currentUser != null) {
       final updatedUser = currentUser.copyWith(
+        displayName: enteredName.isNotEmpty ? enteredName : null,
         educationalInfo: _classController.text.isNotEmpty ? _classController.text : null,
         planDuration: _selectedDuration ?? 7,
         quitDate: _selectedDate,
@@ -178,7 +196,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
     } else {
       final dummyUser = UserModel(
         uid: 'dummy',
-        displayName: "ব্যবহারকারী",
+        displayName: enteredName.isNotEmpty ? enteredName : "ব্যবহারকারী",
         educationalInfo: _classController.text.isNotEmpty ? _classController.text : "শিক্ষাগত তথ্য নেই",
         planDuration: _selectedDuration ?? 7,
         quitDate: _selectedDate,
@@ -250,7 +268,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
             children: [
               // Progress Indicator
               LinearProgressIndicator(
-                value: (_currentPage + 1) / 6,
+                value: (_currentPage + 1) / 7,
                 backgroundColor: Colors.grey.withValues(alpha: 0.2),
                 valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
               ),
@@ -264,6 +282,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
                     });
                   },
                   children: [
+                    _buildNameStep(),
                     _buildClassStep(),
                     _buildAgeStep(),
                     _buildGenderStep(),
@@ -280,7 +299,7 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
                   height: 56,
                   child: ElevatedButton(
                     onPressed: _nextPage,
-                    child: Text(_currentPage == 5 ? "সম্পন্ন করুন" : "পরবর্তী"),
+                    child: Text(_currentPage == 6 ? "সম্পন্ন করুন" : "পরবর্তী"),
                   ),
                 ),
               ),
@@ -311,6 +330,21 @@ class _ProfileAssessmentScreenState extends State<ProfileAssessmentScreen> {
           const SizedBox(height: 32),
           child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildNameStep() {
+    return _buildStepContainer(
+      "আপনার নাম",
+      "আপনার পরিচয়ের জন্য একটি নাম দিন। (অবশ্যই পূরণ করতে হবে)",
+      TextField(
+        controller: _nameController,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(
+          hintText: "যেমন: রাহুল ইসলাম",
+          prefixIcon: Icon(Icons.person_outline),
+        ),
       ),
     );
   }

@@ -403,29 +403,54 @@ class AuthService extends ChangeNotifier {
         final googleEmail = googleUser.email;
         final supabaseEmail = userMap?['email'] as String?;
         final resolvedEmail = googleEmail.isNotEmpty ? googleEmail : supabaseEmail;
-
-        // Extract display name from Google account
-        final googleName = googleUser.displayName;
-        final googlePhoto = googleUser.photoUrl;
+        // Note: googleName and googlePhoto intentionally NOT used —
+        // name comes from profile assessment, photo from profile screen.
 
         if (token != null && userId != null) {
           await _saveSession(token, userId);
           await _fetchAndSetProfile();
 
-          // If email is still missing after profile fetch, save Google info directly
-          if (_currentUser != null && (_currentUser!.email == null || _currentUser!.email!.isEmpty)) {
-            final updated = _currentUser!.copyWith(
+          // Only persist email from Google if it is missing in the profile.
+          // Name and photo are NOT taken from Google — user sets them themselves
+          // via profile assessment (name) and profile screen (photo).
+          if (_currentUser != null) {
+            final needsEmailUpdate = (_currentUser!.email == null || _currentUser!.email!.isEmpty);
+            if (needsEmailUpdate) {
+              final updated = _currentUser!.copyWith(email: resolvedEmail);
+              _currentUser = updated;
+              final body2 = {
+                'id': userId,
+                'email': resolvedEmail,
+                'display_name': updated.displayName,
+                'photo_url': updated.photoUrl,
+                'updated_at': DateTime.now().toIso8601String(),
+              };
+              await DatabaseHelper().saveSetting(
+                  'cached_user_profile_$userId', jsonEncode(body2));
+              try {
+                await http.post(
+                  Uri.parse('${BackendService.baseUrl}/api/profile'),
+                  headers: BackendService.headers(),
+                  body: jsonEncode(body2),
+                ).timeout(const Duration(seconds: 10));
+              } catch (e) {
+                debugPrint("Error saving email to backend: $e");
+              }
+            }
+          } else {
+            // New user — create profile with email only; name set via assessment
+            _currentUser = UserModel(
+              uid: userId,
               email: resolvedEmail,
-              displayName: _currentUser!.displayName ?? googleName,
-              photoUrl: _currentUser!.photoUrl ?? googlePhoto,
+              displayName: null,
+              photoUrl: null,
             );
-            _currentUser = updated;
-            // Persist to backend profile
             final body2 = {
               'id': userId,
               'email': resolvedEmail,
-              'display_name': updated.displayName,
-              'photo_url': updated.photoUrl,
+              'display_name': null,
+              'photo_url': null,
+              'updated_at': DateTime.now().toIso8601String(),
             };
             await DatabaseHelper().saveSetting(
                 'cached_user_profile_$userId', jsonEncode(body2));
@@ -436,7 +461,7 @@ class AuthService extends ChangeNotifier {
                 body: jsonEncode(body2),
               ).timeout(const Duration(seconds: 10));
             } catch (e) {
-              debugPrint("Error saving Google profile to backend: $e");
+              debugPrint("Error saving new user profile to backend: $e");
             }
           }
         }

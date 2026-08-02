@@ -67,6 +67,9 @@ class MoneySaverProvider extends ChangeNotifier {
         _dreams = [];
       }
 
+      // Notify listeners immediately with cached local data
+      notifyListeners();
+
       // Sync from backend if online
       if (userId != 'guest' && BackendService.token != null) {
         try {

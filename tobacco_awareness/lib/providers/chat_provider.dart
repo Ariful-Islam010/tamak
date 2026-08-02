@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/database_helper.dart';
 import '../services/backend_service.dart';
 
@@ -11,7 +12,8 @@ class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   final Set<String> _deletedMessageIds = {};
   bool _isLoading = false;
-  Timer? _pollTimer;
+  Timer? _fallbackTimer;
+  RealtimeChannel? _realtimeChannel;
 
   List<Map<String, dynamic>> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -25,10 +27,34 @@ class ChatProvider extends ChangeNotifier {
     _deletedMessageIds.addAll(savedDeleted);
     await _loadMessagesFromCache();
     await loadMessages();
-    // Poll every 4 seconds for new messages (replaces Supabase Realtime)
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+
+    _setupRealtimeSubscription();
+
+    // Secondary fallback timer every 15s in case connection drops briefly
+    _fallbackTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       loadMessages();
     });
+  }
+
+  void _setupRealtimeSubscription() {
+    try {
+      final client = Supabase.instance.client;
+      _realtimeChannel = client
+          .channel('public:peer_support_messages')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'peer_support_messages',
+            callback: (payload) {
+              debugPrint('⚡ Realtime event received: ${payload.eventType}');
+              loadMessages();
+            },
+          )
+          .subscribe();
+      debugPrint('⚡ Subscribed to Supabase Realtime channel: peer_support_messages');
+    } catch (e) {
+      debugPrint('Error setting up Realtime subscription: $e');
+    }
   }
 
   Future<void> _loadMessagesFromCache() async {
@@ -101,15 +127,23 @@ class ChatProvider extends ChangeNotifier {
 
           final isMe = row['sender_id'] == userId;
 
+          // Resolve sender name from multiple possible field names
+          final senderName = senderData?['display_name']
+              ?? senderData?['name']
+              ?? senderData?['username']
+              ?? senderData?['full_name']
+              ?? (isMe ? null : "ব্যবহারকারী");
+
+          final isCounselor = (senderData?['display_name'] ?? senderData?['name'] ?? '')
+              .toString()
+              .contains("কাউন্সেলর");
+
           fetchedMessages.add({
             "id": row['id'],
             "isMe": isMe,
-            "sender": senderData?['display_name'] ?? "অজ্ঞাত ব্যবহারকারী",
-            "senderPhoto": senderData?['photo_url'],
-            "isCounselor": senderData?['display_name']
-                    ?.toString()
-                    .contains("কাউন্সেলর") ??
-                false,
+            "sender": senderName ?? "ব্যবহারকারী",
+            "senderPhoto": senderData?['photo_url'] ?? senderData?['avatar_url'],
+            "isCounselor": isCounselor,
             "text": row['content'] ?? "",
             "imageUrl": row['image_url'],
             "time": formattedTime,
@@ -222,19 +256,34 @@ class ChatProvider extends ChangeNotifier {
   Future<void> editMessage(dynamic messageId, String newContent) async {
     try {
       if (messageId == null || BackendService.token == null) return;
+
+      final targetIdStr = messageId.toString();
+      final trimmedContent = newContent.trim();
+
+      // Optimistic local update — update UI immediately
+      final idx = _messages.indexWhere((m) => m['id'].toString() == targetIdStr);
+      if (idx != -1) {
+        _messages[idx] = Map<String, dynamic>.from(_messages[idx])
+          ..['text'] = trimmedContent;
+        notifyListeners();
+        await _saveMessagesToCache();
+      }
+
       final response = await http
           .put(
             Uri.parse(
-                '${BackendService.baseUrl}/api/chat/messages/$messageId'),
+                '${BackendService.baseUrl}/api/chat/messages/$targetIdStr'),
             headers: BackendService.headers(),
-            body: jsonEncode({'content': newContent.trim()}),
+            body: jsonEncode({'content': trimmedContent}),
           )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode >= 400) {
-        throw Exception("মেসেজ এডিট করা যায়নি (${response.statusCode})");
+        // Revert optimistic update on failure by reloading from server
+        await loadMessages();
+        throw Exception("মেসেজ এডিট করা যায়নি (${response.statusCode})");
       }
-      await loadMessages();
+      // Optimistic update is sufficient — poll timer will sync in ~4s
     } catch (e) {
       debugPrint("Error editing message: $e");
       rethrow;
@@ -243,7 +292,8 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _fallbackTimer?.cancel();
+    _realtimeChannel?.unsubscribe();
     super.dispose();
   }
 }

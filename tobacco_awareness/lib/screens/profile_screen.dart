@@ -336,7 +336,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final authService = context.watch<AuthService>();
     final user = authService.currentUser;
     final userName = user?.displayName ?? "ব্যবহারকারী";
-    final userEmail = user?.email ?? "ইমেইল দেওয়া হয়নি";
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0FDF4), // Vibrant light green/mint background
@@ -431,17 +430,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       fontSize: 22, 
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF111827),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    userEmail, 
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF4B5563),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
