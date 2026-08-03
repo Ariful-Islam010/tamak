@@ -31,10 +31,13 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     });
   }
 
+  // ✅ OPTIMIZED: সব ৩টি API এখন একসাথে (Parallel) রান হয়, একে একে নয়
   Future<void> _refreshAllData() async {
-    ref.read(moneySaverProvider).loadSavingsData();
-    ref.read(checkInProvider).loadCheckInStatus();
-    ref.read(gamificationProvider).loadGamificationData();
+    await Future.wait([
+      ref.read(moneySaverProvider).loadSavingsData(),
+      ref.read(checkInProvider).loadCheckInStatus(),
+      ref.read(gamificationProvider).loadGamificationData(),
+    ]);
   }
 
   String _toBengali(int number) {
@@ -47,8 +50,8 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
   String _toBengaliOrdinal(int day) {
     if (day == 1) return "১ম";
-    if (day == 2) return "২য়";
-    if (day == 3) return "৩য়";
+    if (day == 2) return "২য়";
+    if (day == 3) return "৩য়";
     if (day == 4) return "৪র্থ";
     if (day == 5) return "৫ম";
     if (day == 6) return "৬ষ্ঠ";
@@ -176,17 +179,31 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Stats Row
+                // Stats Row — ✅ OPTIMIZED: আলাদা StatelessWidget
                 Row(
                   children: [
-                    Expanded(child: _buildStatCard(context, "তামাকমুক্ত দিন", _toBengali(smokeFreeDays), Icons.air, AppTheme.primaryGreen)),
+                    Expanded(
+                      child: _DashboardStatCard(
+                        title: "তামাকমুক্ত দিন",
+                        value: _toBengali(smokeFreeDays),
+                        icon: Icons.air,
+                        color: AppTheme.primaryGreen,
+                      ),
+                    ),
                     const SizedBox(width: 16),
-                    Expanded(child: _buildStatCard(context, "টাকা সেভ", "৳${_toBengali(totalSaved)}", Icons.account_balance_wallet, AppTheme.primaryBlue)),
+                    Expanded(
+                      child: _DashboardStatCard(
+                        title: "টাকা সেভ",
+                        value: "৳${_toBengali(totalSaved)}",
+                        icon: Icons.account_balance_wallet,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 32),
 
-                // Features Grid
+                // Features Grid — ✅ OPTIMIZED: আলাদা StatelessWidget
                 Text("সার্ভিস সমূহ", style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 18)),
                 const SizedBox(height: 16),
                 GridView.count(
@@ -197,12 +214,42 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
                   children: [
-                    _buildGridItem(context, "পরিকল্পনা", Icons.map, AppTheme.primaryBlue, const QuitPlanScreen()),
-                    _buildGridItem(context, "দৈনিক চেক-ইন", Icons.check_circle, AppTheme.primaryGreen, const DailyCheckInScreen()),
-                    _buildSosGridItem(context),
-                    _buildGridItem(context, "টাকা সেভার", Icons.savings, AppTheme.accentYellow, const MoneySaverScreen()),
-                    _buildGridItem(context, "সহায়তা গ্রুপ", Icons.group, Colors.purple, const PeerSupportScreen()),
-                    _buildGridItem(context, "সচেতনতা", Icons.menu_book, Colors.teal, const EducationInfoScreen()),
+                    _DashboardGridItem(
+                      title: "পরিকল্পনা",
+                      icon: Icons.map,
+                      color: AppTheme.primaryBlue,
+                      destination: const QuitPlanScreen(),
+                      onReturn: _refreshAllData,
+                    ),
+                    _DashboardGridItem(
+                      title: "দৈনিক চেক-ইন",
+                      icon: Icons.check_circle,
+                      color: AppTheme.primaryGreen,
+                      destination: const DailyCheckInScreen(),
+                      onReturn: _refreshAllData,
+                    ),
+                    _SosGridItem(onReturn: _refreshAllData),
+                    _DashboardGridItem(
+                      title: "টাকা সেভার",
+                      icon: Icons.savings,
+                      color: AppTheme.accentYellow,
+                      destination: const MoneySaverScreen(),
+                      onReturn: _refreshAllData,
+                    ),
+                    _DashboardGridItem(
+                      title: "সহায়তা গ্রুপ",
+                      icon: Icons.group,
+                      color: Colors.purple,
+                      destination: const PeerSupportScreen(),
+                      onReturn: _refreshAllData,
+                    ),
+                    _DashboardGridItem(
+                      title: "সচেতনতা",
+                      icon: Icons.menu_book,
+                      color: Colors.teal,
+                      destination: const EducationInfoScreen(),
+                      onReturn: _refreshAllData,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 80),
@@ -213,8 +260,24 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildStatCard(BuildContext context, String title, String value, IconData icon, Color color) {
+// ✅ OPTIMIZED: আলাদা StatelessWidget — Stat Card
+class _DashboardStatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _DashboardStatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -236,50 +299,30 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
       ),
     );
   }
+}
 
-  // Original-style SOS grid item (same as before)
-  Widget _buildSosGridItem(BuildContext context) {
-    const color = AppTheme.errorColor;
-    return GestureDetector(
-      onTap: () async {
-        await Navigator.push(context, MaterialPageRoute(builder: (_) => const SosEmergencyScreen()));
-        if (mounted) _refreshAllData();
-      },
-      child: Column(
-        children: [
-          Container(
-            height: 64,
-            width: 64,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.warning_rounded, color: AppTheme.white, size: 32),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "এস.ও.এস",
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
-            maxLines: 2,
-          ),
-        ],
-      ),
-    );
-  }
+// ✅ OPTIMIZED: আলাদা StatelessWidget — Grid Item
+class _DashboardGridItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Widget destination;
+  final Future<void> Function() onReturn;
 
-  Widget _buildGridItem(BuildContext context, String title, IconData icon, Color color, Widget destination) {
+  const _DashboardGridItem({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.destination,
+    required this.onReturn,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
         await Navigator.push(context, MaterialPageRoute(builder: (_) => destination));
-        if (mounted) _refreshAllData();
+        await onReturn();
       },
       child: Column(
         children: [
@@ -295,6 +338,51 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
           const SizedBox(height: 8),
           Text(
             title,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
+            maxLines: 2,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ✅ OPTIMIZED: SOS বাটন আলাদা Widget
+class _SosGridItem extends StatelessWidget {
+  final Future<void> Function() onReturn;
+
+  const _SosGridItem({required this.onReturn});
+
+  @override
+  Widget build(BuildContext context) {
+    const color = AppTheme.errorColor;
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const SosEmergencyScreen()));
+        await onReturn();
+      },
+      child: Column(
+        children: [
+          Container(
+            height: 64,
+            width: 64,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66F44336),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.warning_rounded, color: AppTheme.white, size: 32),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "এস.ও.এস",
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
             maxLines: 2,
