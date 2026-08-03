@@ -34,6 +34,10 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Create dummy .env for CI
+        run: cp .env.example .env
+        working-directory: tobacco_awareness
+
       - name: Install Flutter Dependencies
         run: flutter pub get
         working-directory: tobacco_awareness
@@ -41,7 +45,6 @@ jobs:
       - name: Analyze Flutter Code
         run: flutter analyze --no-fatal-warnings --no-fatal-infos || true
         working-directory: tobacco_awareness
-
 
       - name: Run Flutter Tests
         run: flutter test
