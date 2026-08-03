@@ -46,6 +46,18 @@ class MoneySaverProvider extends ChangeNotifier {
     loadSavingsData();
   }
 
+  /// টেস্টের জন্য নামকৃত Constructor — Hive বা HTTP ছাড়াই কাজ করে
+  MoneySaverProvider.testable();
+
+  /// শুধুমাত্র টেস্টে ব্যবহার করার জন্য — সরাসরি ডেটা সেট করা যায়
+  void setTestData({
+    required int totalSavings,
+    required List<Map<String, dynamic>> dreams,
+  }) {
+    _totalSavings = totalSavings;
+    _dreams = dreams;
+  }
+
   Future<void> loadSavingsData() async {
     try {
       final prefs = HiveHelper();
