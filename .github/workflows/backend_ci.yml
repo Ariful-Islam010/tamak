@@ -1,0 +1,36 @@
+name: Backend CI Check
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'tobacco_awareness_backend/**'
+      - '.github/workflows/backend_ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'tobacco_awareness_backend/**'
+      - '.github/workflows/backend_ci.yml'
+  workflow_dispatch:
+
+jobs:
+  build_check:
+    name: Backend Build & Syntax Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (20)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Backend Dependencies
+        run: npm ci || npm install
+        working-directory: tobacco_awareness_backend
+
+      - name: Verify Next.js Build
+        run: npm run build
+        working-directory: tobacco_awareness_backend
