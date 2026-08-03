@@ -4,8 +4,8 @@ import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/groq_ai_service.dart';
 import '../providers/quit_plan_provider.dart';
-import '../models/user_model.dart';
 import 'home_dashboard_screen.dart';
+
 
 class ProfileAssessmentScreen extends ConsumerStatefulWidget {
   const ProfileAssessmentScreen({super.key});
