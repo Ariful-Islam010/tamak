@@ -8,7 +8,7 @@ router.get('/messages', requireAuth, async (req, res) => {
   try {
     const result = await query(`
       SELECT p.id, p.sender_id, p.content, p.image_url, p.created_at,
-             u.name as display_name, u.avatar_url as photo_url
+             u.display_name as display_name, u.photo_url as photo_url
       FROM peer_support_messages p
       LEFT JOIN user_profiles u ON p.sender_id = u.id
       ORDER BY p.created_at ASC
@@ -51,7 +51,7 @@ router.post('/messages', requireAuth, async (req, res) => {
     
     const completeMessageResult = await query(`
       SELECT p.id, p.sender_id, p.content, p.image_url, p.created_at,
-             u.name as display_name, u.avatar_url as photo_url
+             u.display_name as display_name, u.photo_url as photo_url
       FROM peer_support_messages p
       LEFT JOIN user_profiles u ON p.sender_id = u.id
       WHERE p.id = $1
