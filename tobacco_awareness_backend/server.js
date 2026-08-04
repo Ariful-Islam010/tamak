@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const config = require('./config');
 
@@ -50,6 +52,11 @@ app.use('/api/savings', savingsRouter);
 app.use('/api/goals', goalsRouter);
 app.use('/api/gamification', gamificationRouter);
 app.use('/api/chat', chatRouter);
+// Serve uploaded images as static files
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+app.use('/uploads', express.static(uploadsDir));
+
 app.use('/api/upload', uploadRouter);
 app.use('/api/ai', aiRouter);
 

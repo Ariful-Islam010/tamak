@@ -1,56 +1,31 @@
-const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const fs = require('fs');
+const path = require('path');
 const config = require('../config');
 
-// Ensure the internal endpoint has a protocol
-let minioEndpoint = config.MINIO_ENDPOINT;
-if (!minioEndpoint.startsWith('http://') && !minioEndpoint.startsWith('https://')) {
-  minioEndpoint = 'http://' + minioEndpoint;
+const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(UPLOAD_DIR)) {
+  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 }
 
-const s3Client = new S3Client({
-  endpoint: minioEndpoint,
-  region: 'us-east-1', // MinIO default
-  credentials: {
-    accessKeyId: config.MINIO_ACCESS_KEY,
-    secretAccessKey: config.MINIO_SECRET_KEY,
-  },
-  forcePathStyle: true, // Required for MinIO
-});
-
-const BUCKET_NAME = config.MINIO_BUCKET_NAME || 'tamak';
-
 async function uploadFile(fileBuffer, fileName, mimetype) {
-  const params = {
-    Bucket: BUCKET_NAME,
-    Key: fileName,
-    Body: fileBuffer,
-    ContentType: mimetype,
-  };
+  const filePath = path.join(UPLOAD_DIR, fileName);
+  fs.writeFileSync(filePath, fileBuffer);
 
-  await s3Client.send(new PutObjectCommand(params));
-  
-  // Return the public URL
-  // Remove trailing slash if present from public URL, then append bucket and filename
-  const pubUrl = config.MINIO_PUBLIC_URL.replace(/\/$/, '');
-  let finalPubUrl = pubUrl;
-  if (!pubUrl.startsWith('http://') && !pubUrl.startsWith('https://')) {
-    finalPubUrl = 'http://' + pubUrl;
-  }
-  return `${finalPubUrl}/${BUCKET_NAME}/${fileName}`;
+  // Return public URL — served by Express static middleware at /uploads
+  const base = (config.PUBLIC_URL || '').replace(/\/$/, '');
+  return `${base}/uploads/${fileName}`;
 }
 
 async function deleteFile(fileName) {
-  const params = {
-    Bucket: BUCKET_NAME,
-    Key: fileName,
-  };
-
-  await s3Client.send(new DeleteObjectCommand(params));
+  const filePath = path.join(UPLOAD_DIR, fileName);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
 }
 
 module.exports = {
-  s3Client,
   uploadFile,
   deleteFile,
-  BUCKET_NAME
 };
