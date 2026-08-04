@@ -10,4 +10,5 @@ module.exports = {
   PORT: process.env.PORT || 8000,
   APP_ENV: process.env.APP_ENV || 'production',
   GROQ_API_KEY: process.env.GROQ_API_KEY || '',
+  MINIO_PUBLIC_URL: process.env.MINIO_PUBLIC_URL || process.env.MINIO_ENDPOINT || '',
 };
