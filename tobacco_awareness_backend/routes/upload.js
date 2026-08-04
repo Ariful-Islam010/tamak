@@ -10,13 +10,6 @@ const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype && file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed.'));
-    }
-  },
 });
 
 // POST /api/upload
@@ -26,10 +19,23 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ detail: 'No file uploaded' });
     }
 
-    const fileExt = req.file.originalname.split('.').pop();
+    const fileExt = req.file.originalname.split('.').pop().toLowerCase();
+    const allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'];
+    
+    // Validate inside the controller after parsing
+    if (!allowedExts.includes(fileExt) && !req.file.mimetype.startsWith('image/')) {
+      return res.status(400).json({ detail: 'Only image files are allowed.' });
+    }
+
     const randomName = crypto.randomBytes(16).toString('hex') + '.' + fileExt;
 
-    const secure_url = await uploadFile(req.file.buffer, randomName, req.file.mimetype);
+    // If mimetype is missing or application/octet-stream, guess from extension
+    let mimetype = req.file.mimetype;
+    if (!mimetype.startsWith('image/')) {
+      mimetype = `image/${fileExt === 'jpg' ? 'jpeg' : fileExt}`;
+    }
+
+    const secure_url = await uploadFile(req.file.buffer, randomName, mimetype);
     return res.json({ secure_url });
   } catch (error) {
     console.error('Storage upload error:', error);
