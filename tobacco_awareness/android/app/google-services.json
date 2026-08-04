@@ -1,49 +1,42 @@
 {
   "project_info": {
-    "project_number": "810251320156",
-    "project_id": "tobacco-awareness",
-    "storage_bucket": "tobacco-awareness.firebasestorage.app"
+    "project_number": "82683276860",
+    "project_id": "tamak-506bb",
+    "storage_bucket": "tamak-506bb.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:810251320156:android:6510b90f3d85736235df99",
+        "mobilesdk_app_id": "1:82683276860:android:d427933e0b74837b28dd39",
         "android_client_info": {
-          "package_name": "com.example.tobacco_awareness"
+          "package_name": "com.ariful010a.tobacco_awareness"
         }
       },
       "oauth_client": [
         {
-          "client_id": "810251320156-a53ksj6r0lm3rjad498qens6jmm8fml0.apps.googleusercontent.com",
+          "client_id": "82683276860-a1609oug9l627nh3q10g0k54b26h3bs0.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.tobacco_awareness",
+            "package_name": "com.ariful010a.tobacco_awareness",
             "certificate_hash": "7c58840aafc7fe772f214f406c0d010a0c283e86"
           }
         },
         {
-          "client_id": "810251320156-fnfum4mtk2f6j6egrek5mkii956ip9gi.apps.googleusercontent.com",
+          "client_id": "82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBYEMKXQ2N9iNbnB62rcGpq5-OHBx-3KaY"
+          "current_key": "AIzaSyD3NgxOGM9UdHJ1BIoRKcTQoXP5dpFRqpw"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "810251320156-fnfum4mtk2f6j6egrek5mkii956ip9gi.apps.googleusercontent.com",
+              "client_id": "82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com",
               "client_type": 3
-            },
-            {
-              "client_id": "810251320156-1rhkm4oapfp85jf92df6qk2425ldno68.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.tobaccoAwareness"
-              }
             }
           ]
         }

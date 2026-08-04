@@ -14,7 +14,7 @@ class GroqAiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/generate-plan'),
+        Uri.parse('$_baseUrl/api/ai/generate-plan'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -54,7 +54,7 @@ class GroqAiService {
   static Future<String?> getSosAdvice(String triggerReason) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/get-sos-advice'),
+        Uri.parse('$_baseUrl/api/ai/get-sos-advice'),
         headers: {
           'Content-Type': 'application/json',
         },

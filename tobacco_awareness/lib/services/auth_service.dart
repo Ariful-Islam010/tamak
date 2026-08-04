@@ -12,7 +12,13 @@ import 'backend_service.dart';
 final authServiceProvider = ChangeNotifierProvider<AuthService>((ref) => AuthService());
 
 class AuthService extends ChangeNotifier {
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  // Web/server client ID from google-services.json — required to get idToken on Android
+  static const _serverClientId =
+      '82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com';
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: _serverClientId,
+  );
 
   UserModel? _currentUser;
   bool _isLoading = false;
@@ -363,13 +369,8 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      const webClientId =
-          '810251320156-fnfum4mtk2f6j6egrek5mkii956ip9gi.apps.googleusercontent.com';
-      const iosClientId =
-          '810251320156-1rhkm4oapfp85jf92df6qk2425ldno68.apps.googleusercontent.com';
       final GoogleSignIn googleSignIn = GoogleSignIn(
-        serverClientId: webClientId,
-        clientId: iosClientId,
+        serverClientId: _serverClientId,
       );
       final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       if (googleUser == null) {
