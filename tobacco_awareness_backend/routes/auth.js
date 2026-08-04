@@ -52,11 +52,27 @@ router.post('/signin', async (req, res) => {
   }
 });
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client('82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com');
+
 // POST /api/auth/signin-google
 router.post('/signin-google', async (req, res) => {
   try {
-    const { email, google_id } = req.body;
+    const { idToken } = req.body;
     
+    if (!idToken) {
+      return res.status(400).json({ detail: 'Missing idToken' });
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: idToken,
+      audience: '82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com',
+    });
+    
+    const payload = ticket.getPayload();
+    const email = payload.email;
+    const google_id = payload.sub; // Google's unique ID for the user
+
     let result = await query('SELECT * FROM users WHERE email = $1', [email]);
     let user;
 
@@ -70,6 +86,9 @@ router.post('/signin-google', async (req, res) => {
     } else {
       user = result.rows[0];
       // Optionally update google_id if it was not set
+      if (!user.google_id) {
+        await query('UPDATE users SET google_id = $1 WHERE id = $2', [google_id, user.id]);
+      }
     }
 
     const token = generateToken(user);
