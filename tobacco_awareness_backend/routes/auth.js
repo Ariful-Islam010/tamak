@@ -1,18 +1,29 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseReq } = require('../services/supabase');
+const { query } = require('../services/db');
+const { hashPassword, verifyPassword, generateToken } = require('../services/auth');
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await supabaseReq('POST', '/auth/v1/signup', {
-      jsonData: { email, password },
-    });
-    if (!result.ok) {
-      return res.status(result.status).json(result.data);
+    
+    // Check if user already exists
+    const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rowCount > 0) {
+      return res.status(400).json({ detail: 'User already exists' });
     }
-    return res.json(result.data);
+
+    const hashedPassword = await hashPassword(password);
+    const result = await query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
+      [email, hashedPassword]
+    );
+
+    const user = result.rows[0];
+    const token = generateToken(user);
+
+    return res.json({ user, access_token: token });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -22,13 +33,20 @@ router.post('/signup', async (req, res) => {
 router.post('/signin', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const result = await supabaseReq('POST', '/auth/v1/token?grant_type=password', {
-      jsonData: { email, password },
-    });
-    if (!result.ok) {
-      return res.status(result.status).json(result.data);
+    
+    const result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rowCount === 0) {
+      return res.status(400).json({ detail: 'Invalid credentials' });
     }
-    return res.json(result.data);
+
+    const user = result.rows[0];
+    const isValid = await verifyPassword(password, user.password_hash);
+    if (!isValid) {
+      return res.status(400).json({ detail: 'Invalid credentials' });
+    }
+
+    const token = generateToken(user);
+    return res.json({ user: { id: user.id, email: user.email }, access_token: token });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -37,18 +55,25 @@ router.post('/signin', async (req, res) => {
 // POST /api/auth/signin-google
 router.post('/signin-google', async (req, res) => {
   try {
-    const { idToken, accessToken } = req.body;
-    const body = { provider: 'google', id_token: idToken };
-    if (accessToken) {
-      body.access_token = accessToken;
+    const { email, google_id } = req.body;
+    
+    let result = await query('SELECT * FROM users WHERE email = $1', [email]);
+    let user;
+
+    if (result.rowCount === 0) {
+      // Create user if not exists
+      const insertResult = await query(
+        'INSERT INTO users (email, google_id) VALUES ($1, $2) RETURNING id, email',
+        [email, google_id]
+      );
+      user = insertResult.rows[0];
+    } else {
+      user = result.rows[0];
+      // Optionally update google_id if it was not set
     }
-    const result = await supabaseReq('POST', '/auth/v1/token?grant_type=id_token', {
-      jsonData: body,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json(result.data);
-    }
-    return res.json(result.data);
+
+    const token = generateToken(user);
+    return res.json({ user: { id: user.id, email: user.email }, access_token: token });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

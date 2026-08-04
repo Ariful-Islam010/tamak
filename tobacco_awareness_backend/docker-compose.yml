@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: tamak-backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=tamak_secure_password_123
+      - DB_NAME=tamak
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=tamak_minio_user
+      - MINIO_SECRET_KEY=tamak_minio_password
+    depends_on:
+      - db
+      - minio
+
+  db:
+    image: postgres:15
+    container_name: tamak-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=tamak_secure_password_123
+      - POSTGRES_DB=tamak
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./supabase_schema.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  minio:
+    image: minio/minio:latest
+    container_name: tamak-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=tamak_minio_user
+      - MINIO_ROOT_PASSWORD=tamak_minio_password
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+volumes:
+  pgdata:
+  minio_data:

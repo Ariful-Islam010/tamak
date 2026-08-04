@@ -1,18 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseReq } = require('../services/supabase');
+const { query } = require('../services/db');
 const { requireAuth } = require('../middleware/auth');
 
 // GET /api/goals
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('GET', '/rest/v1/money_saver_goals?select=*&order=created_at.desc', {
-      token: req.token,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const result = await query(
+      'SELECT * FROM money_saver_goals WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+    return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -21,14 +20,19 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/goals
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('POST', '/rest/v1/money_saver_goals', {
-      token: req.token,
-      jsonData: req.body,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const body = req.body;
+    body.user_id = body.user_id || userId;
+
+    const keys = Object.keys(body);
+    const values = Object.values(body);
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const result = await query(
+      `INSERT INTO money_saver_goals (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      values
+    );
+    return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

@@ -1,20 +1,16 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseReq } = require('../services/supabase');
+const { query } = require('../services/db');
 const { requireAuth } = require('../middleware/auth');
 
 // GET /api/gamification
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('GET', '/rest/v1/gamification_progress?select=*', {
-      token: req.token,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    const data = result.data;
-    if (Array.isArray(data) && data.length > 0) {
-      return res.json(data[0]);
+    const userId = req.user.sub;
+    const result = await query('SELECT * FROM gamification_progress WHERE user_id = $1', [userId]);
+    
+    if (result.rowCount > 0) {
+      return res.json(result.rows[0]);
     }
     return res.json(null);
   } catch (error) {
@@ -25,15 +21,23 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/gamification
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('POST', '/rest/v1/gamification_progress', {
-      token: req.token,
-      jsonData: req.body,
-      prefer: 'resolution=merge-duplicates,return=representation',
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const { user_id, current_level, total_points, badges } = req.body;
+    const targetUserId = user_id || userId;
+    
+    // UPSERT style query
+    const result = await query(
+      `INSERT INTO gamification_progress (user_id, current_level, total_points, badges)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) DO UPDATE SET
+         current_level = EXCLUDED.current_level,
+         total_points = EXCLUDED.total_points,
+         badges = EXCLUDED.badges
+       RETURNING *`,
+      [targetUserId, current_level, total_points, JSON.stringify(badges)]
+    );
+    
+    return res.json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -42,45 +46,37 @@ router.post('/', requireAuth, async (req, res) => {
 // GET /api/gamification/stats
 router.get('/stats', requireAuth, async (req, res) => {
   try {
-    const checkinsRes = await supabaseReq('GET', '/rest/v1/daily_checkins?select=check_in_date,used_tobacco&order=check_in_date.asc', {
-      token: req.token,
-    });
-    const checkins = checkinsRes.ok && Array.isArray(checkinsRes.data) ? checkinsRes.data : [];
+    const userId = req.user.sub;
 
-    const savingsRes = await supabaseReq('GET', '/rest/v1/savings_logs?select=amount', {
-      token: req.token,
-    });
-    const savings = savingsRes.ok && Array.isArray(savingsRes.data) ? savingsRes.data : [];
-    const total_savings = savings.reduce((acc, row) => acc + (parseInt(row.amount, 10) || 0), 0);
+    const checkinsRes = await query(
+      'SELECT check_in_date, used_tobacco FROM daily_checkins WHERE user_id = $1 ORDER BY check_in_date ASC',
+      [userId]
+    );
+    const checkins = checkinsRes.rows;
 
-    const profileRes = await supabaseReq('GET', '/rest/v1/user_profiles?select=plan_duration,quit_date', {
-      token: req.token,
-    });
-    const profileData = profileRes.ok && Array.isArray(profileRes.data) ? profileRes.data : [];
-    const profile = profileData.length > 0 ? profileData[0] : {};
+    const savingsRes = await query(
+      'SELECT amount FROM savings_logs WHERE user_id = $1',
+      [userId]
+    );
+    const total_savings = savingsRes.rows.reduce((acc, row) => acc + (parseInt(row.amount, 10) || 0), 0);
 
-    const sosRes = await supabaseReq('GET', '/rest/v1/sos_logs?select=id', {
-      token: req.token,
-    });
-    const sos_count = sosRes.ok && Array.isArray(sosRes.data) ? sosRes.data.length : 0;
+    const profileRes = await query(
+      'SELECT plan_duration, quit_date FROM user_profiles WHERE id = $1',
+      [userId]
+    );
+    const profile = profileRes.rows.length > 0 ? profileRes.rows[0] : {};
 
-    const userRes = await supabaseReq('GET', '/auth/v1/user', {
-      token: req.token,
-    });
-    let userId = null;
-    if (userRes.ok && userRes.data) {
-      userId = userRes.data.id;
-    }
+    const sosRes = await query(
+      'SELECT id FROM sos_logs WHERE user_id = $1',
+      [userId]
+    );
+    const sos_count = sosRes.rowCount;
 
-    let messages_count = 0;
-    if (userId) {
-      const messagesRes = await supabaseReq('GET', `/rest/v1/peer_support_messages?select=id&sender_id=eq.${userId}`, {
-        token: req.token,
-      });
-      if (messagesRes.ok && Array.isArray(messagesRes.data)) {
-        messages_count = messagesRes.data.length;
-      }
-    }
+    const messagesRes = await query(
+      'SELECT id FROM peer_support_messages WHERE sender_id = $1',
+      [userId]
+    );
+    const messages_count = messagesRes.rowCount;
 
     return res.json({
       checkins,

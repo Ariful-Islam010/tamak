@@ -1,18 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
-const config = require('../config');
+const { uploadFile } = require('../services/storage');
 const { requireAuth } = require('../middleware/auth');
+const crypto = require('crypto');
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: config.CLOUDINARY_CLOUD_NAME,
-  api_key: config.CLOUDINARY_API_KEY,
-  api_secret: config.CLOUDINARY_API_SECRET,
-});
-
+// Configure Multer
+const storage = multer.memoryStorage();
 const upload = multer({
+  storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype && file.mimetype.startsWith('image/')) {
@@ -30,23 +26,13 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
       return res.status(400).json({ detail: 'No file uploaded' });
     }
 
-    const uploadStream = () => {
-      return new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          { upload_preset: config.CLOUDINARY_UPLOAD_PRESET },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        stream.end(req.file.buffer);
-      });
-    };
+    const fileExt = req.file.originalname.split('.').pop();
+    const randomName = crypto.randomBytes(16).toString('hex') + '.' + fileExt;
 
-    const result = await uploadStream();
-    return res.json({ secure_url: result.secure_url });
+    const secure_url = await uploadFile(req.file.buffer, randomName, req.file.mimetype);
+    return res.json({ secure_url });
   } catch (error) {
-    console.error('Cloudinary upload error:', error);
+    console.error('Storage upload error:', error);
     return res.status(500).json({ detail: error.message || 'Image upload failed' });
   }
 });

@@ -1,14 +1,12 @@
 require('dotenv').config();
 
 module.exports = {
-  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
-  SUPABASE_URL: process.env.SUPABASE_URL || '',
-  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || '',
-  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '',
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
-  CLOUDINARY_UPLOAD_PRESET: process.env.CLOUDINARY_UPLOAD_PRESET || '',
+  DATABASE_URL: process.env.DATABASE_URL || '',
+  MINIO_ENDPOINT: process.env.MINIO_ENDPOINT || '',
+  MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY || '',
+  MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY || '',
+  MINIO_BUCKET_NAME: process.env.MINIO_BUCKET_NAME || 'tamak',
+  JWT_SECRET: process.env.JWT_SECRET || 'fallback_secret_for_development',
   PORT: process.env.PORT || 8000,
   APP_ENV: process.env.APP_ENV || 'production',
 };

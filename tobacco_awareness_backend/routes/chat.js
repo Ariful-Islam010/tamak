@@ -1,20 +1,33 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseReq } = require('../services/supabase');
+const { query } = require('../services/db');
 const { requireAuth } = require('../middleware/auth');
 
 // GET /api/chat/messages
 router.get('/messages', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq(
-      'GET',
-      '/rest/v1/peer_support_messages?select=id,sender_id,content,image_url,created_at,sender:user_profiles(display_name,photo_url)&order=created_at.asc',
-      { token: req.token }
-    );
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const result = await query(`
+      SELECT p.id, p.sender_id, p.content, p.image_url, p.created_at,
+             u.name as display_name, u.avatar_url as photo_url
+      FROM peer_support_messages p
+      LEFT JOIN user_profiles u ON p.sender_id = u.id
+      ORDER BY p.created_at ASC
+    `);
+    
+    // Map to the nested structure supabase returned
+    const data = result.rows.map(row => ({
+      id: row.id,
+      sender_id: row.sender_id,
+      content: row.content,
+      image_url: row.image_url,
+      created_at: row.created_at,
+      sender: {
+        display_name: row.display_name,
+        photo_url: row.photo_url
+      }
+    }));
+    
+    return res.json(data);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -23,14 +36,20 @@ router.get('/messages', requireAuth, async (req, res) => {
 // POST /api/chat/messages
 router.post('/messages', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('POST', '/rest/v1/peer_support_messages', {
-      token: req.token,
-      jsonData: req.body,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const body = req.body;
+    body.sender_id = body.sender_id || userId;
+    
+    const keys = Object.keys(body);
+    const values = Object.values(body);
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const result = await query(
+      `INSERT INTO peer_support_messages (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      values
+    );
+    
+    return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -40,24 +59,31 @@ router.post('/messages', requireAuth, async (req, res) => {
 router.delete('/messages/:id', requireAuth, async (req, res) => {
   try {
     const messageId = req.params.id;
-    // Attempt deletion using user token first
-    const result = await supabaseReq('DELETE', `/rest/v1/peer_support_messages?id=eq.${messageId}`, {
-      token: req.token,
-    });
-    if (result.ok && Array.isArray(result.data) && result.data.length > 0) {
+    const userId = req.user.sub;
+    
+    // First, try to delete if user is the sender
+    const result = await query(
+      'DELETE FROM peer_support_messages WHERE id = $1 AND sender_id = $2 RETURNING *',
+      [messageId, userId]
+    );
+    
+    if (result.rowCount > 0) {
       return res.json({ status: 'success' });
     }
 
-    // Fallback to service role
-    const resultSr = await supabaseReq('DELETE', `/rest/v1/peer_support_messages?id=eq.${messageId}`, {
-      token: req.token,
-      useServiceRole: true,
-    });
-    if (resultSr.ok) {
+    // Fallback if not sender (assuming service role/admin privileges)
+    // For simplicity, we just delete it without checking if the user is an admin.
+    // Modify this if a specific admin check is needed.
+    const resultSr = await query(
+      'DELETE FROM peer_support_messages WHERE id = $1 RETURNING *',
+      [messageId]
+    );
+    
+    if (resultSr.rowCount > 0) {
       return res.json({ status: 'success' });
     }
 
-    return res.status(resultSr.status || 400).json({ detail: resultSr.text || 'Message deletion failed' });
+    return res.status(400).json({ detail: 'Message deletion failed' });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -67,28 +93,37 @@ router.delete('/messages/:id', requireAuth, async (req, res) => {
 router.put('/messages/:id', requireAuth, async (req, res) => {
   try {
     const messageId = req.params.id;
-    const result = await supabaseReq('PATCH', `/rest/v1/peer_support_messages?id=eq.${messageId}`, {
-      token: req.token,
-      jsonData: req.body,
-    });
-    if (result.ok) {
-      const data = result.data;
-      if (Array.isArray(data) && data.length > 0) {
-        return res.json(data);
-      }
+    const userId = req.user.sub;
+    const body = req.body;
+    
+    if (Object.keys(body).length === 0) {
+      return res.json([]);
+    }
+    
+    const setClause = Object.keys(body).map((key, i) => `${key} = $${i + 1}`).join(', ');
+    const values = Object.values(body);
+    
+    // First, try to update if user is the sender
+    let result = await query(
+      `UPDATE peer_support_messages SET ${setClause} WHERE id = $${values.length + 1} AND sender_id = $${values.length + 2} RETURNING *`,
+      [...values, messageId, userId]
+    );
+    
+    if (result.rowCount > 0) {
+      return res.json(result.rows);
     }
 
-    // Service role fallback
-    const resultSr = await supabaseReq('PATCH', `/rest/v1/peer_support_messages?id=eq.${messageId}`, {
-      token: req.token,
-      jsonData: req.body,
-      useServiceRole: true,
-    });
-    if (resultSr.ok) {
-      return res.json(resultSr.data);
+    // Fallback if not sender
+    let resultSr = await query(
+      `UPDATE peer_support_messages SET ${setClause} WHERE id = $${values.length + 1} RETURNING *`,
+      [...values, messageId]
+    );
+    
+    if (resultSr.rowCount > 0) {
+      return res.json(resultSr.rows);
     }
 
-    return res.status(resultSr.status || 400).json({ detail: resultSr.text || 'Message edit failed' });
+    return res.status(400).json({ detail: 'Message edit failed' });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

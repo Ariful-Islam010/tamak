@@ -1,18 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { supabaseReq } = require('../services/supabase');
+const { query } = require('../services/db');
 const { requireAuth } = require('../middleware/auth');
 
 // GET /api/savings
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('GET', '/rest/v1/savings_logs?select=*', {
-      token: req.token,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const result = await query('SELECT * FROM savings_logs WHERE user_id = $1', [userId]);
+    return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
@@ -21,14 +17,19 @@ router.get('/', requireAuth, async (req, res) => {
 // POST /api/savings
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const result = await supabaseReq('POST', '/rest/v1/savings_logs', {
-      token: req.token,
-      jsonData: req.body,
-    });
-    if (!result.ok) {
-      return res.status(result.status).json({ detail: result.text });
-    }
-    return res.json(result.data);
+    const userId = req.user.sub;
+    const body = req.body;
+    body.user_id = body.user_id || userId;
+
+    const keys = Object.keys(body);
+    const values = Object.values(body);
+    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+    
+    const result = await query(
+      `INSERT INTO savings_logs (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
+      values
+    );
+    return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
