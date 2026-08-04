@@ -89,15 +89,17 @@ class GamificationScreen extends ConsumerWidget {
     final stageColor = _stageColor(gamification.plantStage, gamification.hasPestAttack);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FDF4),
-      body: CustomScrollView(
-        slivers: [
-          // ── Colorful Header ──
-          SliverAppBar(
-            expandedHeight: 180,
-            pinned: true,
-            backgroundColor: const Color(0xFF065F46),
-            iconTheme: const IconThemeData(color: Colors.white),
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: AppTheme.backgroundDecoration,
+        child: CustomScrollView(
+          slivers: [
+            // ── Colorful Header ──
+            SliverAppBar(
+              expandedHeight: 180,
+              pinned: true,
+              backgroundColor: const Color(0xFF065F46),
+              iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -412,6 +414,7 @@ class GamificationScreen extends ConsumerWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

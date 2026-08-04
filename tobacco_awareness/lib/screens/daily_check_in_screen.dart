@@ -593,10 +593,12 @@ class _DecorativeBg extends StatelessWidget {
 class _BgPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    // ── Base gradient background ──
     final bgPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFF0FDF7), Color(0xFFF8F9FA), Color(0xFFFFF5F7)],
+        colors: [
+          Color(0xFFE0F2FE), // Matching AppTheme
+          Color(0xFFF0FDF4), // Matching AppTheme
+        ],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));

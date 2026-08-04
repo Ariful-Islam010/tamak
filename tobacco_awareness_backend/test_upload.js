@@ -10,8 +10,8 @@ const stat = fs.statSync(filePath);
 const boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW';
 
 const req = http.request({
-  hostname: 'g8ize1mukw5u8njwdxr5g1og.163.227.239.97.sslip.io',
-  port: 80,
+  hostname: 'localhost',
+  port: 8000,
   path: '/api/upload',
   method: 'POST',
   headers: {

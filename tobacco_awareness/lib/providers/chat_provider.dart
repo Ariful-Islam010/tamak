@@ -196,6 +196,25 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> sendImage(File file, String userName) async {
     if (BackendService.token == null) return;
+
+    // Optimistic UI update
+    final fallbackId = "fallback_${DateTime.now().millisecondsSinceEpoch}";
+    final now = DateTime.now();
+    _messages.add({
+      "id": fallbackId,
+      "isMe": true,
+      "sender": userName,
+      "senderPhoto": null,
+      "isCounselor": false,
+      "text": "📷 একটি ছবি শেয়ার করেছেন",
+      "imageUrl": null,
+      "localImagePath": file.path,
+      "time": DateFormat('hh:mm a').format(now),
+      "createdAt": now,
+      "isUploading": true,
+    });
+    notifyListeners();
+
     try {
       final request = http.MultipartRequest(
         'POST',
@@ -206,18 +225,25 @@ class ChatProvider extends ChangeNotifier {
       final streamed =
           await request.send().timeout(const Duration(seconds: 30));
       final responseData = await streamed.stream.bytesToString();
+      
+      _messages.removeWhere((msg) => msg["id"] == fallbackId);
+
       if (streamed.statusCode == 200) {
         final data = jsonDecode(responseData);
         final secureUrl = data['secure_url'] as String?;
         if (secureUrl != null) {
           await sendMessage("", userName, imageUrl: secureUrl);
         } else {
+          notifyListeners();
           throw Exception("Upload returned no URL");
         }
       } else {
+        notifyListeners();
         throw Exception("Image upload via backend failed: ${streamed.statusCode}");
       }
     } catch (e) {
+      _messages.removeWhere((msg) => msg["id"] == fallbackId);
+      notifyListeners();
       debugPrint("Error sending image: $e");
       rethrow;
     }

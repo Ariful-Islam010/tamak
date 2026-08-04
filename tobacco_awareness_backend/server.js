@@ -55,7 +55,7 @@ app.use('/api/ai', aiRouter);
 
 const PORT = config.PORT;
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Express.js & Socket.io backend listening on port ${PORT}`);
 });
 

@@ -152,6 +152,8 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                     String sender = msg["sender"] ?? "ব্যবহারকারী";
                     String? senderPhoto = msg["senderPhoto"];
                     String? imageUrl = msg["imageUrl"];
+                    String? localImagePath = msg["localImagePath"];
+                    bool isUploading = msg["isUploading"] ?? false;
                     bool isMe = msg["isMe"] ?? false;
                     bool isCounselor = msg["isCounselor"] ?? false;
                     DateTime? createdAt = msg["createdAt"] is DateTime
@@ -164,7 +166,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                       senderPhoto = currentUser?.photoUrl;
                     }
                     
-                    if (imageUrl != null && text.trim().isEmpty) {
+                    if ((imageUrl != null || localImagePath != null) && text.trim().isEmpty) {
                       text = "📷 একটি ছবি শেয়ার করেছেন";
                     }
                     
@@ -175,6 +177,8 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                       sender,
                       senderPhoto,
                       imageUrl,
+                      localImagePath,
+                      isUploading,
                       msg["time"] ?? "",
                       createdAt,
                       isMe,
@@ -253,6 +257,8 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
     String sender, 
     String? senderPhoto,
     String? imageUrl,
+    String? localImagePath,
+    bool isUploading,
     String time, 
     DateTime? createdAt,
     bool isMe, 
@@ -270,7 +276,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
       bottomRight: const Radius.circular(12),
     );
 
-    final isOnlyImage = imageUrl != null && (text.isEmpty || text == "📷 একটি ছবি শেয়ার করেছেন");
+    final isOnlyImage = (imageUrl != null || localImagePath != null) && (text.isEmpty || text == "📷 একটি ছবি শেয়ার করেছেন");
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -339,23 +345,30 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: Image.network(
-                                    imageUrl,
-                                    height: 250,
-                                    width: 250,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return Container(
+                                  child: localImagePath != null
+                                    ? Image.file(
+                                        File(localImagePath),
                                         height: 250,
                                         width: 250,
-                                        color: Colors.grey.shade200,
-                                        child: const Center(
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        ),
-                                      );
-                                    },
-                                  ),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.network(
+                                        imageUrl ?? '',
+                                        height: 250,
+                                        width: 250,
+                                        fit: BoxFit.cover,
+                                        loadingBuilder: (context, child, loadingProgress) {
+                                          if (loadingProgress == null) return child;
+                                          return Container(
+                                            height: 250,
+                                            width: 250,
+                                            color: Colors.grey.shade200,
+                                            child: const Center(
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                 ),
                                 // Time & done icon overlay on bottom right
                                 Positioned(
@@ -379,11 +392,17 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                         ),
                                         if (isMe) ...[
                                           const SizedBox(width: 4),
-                                          const Icon(
-                                            Icons.done_all,
-                                            size: 14,
-                                            color: Colors.lightBlueAccent,
-                                          ),
+                                          isUploading 
+                                            ? const SizedBox(
+                                                width: 14, 
+                                                height: 14, 
+                                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                                              )
+                                            : const Icon(
+                                                Icons.done_all,
+                                                size: 14,
+                                                color: Colors.lightBlueAccent,
+                                              ),
                                         ],
                                       ],
                                     ),
@@ -408,28 +427,35 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                     ),
                                   ),
                                 
-                                if (imageUrl != null)
+                                if (imageUrl != null || localImagePath != null)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 6, top: 4),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        imageUrl,
-                                        height: 200,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return Container(
-                                            height: 150,
+                                      child: localImagePath != null
+                                        ? Image.file(
+                                            File(localImagePath),
+                                            height: 200,
                                             width: double.infinity,
-                                            color: Colors.grey.shade200,
-                                            child: const Center(
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Image.network(
+                                            imageUrl ?? '',
+                                            height: 200,
+                                            width: double.infinity,
+                                            fit: BoxFit.cover,
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Container(
+                                                height: 150,
+                                                width: double.infinity,
+                                                color: Colors.grey.shade200,
+                                                child: const Center(
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              );
+                                            },
+                                          ),
                                     ),
                                   ),
               
@@ -455,7 +481,14 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                         ),
                                       ),
                                       if (isMe) const SizedBox(width: 4),
-                                      if (isMe) const Icon(Icons.done_all, size: 16, color: Colors.blue), // Read receipt
+                                      if (isMe) 
+                                        isUploading
+                                          ? const SizedBox(
+                                              width: 14, 
+                                              height: 14, 
+                                              child: CircularProgressIndicator(strokeWidth: 2)
+                                            )
+                                          : const Icon(Icons.done_all, size: 16, color: Colors.blue), // Read receipt
                                     ],
                                   ),
                                 ),
