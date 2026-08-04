@@ -22,23 +22,35 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { name, avatar_url, quit_date, cigs_per_day, price_per_pack, currency, target_goal, language } = req.body;
+    const { 
+      email, 
+      display_name, 
+      photo_url, 
+      educational_info, 
+      plan_duration, 
+      quit_date, 
+      ai_quit_plan, 
+      age, 
+      gender 
+    } = req.body;
     
-    // UPSERT style query since the original logic was resolution=merge-duplicates
+    // UPSERT style query
     const result = await query(
-      `INSERT INTO user_profiles (id, name, avatar_url, quit_date, cigs_per_day, price_per_pack, currency, target_goal, language)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO user_profiles (id, email, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (id) DO UPDATE SET
-         name = EXCLUDED.name,
-         avatar_url = EXCLUDED.avatar_url,
+         email = EXCLUDED.email,
+         display_name = EXCLUDED.display_name,
+         photo_url = EXCLUDED.photo_url,
+         educational_info = EXCLUDED.educational_info,
+         plan_duration = EXCLUDED.plan_duration,
          quit_date = EXCLUDED.quit_date,
-         cigs_per_day = EXCLUDED.cigs_per_day,
-         price_per_pack = EXCLUDED.price_per_pack,
-         currency = EXCLUDED.currency,
-         target_goal = EXCLUDED.target_goal,
-         language = EXCLUDED.language
+         ai_quit_plan = EXCLUDED.ai_quit_plan,
+         age = EXCLUDED.age,
+         gender = EXCLUDED.gender,
+         updated_at = NOW()
        RETURNING *`,
-      [userId, name, avatar_url, quit_date, cigs_per_day, price_per_pack, currency, target_goal, language]
+      [userId, email, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender]
     );
 
     return res.json(result.rows[0]);

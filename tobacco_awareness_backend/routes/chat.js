@@ -14,7 +14,7 @@ router.get('/messages', requireAuth, async (req, res) => {
       ORDER BY p.created_at ASC
     `);
     
-    // Map to the nested structure supabase returned
+    // Map to the nested structure expected by the frontend
     const data = result.rows.map(row => ({
       id: row.id,
       sender_id: row.sender_id,

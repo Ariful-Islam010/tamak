@@ -22,19 +22,20 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const { user_id, current_level, total_points, badges } = req.body;
-    const targetUserId = user_id || userId;
+    const { current_streak, longest_streak, badges, last_check_in_date } = req.body;
     
     // UPSERT style query
     const result = await query(
-      `INSERT INTO gamification_progress (user_id, current_level, total_points, badges)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO gamification_progress (user_id, current_streak, longest_streak, badges, last_check_in_date)
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (user_id) DO UPDATE SET
-         current_level = EXCLUDED.current_level,
-         total_points = EXCLUDED.total_points,
-         badges = EXCLUDED.badges
+         current_streak = EXCLUDED.current_streak,
+         longest_streak = EXCLUDED.longest_streak,
+         badges = EXCLUDED.badges,
+         last_check_in_date = EXCLUDED.last_check_in_date,
+         updated_at = NOW()
        RETURNING *`,
-      [targetUserId, current_level, total_points, JSON.stringify(badges)]
+      [userId, current_streak, longest_streak, badges, last_check_in_date]
     );
     
     return res.json(result.rows[0]);

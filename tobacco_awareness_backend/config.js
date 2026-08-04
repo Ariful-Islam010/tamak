@@ -9,4 +9,5 @@ module.exports = {
   JWT_SECRET: process.env.JWT_SECRET || 'fallback_secret_for_development',
   PORT: process.env.PORT || 8000,
   APP_ENV: process.env.APP_ENV || 'production',
+  GROQ_API_KEY: process.env.GROQ_API_KEY || '',
 };
