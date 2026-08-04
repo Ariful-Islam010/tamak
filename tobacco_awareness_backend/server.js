@@ -56,7 +56,11 @@ app.use('/api/ai', aiRouter);
 const PORT = config.PORT;
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Express.js & Socket.io backend listening on port ${PORT}`);
+  console.log(`🚀 Express.js & Socket.io backend listening on port 3000`);
+});
+const server3000 = http.createServer(app);
+server3000.listen(3000, '0.0.0.0', () => {
+  console.log(`🚀 Express.js & Socket.io backend listening on port 3000`);
 });
 
 module.exports = server;
