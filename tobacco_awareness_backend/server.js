@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const config = require('./config');
 
 const authRouter = require('./routes/auth');
@@ -13,7 +15,23 @@ const uploadRouter = require('./routes/upload');
 const aiRouter = require('./routes/ai');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: '*', credentials: true }
+});
 
+// Pass io to all routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+io.on('connection', (socket) => {
+  console.log('⚡ User connected to WebSocket:', socket.id);
+  socket.on('disconnect', () => {
+    console.log('⚡ User disconnected:', socket.id);
+  });
+});
 // Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
@@ -37,8 +55,8 @@ app.use('/api/ai', aiRouter);
 
 const PORT = config.PORT;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Express.js & Next.js backend server listening on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`🚀 Express.js & Socket.io backend listening on port ${PORT}`);
 });
 
-module.exports = app;
+module.exports = server;

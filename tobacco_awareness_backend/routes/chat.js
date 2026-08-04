@@ -49,7 +49,32 @@ router.post('/messages', requireAuth, async (req, res) => {
       values
     );
     
-    return res.json(result.rows);
+    const completeMessageResult = await query(`
+      SELECT p.id, p.sender_id, p.content, p.image_url, p.created_at,
+             u.name as display_name, u.avatar_url as photo_url
+      FROM peer_support_messages p
+      LEFT JOIN user_profiles u ON p.sender_id = u.id
+      WHERE p.id = $1
+    `, [result.rows[0].id]);
+    
+    const row = completeMessageResult.rows[0];
+    const newMessage = {
+      id: row.id,
+      sender_id: row.sender_id,
+      content: row.content,
+      image_url: row.image_url,
+      created_at: row.created_at,
+      sender: {
+        display_name: row.display_name,
+        photo_url: row.photo_url
+      }
+    };
+    
+    if (req.io) {
+      req.io.emit('new_message', newMessage);
+    }
+    
+    return res.json([newMessage]);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
