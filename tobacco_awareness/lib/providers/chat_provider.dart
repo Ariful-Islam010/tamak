@@ -5,7 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
+
 import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
 
@@ -15,8 +16,8 @@ class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   final Set<String> _deletedMessageIds = {};
   bool _isLoading = false;
-  Timer? _fallbackTimer;
-  RealtimeChannel? _realtimeChannel;
+  IO.Socket? _socket;
+
 
   List<Map<String, dynamic>> get messages => _messages;
   bool get isLoading => _isLoading;
@@ -31,34 +32,32 @@ class ChatProvider extends ChangeNotifier {
     await _loadMessagesFromCache();
     await loadMessages();
 
-    _setupRealtimeSubscription();
-
-    // Secondary fallback timer every 15s in case connection drops briefly
-    _fallbackTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      loadMessages();
-    });
+    _initSocket();
   }
 
-  void _setupRealtimeSubscription() {
+  void _initSocket() {
     try {
-      final client = Supabase.instance.client;
-      _realtimeChannel = client
-          .channel('public:peer_support_messages')
-          .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            schema: 'public',
-            table: 'peer_support_messages',
-            callback: (payload) {
-              debugPrint('⚡ Realtime event received: ${payload.eventType}');
-              loadMessages();
-            },
-          )
-          .subscribe();
-      debugPrint('⚡ Subscribed to Supabase Realtime channel: peer_support_messages');
+      _socket = IO.io(BackendService.baseUrl, <String, dynamic>{
+        'transports': ['websocket'],
+        'autoConnect': true,
+      });
+
+      _socket?.onConnect((_) {
+        debugPrint('⚡ Connected to WebSocket Server');
+      });
+
+      _socket?.on('new_message', (data) {
+        debugPrint('⚡ Received new message via WebSocket');
+        loadMessages();
+      });
+
+      _socket?.onDisconnect((_) => debugPrint('⚡ Disconnected from WebSocket Server'));
     } catch (e) {
-      debugPrint('Error setting up Realtime subscription: $e');
+      debugPrint('Error setting up Socket.io: $e');
     }
   }
+
+
 
   Future<void> _loadMessagesFromCache() async {
     try {
@@ -216,7 +215,7 @@ class ChatProvider extends ChangeNotifier {
           throw Exception("Upload returned no URL");
         }
       } else {
-        throw Exception("Cloudinary upload via backend failed: ${streamed.statusCode}");
+        throw Exception("Image upload via backend failed: ${streamed.statusCode}");
       }
     } catch (e) {
       debugPrint("Error sending image: $e");
@@ -295,8 +294,8 @@ class ChatProvider extends ChangeNotifier {
 
   @override
   void dispose() {
-    _fallbackTimer?.cancel();
-    _realtimeChannel?.unsubscribe();
+    _socket?.disconnect();
+    _socket?.dispose();
     super.dispose();
   }
 }

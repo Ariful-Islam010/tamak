@@ -300,7 +300,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Upload photo to backend (which uploads to Cloudinary) and update profile.
+  /// Upload photo to backend and update profile.
   Future<void> updateProfilePhoto(String photoUrl) async {
     try {
       _isLoading = true;
@@ -403,10 +403,10 @@ class AuthService extends ChangeNotifier {
         final userMap = data['user'] as Map<String, dynamic>?;
         final userId = userMap?['id'] as String?;
 
-        // Extract email from multiple sources (Google > Supabase user object)
+        // Extract email from multiple sources (Google > backend user object)
         final googleEmail = googleUser.email;
-        final supabaseEmail = userMap?['email'] as String?;
-        final resolvedEmail = googleEmail.isNotEmpty ? googleEmail : supabaseEmail;
+        final backendEmail = userMap?['email'] as String?;
+        final resolvedEmail = googleEmail.isNotEmpty ? googleEmail : backendEmail;
         // Note: googleName and googlePhoto intentionally NOT used —
         // name comes from profile assessment, photo from profile screen.
 
