@@ -107,17 +107,83 @@ router.get('/api/users/export/csv', requireAdmin, async (req, res) => {
 router.get('/api/users/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
-    const [profile, goals, checkins, savings, gamification, wishlist, sos] = await Promise.all([
+    const [profile, goals, checkins, savings, gamification, wishlist, sos, messages, files, missions] = await Promise.all([
       query('SELECT u.*, up.* FROM users u LEFT JOIN user_profiles up ON u.id = up.id WHERE u.id = $1', [id]),
       query('SELECT * FROM money_saver_goals WHERE user_id = $1 ORDER BY created_at DESC', [id]),
-      query('SELECT * FROM daily_checkins WHERE user_id = $1 ORDER BY check_in_date DESC LIMIT 30', [id]),
-      query('SELECT * FROM savings_logs WHERE user_id = $1 ORDER BY logged_at DESC LIMIT 20', [id]),
+      query('SELECT * FROM daily_checkins WHERE user_id = $1 ORDER BY check_in_date DESC', [id]),
+      query('SELECT * FROM savings_logs WHERE user_id = $1 ORDER BY logged_at DESC', [id]),
       query('SELECT * FROM gamification_progress WHERE user_id = $1', [id]),
       query('SELECT * FROM wishlist_items WHERE user_id = $1 ORDER BY created_at DESC', [id]),
       query('SELECT * FROM sos_logs WHERE user_id = $1 ORDER BY trigger_time DESC', [id]),
+      query('SELECT * FROM peer_support_messages WHERE sender_id = $1 ORDER BY created_at DESC', [id]),
+      query('SELECT * FROM media_files WHERE user_id = $1 ORDER BY created_at DESC', [id]),
+      query('SELECT * FROM user_mission_progress WHERE user_id = $1 ORDER BY progress_date DESC', [id]),
     ]);
     if (profile.rowCount === 0) return res.status(404).json({ error: 'Not found' });
-    res.json({ profile: profile.rows[0], goals: goals.rows, checkins: checkins.rows, savings: savings.rows, gamification: gamification.rows[0] || null, wishlist: wishlist.rows, sos: sos.rows });
+    // Build summary stats
+    const totalSaved = savings.rows.reduce((a, r) => a + Number(r.amount), 0);
+    const smokeFreedays = checkins.rows.filter(c => !c.smoked_today).length;
+    const completedGoals = goals.rows.filter(g => g.is_completed).length;
+    const summary = {
+      total_checkins: checkins.rowCount,
+      total_goals: goals.rowCount,
+      completed_goals: completedGoals,
+      total_saved: totalSaved,
+      total_savings_logs: savings.rowCount,
+      total_messages: messages.rowCount,
+      total_files: files.rowCount,
+      total_sos: sos.rowCount,
+      total_wishlist: wishlist.rowCount,
+      smoke_free_days: smokeFreedays,
+      missions_completed: missions.rows.filter(m => m.is_completed).length,
+    };
+    res.json({
+      profile: profile.rows[0],
+      summary,
+      goals: goals.rows,
+      checkins: checkins.rows,
+      savings: savings.rows,
+      gamification: gamification.rows[0] || null,
+      wishlist: wishlist.rows,
+      sos: sos.rows,
+      messages: messages.rows,
+      files: files.rows,
+      missions: missions.rows,
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── Per-User Full CSV Export ──────────────────────────────────────────────────
+router.get('/api/users/:id/export/csv', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userRow = await query('SELECT u.email, up.display_name FROM users u LEFT JOIN user_profiles up ON u.id = up.id WHERE u.id = $1', [id]);
+    if (userRow.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    const { email, display_name } = userRow.rows[0];
+    const safeName = (display_name || email || id).replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+    const sections = {
+      profile: await query('SELECT u.id, u.email, u.created_at, up.display_name, up.age, up.gender, up.educational_info, up.plan_duration, up.quit_date, up.ai_quit_plan FROM users u LEFT JOIN user_profiles up ON u.id = up.id WHERE u.id = $1', [id]),
+      daily_checkins: await query('SELECT id, check_in_date, mood, craving_level, smoked_today, used_tobacco, cigarettes_smoked, created_at FROM daily_checkins WHERE user_id = $1 ORDER BY check_in_date DESC', [id]),
+      money_saver_goals: await query('SELECT id, title, target_amount, current_amount, is_completed, icon_name, created_at FROM money_saver_goals WHERE user_id = $1 ORDER BY created_at DESC', [id]),
+      savings_logs: await query('SELECT id, amount, logged_at FROM savings_logs WHERE user_id = $1 ORDER BY logged_at DESC', [id]),
+      gamification: await query('SELECT level, current_xp, total_xp, current_streak, longest_streak, badges, last_check_in_date, updated_at FROM gamification_progress WHERE user_id = $1', [id]),
+      wishlist_items: await query('SELECT id, item_name, target_amount, category_icon, is_achieved, created_at FROM wishlist_items WHERE user_id = $1 ORDER BY created_at DESC', [id]),
+      sos_logs: await query('SELECT id, selected_mode, distraction_clicked, trigger_time FROM sos_logs WHERE user_id = $1 ORDER BY trigger_time DESC', [id]),
+      messages: await query('SELECT id, content, image_url, created_at FROM peer_support_messages WHERE sender_id = $1 ORDER BY created_at DESC', [id]),
+      media_files: await query('SELECT id, file_name, file_size_bytes, mime_type, url, created_at FROM media_files WHERE user_id = $1 ORDER BY created_at DESC', [id]),
+      mission_progress: await query('SELECT mission_id, progress_date, is_completed FROM user_mission_progress WHERE user_id = $1 ORDER BY progress_date DESC', [id]),
+    };
+
+    let output = `##### TAMAK USER DATA EXPORT #####\n##### User: ${email} (${display_name || 'No name'}) #####\n##### Exported: ${new Date().toISOString()} #####\n`;
+    for (const [name, result] of Object.entries(sections)) {
+      output += `\n\n=== ${name.toUpperCase()} (${result.rowCount} rows) ===\n`;
+      output += result.rowCount > 0 ? toCSV(result.rows) : '(no data)';
+    }
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="tamak_user_${safeName}.csv"`);
+    res.send(output);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

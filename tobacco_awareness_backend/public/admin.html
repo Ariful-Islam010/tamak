@@ -97,7 +97,16 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
 /* Side Panel */
 .po{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;backdrop-filter:blur(4px)}
 .po.ac{display:block}
-.sp{position:fixed;right:0;top:0;width:500px;height:100vh;background:var(--s1);border-left:1px solid var(--bdr);z-index:201;overflow-y:auto;transform:translateX(100%);transition:transform .3s ease}
+.sp{position:fixed;right:0;top:0;width:560px;height:100vh;background:var(--s1);border-left:1px solid var(--bdr);z-index:201;overflow-y:auto;transform:translateX(100%);transition:transform .3s ease}
+/* User panel tabs */
+.up-tabs{display:flex;gap:0;border-bottom:1px solid var(--bdr);overflow-x:auto;flex-shrink:0;padding:0 16px}
+.up-tab{padding:10px 13px;font-size:12px;font-weight:500;color:var(--mt);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit;background:none;border-top:none;border-left:none;border-right:none;transition:all .2s}
+.up-tab.ac{color:var(--acc);border-bottom-color:var(--acc)}
+.up-tab:hover{color:var(--tx)}
+.up-tab-body{display:none;padding:18px}.up-tab-body.ac{display:block}
+.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.sum-c{background:var(--s2);border-radius:10px;padding:12px;text-align:center}
+.sum-c .sv{font-size:20px;font-weight:800;color:var(--acc3)}.sum-c .sl{font-size:10px;color:var(--mt);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
 .sp.ac{transform:translateX(0)}
 .sph{padding:18px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--s1);z-index:1}
 .sph h3{font-size:16px;font-weight:700}.spc{background:none;border:none;color:var(--mt);font-size:24px;cursor:pointer;line-height:1}
@@ -478,36 +487,180 @@ async function loadUsers(search=''){
 function debounce(type){clearTimeout(dbtimers[type]);dbtimers[type]=setTimeout(()=>{if(type==='users')loadUsers(document.getElementById('usrq').value);},400);}
 
 async function viewUser(id,name){
-  document.getElementById('sp-title').textContent=name;
-  document.getElementById('sp-body').innerHTML='<div class="ld"><span class="sp2"></span></div>';
-  document.getElementById('sp').classList.add('ac');document.getElementById('po').classList.add('ac');
-  const d=await apiFetch(`/admin/api/users/${id}`);if(!d) return;
-  const p=d.profile;
-  document.getElementById('sp-body').innerHTML=`
-    <div style="font-size:13px">
-      <div class="ir"><span class="k">Email</span><span class="v">${p.email||'—'}</span></div>
-      <div class="ir"><span class="k">Display Name</span><span class="v">${p.display_name||'—'}</span></div>
-      <div class="ir"><span class="k">Age</span><span class="v">${p.age||'—'}</span></div>
-      <div class="ir"><span class="k">Gender</span><span class="v">${p.gender||'—'}</span></div>
-      <div class="ir"><span class="k">Quit Date</span><span class="v">${p.quit_date?new Date(p.quit_date).toLocaleDateString():'—'}</span></div>
-      <div class="ir"><span class="k">Plan Duration</span><span class="v">${p.plan_duration?p.plan_duration+' days':'—'}</span></div>
-      <div class="ir"><span class="k">Auth</span><span class="v">${p.google_id?'🔵 Google':'📧 Email/Password'}</span></div>
-      <div class="ir"><span class="k">Joined</span><span class="v">${new Date(p.created_at).toLocaleString()}</span></div>
-      ${p.educational_info?`<div class="ir"><span class="k">Education</span><span class="v">${p.educational_info}</span></div>`:''}
+  document.getElementById('sp-title').textContent = name;
+  document.getElementById('sp-body').innerHTML = `
+    <div class="up-tabs" id="up-tabs">
+      <button class="up-tab ac" onclick="upTab('overview',this)">📊 Overview</button>
+      <button class="up-tab" onclick="upTab('profile',this)">👤 Profile</button>
+      <button class="up-tab" onclick="upTab('checkins',this)">✅ Check-ins</button>
+      <button class="up-tab" onclick="upTab('goals',this)">🎯 Goals</button>
+      <button class="up-tab" onclick="upTab('savings',this)">💰 Savings</button>
+      <button class="up-tab" onclick="upTab('gam',this)">🏆 XP & Streaks</button>
+      <button class="up-tab" onclick="upTab('wishlist',this)">🛍 Wishlist</button>
+      <button class="up-tab" onclick="upTab('messages',this)">💬 Messages</button>
+      <button class="up-tab" onclick="upTab('files',this)">📁 Files</button>
+      <button class="up-tab" onclick="upTab('sos',this)">🆘 SOS</button>
     </div>
-    ${d.gamification?`<div class="ps"><h4>🏆 Gamification</h4><div style="font-size:13px">
-      <div class="ir"><span class="k">Level</span><span class="v">${d.gamification.level}</span></div>
-      <div class="ir"><span class="k">Total XP</span><span class="v">${d.gamification.total_xp}</span></div>
-      <div class="ir"><span class="k">Current Streak</span><span class="v">${d.gamification.current_streak} days</span></div>
-      <div class="ir"><span class="k">Longest Streak</span><span class="v">${d.gamification.longest_streak} days</span></div>
-      <div class="ir"><span class="k">Badges</span><span class="v">${(d.gamification.badges||[]).join(', ')||'None'}</span></div>
+    <div id="up-loading" class="ld"><span class="sp2"></span> Loading all user data...</div>
+    <div id="up-content" style="display:none"></div>`;
+  document.getElementById('sp').classList.add('ac');
+  document.getElementById('po').classList.add('ac');
+
+  const d = await apiFetch(`/admin/api/users/${id}`);
+  if(!d){ document.getElementById('up-loading').textContent='Failed to load.'; return; }
+  document.getElementById('up-loading').style.display = 'none';
+  document.getElementById('up-content').style.display = 'block';
+  const p = d.profile;
+  const s = d.summary;
+
+  // Summary stats grid
+  const sumGrid = `<div class="sum-grid">
+    <div class="sum-c"><div class="sv">${s.total_checkins}</div><div class="sl">Check-ins</div></div>
+    <div class="sum-c"><div class="sv" style="color:var(--grn)">৳${s.total_saved}</div><div class="sl">Total Saved</div></div>
+    <div class="sum-c"><div class="sv" style="color:var(--ora)">${s.smoke_free_days}</div><div class="sl">Smoke-free Days</div></div>
+    <div class="sum-c"><div class="sv">${s.total_goals}</div><div class="sl">Goals</div></div>
+    <div class="sum-c"><div class="sv" style="color:var(--acc)">${s.completed_goals}</div><div class="sl">Completed</div></div>
+    <div class="sum-c"><div class="sv">${s.total_messages}</div><div class="sl">Messages</div></div>
+    <div class="sum-c"><div class="sv">${s.total_files}</div><div class="sl">Files</div></div>
+    <div class="sum-c"><div class="sv" style="color:var(--red)">${s.total_sos}</div><div class="sl">SOS Alerts</div></div>
+    <div class="sum-c"><div class="sv">${s.missions_completed}</div><div class="sl">Missions Done</div></div>
+  </div>`;
+
+  const dlBtn = `<button class="btn bex" style="width:100%;padding:10px;margin-bottom:14px" onclick="dlCSV('/admin/api/users/${id}/export/csv','tamak_user_${id}.csv')">⬇ Download All This User's Data (CSV)</button>`;
+
+  // Overview tab
+  const tabOverview = `${dlBtn}${sumGrid}
+    <div class="ps"><h4>🔑 Auth & Account</h4><div style="font-size:13px">
+      <div class="ir"><span class="k">Email</span><span class="v">${p.email||'—'}</span></div>
+      <div class="ir"><span class="k">Auth Type</span><span class="v">${p.google_id?'🔵 Google OAuth':'📧 Email/Password'}</span></div>
+      <div class="ir"><span class="k">Joined</span><span class="v">${new Date(p.created_at).toLocaleString()}</span></div>
+    </div></div>
+    ${d.gamification?`<div class="ps"><h4>🏆 Gamification Snapshot</h4><div style="font-size:13px">
+      <div class="ir"><span class="k">Level / XP</span><span class="v">Lv.${d.gamification.level} · ${d.gamification.total_xp} XP</span></div>
+      <div class="ir"><span class="k">Current Streak</span><span class="v">🔥 ${d.gamification.current_streak} days</span></div>
+      <div class="ir"><span class="k">Longest Streak</span><span class="v">⭐ ${d.gamification.longest_streak} days</span></div>
+      <div class="ir"><span class="k">Badges</span><span class="v">${(d.gamification.badges||[]).join(', ')||'None yet'}</span></div>
     </div></div>`:''}
-    ${d.goals.length?`<div class="ps"><h4>🎯 Goals (${d.goals.length})</h4>${d.goals.map(g=>`<div class="mb"><div class="mh"><span class="ms">${g.title}</span><span class="bdg ${g.is_completed?'bg':'bo'}">${g.is_completed?'Done':'Active'}</span></div><div class="mtx">৳${g.current_amount} / ৳${g.target_amount}</div></div>`).join('')}</div>`:''}
-    ${d.checkins.length?`<div class="ps"><h4>✅ Recent Check-ins (${d.checkins.length})</h4>${d.checkins.slice(0,10).map(c=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--bdr);color:var(--mt)"><span>${new Date(c.check_in_date).toLocaleDateString()}</span><span>Mood: ${c.mood||'—'} | Craving: ${c.craving_level||'—'}/10 | ${c.smoked_today?'😰 Smoked':'✅ Clean'}</span></div>`).join('')}</div>`:''}
-    ${d.wishlist.length?`<div class="ps"><h4>🛍 Wishlist (${d.wishlist.length})</h4>${d.wishlist.map(w=>`<div class="mb"><div class="mh"><span class="ms">${w.item_name}</span><span class="bdg ${w.is_achieved?'bg':'bt'}">${w.is_achieved?'Achieved':'Pending'}</span></div><div class="mtx">Target: ৳${w.target_amount}</div></div>`).join('')}</div>`:''}
-    <div class="ps"><button class="btn bd" style="width:100%;padding:11px;" onclick="deleteUser('${id}','${esc(p.email)}')">🗑 Delete This User Permanently</button></div>`;
+    ${d.goals.length?`<div class="ps"><h4>🎯 Goals (${s.total_goals} total, ${s.completed_goals} done)</h4>
+      ${d.goals.slice(0,5).map(g=>{const pct=g.target_amount>0?Math.min(Math.round((g.current_amount/g.target_amount)*100),100):0;return `<div class="mb"><div class="mh"><span class="ms">${g.title}</span><span class="bdg ${g.is_completed?'bg':'bo'}">${g.is_completed?'Done':'Active'}</span></div>
+        <div style="height:5px;background:var(--s3);border-radius:3px;overflow:hidden;margin:6px 0"><div style="height:100%;width:${pct}%;background:var(--grn);border-radius:3px"></div></div>
+        <div class="mtx">৳${g.current_amount} / ৳${g.target_amount} (${pct}%)</div></div>`;}).join('')}
+    </div>`:''}
+    <div class="ps"><button class="btn bd" style="width:100%;padding:11px" onclick="deleteUser('${id}','${esc(p.email)}')">🗑 Delete This User Permanently</button></div>`;
+
+  // Profile tab
+  const tabProfile = `<div style="font-size:13px">
+    <div class="ir"><span class="k">Display Name</span><span class="v">${p.display_name||'—'}</span></div>
+    <div class="ir"><span class="k">Email</span><span class="v">${p.email||'—'}</span></div>
+    <div class="ir"><span class="k">Age</span><span class="v">${p.age||'—'}</span></div>
+    <div class="ir"><span class="k">Gender</span><span class="v">${p.gender||'—'}</span></div>
+    <div class="ir"><span class="k">Education Level</span><span class="v">${p.educational_info||'—'}</span></div>
+    <div class="ir"><span class="k">Plan Duration</span><span class="v">${p.plan_duration?p.plan_duration+' days':'—'}</span></div>
+    <div class="ir"><span class="k">Quit Date</span><span class="v">${p.quit_date?new Date(p.quit_date).toLocaleDateString():'—'}</span></div>
+    <div class="ir"><span class="k">Auth</span><span class="v">${p.google_id?'🔵 Google':'📧 Email/Password'}</span></div>
+    <div class="ir"><span class="k">Google ID</span><span class="v">${p.google_id||'—'}</span></div>
+    <div class="ir"><span class="k">User ID</span><span class="v" style="font-size:10px">${p.id}</span></div>
+    <div class="ir"><span class="k">Joined</span><span class="v">${new Date(p.created_at).toLocaleString()}</span></div>
+    ${p.ai_quit_plan?`<div class="ir" style="flex-direction:column;gap:6px"><span class="k">AI Quit Plan</span><div style="font-size:11px;color:var(--mt);line-height:1.6;background:var(--s2);padding:8px;border-radius:8px;margin-top:4px">${String(p.ai_quit_plan).slice(0,400)}${String(p.ai_quit_plan).length>400?'…':''}</div></div>`:''}
+  </div>`;
+
+  // Check-ins tab
+  const tabCheckins = d.checkins.length ? `
+    <div style="font-size:12px;color:var(--mt);margin-bottom:10px">${d.checkins.length} total records · all time</div>
+    <div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Mood</th><th>Craving</th><th>Smoked?</th><th>Tobacco?</th><th>Cigs</th></tr></thead><tbody>
+    ${d.checkins.map(c=>`<tr>
+      <td style="font-size:11px">${new Date(c.check_in_date).toLocaleDateString()}</td>
+      <td><span class="bdg bb" style="font-size:10px">${c.mood||'—'}</span></td>
+      <td><span class="bdg ${+c.craving_level>6?'br':+c.craving_level>3?'bo':'bg'}" style="font-size:10px">${c.craving_level||'—'}/10</span></td>
+      <td><span class="bdg ${c.smoked_today?'br':'bg'}" style="font-size:10px">${c.smoked_today?'Yes':'No'}</span></td>
+      <td><span class="bdg ${c.used_tobacco?'br':'bg'}" style="font-size:10px">${c.used_tobacco?'Yes':'No'}</span></td>
+      <td style="font-size:11px">${c.cigarettes_smoked||0}</td>
+    </tr>`).join('')}
+    </tbody></table></div>` : '<div class="ld">No check-ins yet</div>';
+
+  // Goals tab
+  const tabGoals = d.goals.length ? d.goals.map(g=>{
+    const pct=g.target_amount>0?Math.min(Math.round((g.current_amount/g.target_amount)*100),100):0;
+    return `<div class="mb"><div class="mh"><span class="ms">${g.title}</span><span class="bdg ${g.is_completed?'bg':'bo'}">${g.is_completed?'✓ Done':'Active'}</span></div>
+      <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;margin:6px 0"><div style="height:100%;width:${pct}%;background:var(--grn);border-radius:3px"></div></div>
+      <div class="mtx">৳${g.current_amount} saved of ৳${g.target_amount} target (${pct}%)</div>
+      <div class="mtx" style="margin-top:3px">Created: ${new Date(g.created_at).toLocaleDateString()}</div></div>`;
+  }).join('') : '<div class="ld">No goals yet</div>';
+
+  // Savings tab
+  const totalSav = d.savings.reduce((a,r)=>a+Number(r.amount),0);
+  const tabSavings = d.savings.length ? `
+    <div style="background:var(--s2);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;justify-content:space-between">
+      <div><div style="font-size:22px;font-weight:800;color:var(--grn)">৳${totalSav}</div><div style="font-size:11px;color:var(--mt)">Total Saved</div></div>
+      <div><div style="font-size:22px;font-weight:800">${d.savings.length}</div><div style="font-size:11px;color:var(--mt)">Transactions</div></div>
+      <div><div style="font-size:22px;font-weight:800;color:var(--acc3)">৳${Math.round(totalSav/d.savings.length)}</div><div style="font-size:11px;color:var(--mt)">Avg per Log</div></div>
+    </div>
+    ${d.savings.map(s=>`<div class="mb"><div class="mh"><span class="ms" style="color:var(--grn)">৳${s.amount}</span><span class="mt2">${new Date(s.logged_at).toLocaleString()}</span></div></div>`).join('')}` 
+  : '<div class="ld">No savings logged yet</div>';
+
+  // Gamification tab
+  const g = d.gamification;
+  const tabGam = g ? `<div style="font-size:13px">
+    <div class="ir"><span class="k">Level</span><span class="v"><span class="bdg bp2">Lv.${g.level}</span></span></div>
+    <div class="ir"><span class="k">Total XP</span><span class="v">${g.total_xp} XP</span></div>
+    <div class="ir"><span class="k">Current XP</span><span class="v">${g.current_xp} XP</span></div>
+    <div class="ir"><span class="k">Current Streak</span><span class="v">🔥 ${g.current_streak} days</span></div>
+    <div class="ir"><span class="k">Longest Streak</span><span class="v">⭐ ${g.longest_streak} days</span></div>
+    <div class="ir"><span class="k">Last Check-in</span><span class="v">${g.last_check_in_date?new Date(g.last_check_in_date).toLocaleDateString():'—'}</span></div>
+    <div class="ir"><span class="k">Updated</span><span class="v">${g.updated_at?new Date(g.updated_at).toLocaleString():'—'}</span></div>
+    </div>
+    <div class="ps"><h4>🎖 Badges (${(g.badges||[]).length})</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">${(g.badges||[]).length?g.badges.map(b=>`<span class="bdg bp2" style="font-size:12px;padding:4px 10px">${b}</span>`).join(''):'<div style="color:var(--mt);font-size:13px">No badges yet</div>'}</div></div>`
+  : '<div class="ld">No gamification data yet</div>';
+
+  // Wishlist tab
+  const tabWishlist = d.wishlist.length ? d.wishlist.map(w=>`<div class="mb">
+    <div class="mh"><span style="font-size:18px">${w.category_icon||'🛍'}</span><span class="ms" style="margin-left:6px">${w.item_name}</span><span class="bdg ${w.is_achieved?'bg':'bt'}">${w.is_achieved?'✓ Achieved':'Pending'}</span></div>
+    <div class="mtx">Target: ৳${w.target_amount} · Added: ${new Date(w.created_at).toLocaleDateString()}</div></div>`).join('') 
+  : '<div class="ld">No wishlist items</div>';
+
+  // Messages tab
+  const tabMessages = d.messages.length ? `
+    <div style="font-size:12px;color:var(--mt);margin-bottom:10px">${d.messages.length} messages sent</div>
+    ${d.messages.map(m=>`<div class="mb">
+      <div class="mh"><span class="ms" style="font-size:11px;color:var(--mt)">${new Date(m.created_at).toLocaleString()}</span></div>
+      ${m.image_url?`<img src="${m.image_url}" style="max-width:120px;border-radius:6px;margin-bottom:4px" onerror="this.style.display='none'"/>`:''}
+      <div style="font-size:12px">${m.content||'<em>[image only]</em>'}</div>
+    </div>`).join('')}`
+  : '<div class="ld">No messages sent</div>';
+
+  // Files tab
+  const tabFiles = d.files.length ? `
+    <div style="font-size:12px;color:var(--mt);margin-bottom:10px">${d.files.length} files uploaded</div>
+    ${d.files.map(f=>{const isImg=f.mime_type?.startsWith('image/');return `<div class="mb"><div class="mh">
+      ${isImg?`<img src="${f.url}" style="width:40px;height:40px;border-radius:6px;object-fit:cover" onerror="this.outerHTML='<span style=font-size:20px>📄</span>'"/>`:'<span style="font-size:20px">📄</span>'}
+      <span class="ms" style="margin-left:8px">${f.file_name}</span>
+      <span class="bdg bb">${(f.file_size_bytes/1024).toFixed(0)} KB</span></div>
+      <div class="mtx">${f.mime_type||'—'} · ${new Date(f.created_at).toLocaleDateString()} · <a href="${f.url}" target="_blank" style="color:var(--acc3)">Open ↗</a></div>
+    </div>`;}).join('')}`
+  : '<div class="ld">No files uploaded</div>';
+
+  // SOS tab
+  const tabSOS = d.sos.length ? `
+    <div style="font-size:12px;color:var(--red);margin-bottom:10px">⚠ ${d.sos.length} SOS alerts triggered</div>
+    ${d.sos.map(s=>`<div class="mb"><div class="mh"><span class="bdg br">${s.selected_mode}</span><span class="mt2">${new Date(s.trigger_time).toLocaleString()}</span></div>
+      <div class="mtx">Distraction used: ${s.distraction_clicked||'—'}</div></div>`).join('')}`
+  : '<div class="ld" style="color:var(--grn)">✅ No SOS alerts — great sign!</div>';
+
+  const tabs = {overview:tabOverview, profile:tabProfile, checkins:tabCheckins, goals:tabGoals, savings:tabSavings, gam:tabGam, wishlist:tabWishlist, messages:tabMessages, files:tabFiles, sos:tabSOS};
+
+  document.getElementById('up-content').innerHTML = Object.entries(tabs).map(([k,v])=>`<div class="up-tab-body ${k==='overview'?'ac':''}" id="utb-${k}">${v}</div>`).join('');
 }
+
+function upTab(name, btn){
+  document.querySelectorAll('.up-tab').forEach(t=>t.classList.remove('ac'));
+  document.querySelectorAll('.up-tab-body').forEach(b=>b.classList.remove('ac'));
+  btn.classList.add('ac');
+  document.getElementById('utb-'+name)?.classList.add('ac');
+}
+
 function closePanel(){document.getElementById('sp').classList.remove('ac');document.getElementById('po').classList.remove('ac');}
+
 
 async function deleteUser(id,email){if(!confirm(`Delete "${email}"? All their data will be permanently removed.`)) return;const r=await fetch(`${BASE}/admin/api/users/${id}`,{method:'DELETE',headers:ah()});if(r.ok){toast('User deleted','success');closePanel();loadUsers(document.getElementById('usrq')?.value||'');}else toast('Failed','error');}
 async function deleteTestAccounts(){if(!confirm('Delete ALL @example.com test accounts?')) return;const r=await fetch(`${BASE}/admin/api/users/bulk/test-accounts`,{method:'DELETE',headers:ah()});if(r.ok){const d=await r.json();toast(`Deleted ${d.deleted} test accounts`,'success');loadUsers();}else toast('Failed','error');}
