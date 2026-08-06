@@ -15,6 +15,7 @@ const gamificationRouter = require('./routes/gamification');
 const chatRouter = require('./routes/chat');
 const uploadRouter = require('./routes/upload');
 const aiRouter = require('./routes/ai');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 const server = http.createServer(app);
@@ -59,6 +60,10 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use('/api/upload', uploadRouter);
 app.use('/api/ai', aiRouter);
+
+// Admin Dashboard
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/admin', adminRouter);
 
 server.listen(3000, '0.0.0.0', () => {
   console.log(`🚀 Express.js & Socket.io backend listening on port 3000`);
