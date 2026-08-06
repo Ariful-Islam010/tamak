@@ -63,6 +63,8 @@ app.use('/api/ai', aiRouter);
 
 // Admin Dashboard
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+app.get('/admin/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.use('/admin', adminRouter);
 
 server.listen(3000, '0.0.0.0', () => {
