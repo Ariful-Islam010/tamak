@@ -54,10 +54,11 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
     const secure_url = await uploadFile(req.file.buffer, randomName, mimetype);
 
     // Record in database
+    const userId = req.user.sub || req.user.id;
     await query(
       `INSERT INTO media_files (user_id, file_name, file_size_bytes, mime_type, url)
        VALUES ($1, $2, $3, $4, $5)`,
-      [req.user.id, randomName, req.file.size, mimetype, secure_url]
+      [userId, randomName, req.file.size, mimetype, secure_url]
     );
 
     return res.json({ secure_url });
@@ -112,9 +113,10 @@ router.get('/files', requireAuth, async (req, res) => {
 // DELETE /api/upload/files/:id — delete a file
 router.delete('/files/:id', requireAuth, async (req, res) => {
   try {
+    const userId = req.user.sub || req.user.id;
     const result = await query(
       'SELECT * FROM media_files WHERE id = $1 AND user_id = $2',
-      [req.params.id, req.user.id]
+      [req.params.id, userId]
     );
     if (!result.rows.length) return res.status(404).json({ detail: 'File not found' });
 

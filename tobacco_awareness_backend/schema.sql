@@ -1,100 +1,117 @@
+-- ============================================================
+-- Tobacco Awareness Application — 100% Frontend Matched Schema
+-- Database: tamak
+-- ============================================================
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-DROP TABLE IF EXISTS user_mission_progress CASCADE;
-DROP TABLE IF EXISTS daily_checkins CASCADE;
-DROP TABLE IF EXISTS peer_support_messages CASCADE;
-DROP TABLE IF EXISTS wishlist_items CASCADE;
-DROP TABLE IF EXISTS savings_logs CASCADE;
-DROP TABLE IF EXISTS money_saver_goals CASCADE;
-DROP TABLE IF EXISTS sos_logs CASCADE;
-DROP TABLE IF EXISTS gamification_progress CASCADE;
-DROP TABLE IF EXISTS user_badges CASCADE;
-DROP TABLE IF EXISTS user_profiles CASCADE;
-DROP TABLE IF EXISTS users CASCADE;
-DROP TABLE IF EXISTS missions CASCADE;
-DROP TABLE IF EXISTS badges CASCADE;
-DROP TABLE IF EXISTS education_articles CASCADE;
-
+-- 1. Users Table (Authentication: Email & Google Sign-in)
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT,
-    google_id TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    google_id TEXT UNIQUE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2. User Profiles Table (Onboarding Assessment & User Details)
 CREATE TABLE user_profiles (
-    id UUID REFERENCES users(id) ON DELETE CASCADE PRIMARY KEY,
-    email TEXT,
+    id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     display_name TEXT,
     photo_url TEXT,
-    educational_info TEXT,
-    plan_duration INTEGER,
-    quit_date TIMESTAMP WITH TIME ZONE,
-    ai_quit_plan TEXT,
     age INTEGER,
     gender TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    educational_info TEXT,
+    plan_duration INTEGER,
+    quit_date TIMESTAMPTZ,
+    ai_quit_plan TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 3. Daily Check-ins Table (Daily Progress & Optional Reflection Note)
 CREATE TABLE daily_checkins (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     check_in_date DATE NOT NULL,
     mood TEXT,
-    craving_level INTEGER,
-    used_tobacco BOOLEAN,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    craving_level INTEGER CHECK (craving_level BETWEEN 1 AND 10),
+    used_tobacco BOOLEAN DEFAULT FALSE,
+    note TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(user_id, check_in_date)
 );
 
+-- 4. Gamification Progress Table (Streak Tracking & Unlocked Badges Array)
 CREATE TABLE gamification_progress (
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE PRIMARY KEY,
-    level INTEGER DEFAULT 1,
-    current_xp INTEGER DEFAULT 0,
-    total_xp INTEGER DEFAULT 0,
-    badges TEXT[] DEFAULT '{}',
+    user_id UUID PRIMARY KEY REFERENCES user_profiles(id) ON DELETE CASCADE,
     longest_streak INTEGER DEFAULT 0,
     current_streak INTEGER DEFAULT 0,
+    badges TEXT[] DEFAULT '{}',
     last_check_in_date DATE,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 5. Money Saver Goals Table (User's Savings Goals & Dreams)
 CREATE TABLE money_saver_goals (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
-    target_amount NUMERIC NOT NULL,
-    current_amount NUMERIC DEFAULT 0,
-    is_completed BOOLEAN DEFAULT FALSE,
+    target_amount NUMERIC(12,2) NOT NULL,
+    current_amount NUMERIC(12,2) DEFAULT 0,
     icon_name TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    is_completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 6. Savings Logs Table (Daily Money Savings History)
+CREATE TABLE savings_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    amount NUMERIC(12,2) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. Peer Support Messages Table (Community Support Chat)
 CREATE TABLE peer_support_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sender_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     image_url TEXT,
     is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE OR REPLACE FUNCTION handle_new_user() 
+-- 8. Media Files Table (Uploaded Images & Profile Photos)
+CREATE TABLE media_files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    file_name TEXT,
+    file_size_bytes BIGINT,
+    mime_type TEXT,
+    url TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. SOS Logs Table (Emergency SOS Usage Log for "Life Saver" Badge)
+CREATE TABLE sos_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    trigger_time TIMESTAMPTZ DEFAULT NOW(),
+    selected_mode TEXT,
+    distraction_clicked TEXT
+);
+
+-- 10. Auto Trigger for User Signup (Creates Profile & Gamification Row Automatically)
+CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO user_profiles (id, email)
-  VALUES (new.id, new.email);
-  
-  INSERT INTO gamification_progress (user_id)
-  VALUES (new.id);
-  
-  RETURN new;
+    INSERT INTO user_profiles (id) VALUES (NEW.id);
+    INSERT INTO gamification_progress (user_id) VALUES (NEW.id);
+    RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER on_user_created
-  AFTER INSERT ON users
-  FOR EACH ROW EXECUTE PROCEDURE handle_new_user();
-
+AFTER INSERT ON users
+FOR EACH ROW EXECUTE FUNCTION handle_new_user();

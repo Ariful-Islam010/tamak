@@ -7,7 +7,15 @@ const { requireAuth } = require('../middleware/auth');
 router.get('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const result = await query('SELECT * FROM user_profiles WHERE id = $1', [userId]);
+    const result = await query(
+      `SELECT up.id, u.email, up.display_name, up.photo_url, up.age, up.gender,
+              up.educational_info, up.plan_duration, up.quit_date, up.ai_quit_plan,
+              up.created_at, up.updated_at
+       FROM user_profiles up
+       LEFT JOIN users u ON up.id = u.id
+       WHERE up.id = $1`,
+      [userId]
+    );
     
     if (result.rowCount === 0) {
       return res.json({});
@@ -23,7 +31,6 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
     const { 
-      email, 
       display_name, 
       photo_url, 
       educational_info, 
@@ -34,12 +41,11 @@ router.post('/', requireAuth, async (req, res) => {
       gender 
     } = req.body;
     
-    // UPSERT style query
+    // UPSERT style query into user_profiles
     const result = await query(
-      `INSERT INTO user_profiles (id, email, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO user_profiles (id, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (id) DO UPDATE SET
-         email = EXCLUDED.email,
          display_name = EXCLUDED.display_name,
          photo_url = EXCLUDED.photo_url,
          educational_info = EXCLUDED.educational_info,
@@ -50,7 +56,7 @@ router.post('/', requireAuth, async (req, res) => {
          gender = EXCLUDED.gender,
          updated_at = NOW()
        RETURNING *`,
-      [userId, email, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender]
+      [userId, display_name, photo_url, educational_info, plan_duration, quit_date, ai_quit_plan, age, gender]
     );
 
     return res.json(result.rows[0]);
