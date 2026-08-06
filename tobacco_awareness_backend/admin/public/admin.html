@@ -1,151 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Tamak Admin Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#09101f;--s1:#111827;--s2:#1a2235;--s3:#1e2d45;--bdr:rgba(255,255,255,0.07);--acc:#7c3aed;--acc2:#4f46e5;--acc3:#06b6d4;--grn:#10b981;--red:#ef4444;--ora:#f59e0b;--yel:#eab308;--tx:#f1f5f9;--mt:#64748b;--sh:0 4px 24px rgba(0,0,0,0.5)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;display:flex}
-/* Login */
-#ls{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;background-image:radial-gradient(ellipse at 20% 50%,rgba(124,58,237,.15) 0%,transparent 50%),radial-gradient(ellipse at 80% 20%,rgba(6,182,212,.1) 0%,transparent 50%)}
-#ls.h{display:none}
-.lc{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:48px 40px;width:380px;text-align:center;box-shadow:var(--sh)}
-.lc .logo{font-size:44px;margin-bottom:8px}.lc h1{font-size:24px;font-weight:700;margin-bottom:4px}.lc p{color:var(--mt);font-size:14px;margin-bottom:32px}
-.lc input{width:100%;padding:14px 16px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;color:var(--tx);font-size:15px;font-family:inherit;margin-bottom:16px;outline:none;transition:border-color .2s}
-.lc input:focus{border-color:var(--acc)}.lc .err{color:var(--red);font-size:13px;margin-top:10px;display:none}
-.bp{width:100%;padding:14px;background:linear-gradient(135deg,var(--acc),var(--acc2));border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s}
-.bp:hover{opacity:.9}
+:root {
+  --bg: #0B0E14; --s1: #121721; --s2: #1A202C; --s3: #242C3D;
+  --bdr: #2D3748; --txt: #EDF2F7; --mt: #A0AEC0;
+  --acc: #6366F1; --acc2: #818CF8; --acc3: #4F46E5;
+  --grn: #10B981; --red: #EF4444; --ora: #F59E0B; --cyn: #06B6D4;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+body { background: var(--bg); color: var(--txt); font-size: 14px; min-height: 100vh; }
+.h { display: none !important; }
+
+/* Login Screen */
+#ls { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: radial-gradient(circle at top, #1E1B4B 0%, var(--bg) 70%); }
+.lcard { background: var(--s1); border: 1px solid var(--bdr); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.lcard h2 { font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+.lcard p { color: var(--mt); font-size: 13px; margin-bottom: 28px; }
+.lcard input { width: 100%; padding: 14px 16px; background: var(--s2); border: 1px solid var(--bdr); border-radius: 12px; color: var(--txt); font-size: 14px; margin-bottom: 16px; outline: none; transition: border-color 0.2s; }
+.lcard input:focus { border-color: var(--acc); }
+.lcard button { width: 100%; padding: 14px; background: var(--acc); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.lcard button:hover { background: var(--acc3); }
+.lcard .err { color: var(--red); font-size: 12px; margin-top: 12px; display: none; }
+
 /* Layout */
-#app{display:flex;width:100%}#app.h{display:none}
-/* Sidebar */
-.sb{width:250px;background:var(--s1);border-right:1px solid var(--bdr);min-height:100vh;position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:100;overflow-y:auto}
-.sbl{padding:20px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
-.sbl .icon{font-size:26px}.sbl .name{font-size:18px;font-weight:700}.sbl .badge{font-size:10px;background:var(--acc);color:#fff;padding:2px 8px;border-radius:20px;font-weight:600}
-nav{flex:1;padding:12px 10px}
-nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:var(--mt);text-decoration:none;font-size:13px;font-weight:500;margin-bottom:2px;transition:all .2s;cursor:pointer;position:relative}
-nav a:hover{background:var(--s2);color:var(--tx)}nav a.ac{background:rgba(124,58,237,.15);color:var(--acc);border:1px solid rgba(124,58,237,.2)}
-.ni{font-size:16px;width:20px;text-align:center}.nb{position:absolute;right:10px;background:var(--red);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:20px;min-width:18px;text-align:center}
-.nav-sep{font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:1px;padding:10px 12px 4px;margin-top:6px}
-.sbf{padding:14px;border-top:1px solid var(--bdr)}
-.sbf button{background:none;border:1px solid var(--bdr);color:var(--mt);padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;width:100%;font-family:inherit;transition:all .2s}
-.sbf button:hover{border-color:var(--red);color:var(--red)}
-/* Main */
-.mn{margin-left:250px;flex:1;padding:28px;min-height:100vh}
-.pg{display:none}.pg.ac{display:block}
-.ph{margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.ph h1{font-size:26px;font-weight:800}.ph p{color:var(--mt);font-size:13px;margin-top:3px}
-.ph-actions{display:flex;gap:8px;flex-wrap:wrap}
-/* Stats */
-.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:14px;margin-bottom:24px}
-.sc{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:18px;transition:transform .2s,border-color .2s}
-.sc:hover{transform:translateY(-2px);border-color:rgba(124,58,237,.3)}
-.sc .ic{font-size:26px;margin-bottom:10px}.sc .v{font-size:26px;font-weight:800;line-height:1;margin-bottom:3px}.sc .lb{font-size:11px;color:var(--mt);font-weight:500;text-transform:uppercase;letter-spacing:.5px}.sc .ch{font-size:11px;margin-top:5px}.ch.p{color:var(--grn)}.ch.n{color:var(--red)}
-/* Charts */
-.cc{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:22px;margin-bottom:22px}
-.cc h3{font-size:15px;font-weight:600;margin-bottom:18px}
-.bars{display:flex;align-items:flex-end;gap:6px;height:90px}
-.bw{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
-.bar{width:100%;background:linear-gradient(to top,var(--acc),var(--acc3));border-radius:4px 4px 0 0;min-height:3px;transition:height .6s ease}
-.bl{font-size:10px;color:var(--mt)}.bv{font-size:10px;font-weight:600}
-.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.pie-bars{display:flex;flex-direction:column;gap:8px}
-.pb-row{display:flex;align-items:center;gap:10px;font-size:13px}
-.pb-label{width:120px;color:var(--mt);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pb-bar-bg{flex:1;height:8px;background:var(--s2);border-radius:4px;overflow:hidden}
-.pb-bar-fill{height:100%;border-radius:4px;background:linear-gradient(to right,var(--acc),var(--acc3));transition:width .6s}
-.pb-val{width:40px;text-align:right;font-size:12px;font-weight:600}
+#app { display: flex; min-height: 100vh; }
+.sb { width: 250px; background: var(--s1); border-right: 1px solid var(--bdr); display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 10; }
+.sbl { padding: 24px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--bdr); }
+.sbl .icon { font-size: 24px; }
+.sbl .name { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+.sbl .badge { background: var(--acc3); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+.sb nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+.sb nav a { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--mt); border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 13px; margin-bottom: 4px; cursor: pointer; transition: all 0.15s; }
+.sb nav a:hover, .sb nav a.ac { background: var(--s2); color: var(--txt); }
+.sb nav a.ac { color: var(--acc2); font-weight: 700; }
+.sb nav a .ni { font-size: 16px; }
+.sb nav a .nb { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 800; }
+.nav-sep { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--mt); opacity: 0.5; margin: 16px 14px 6px; letter-spacing: 0.5px; }
+.sbf { padding: 16px; border-top: 1px solid var(--bdr); }
+.sbf button { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--bdr); color: var(--mt); border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.sbf button:hover { background: var(--s2); color: var(--txt); }
+
+.mn { flex: 1; margin-left: 250px; padding: 32px; max-width: 1400px; }
+.ph { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.ph h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.ph p { color: var(--mt); font-size: 13px; margin-top: 2px; }
+.ph-actions { display: flex; gap: 10px; }
+
+.pg { display: none; }
+.pg.ac { display: block; }
+
+/* Grid Cards */
+.sg { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.sc { background: var(--s1); border: 1px solid var(--bdr); border-radius: 16px; padding: 20px; position: relative; overflow: hidden; }
+.sc .ic { font-size: 20px; margin-bottom: 12px; }
+.sc .v { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+.sc .lb { color: var(--mt); font-size: 12px; font-weight: 600; margin-top: 2px; }
+.sc .ch { font-size: 11px; font-weight: 700; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; }
+.sc .ch.p { background: rgba(16,185,129,0.15); color: var(--grn); }
+.sc .ch.n { background: rgba(239,68,68,0.15); color: var(--red); }
+
 /* Tables */
-.tc{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;overflow:hidden;margin-bottom:22px}
-.th{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.th h3{font-size:14px;font-weight:600}.ts{padding:7px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--tx);font-size:13px;font-family:inherit;outline:none;min-width:180px}
-.ts:focus{border-color:var(--acc)}
-.tw{overflow-x:auto;max-height:500px;overflow-y:auto}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;font-size:11px;font-weight:600;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;padding:9px 14px;border-bottom:1px solid var(--bdr);background:var(--s2);position:sticky;top:0;z-index:1}
-td{padding:11px 14px;font-size:13px;border-bottom:1px solid var(--bdr);vertical-align:middle}
-tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.015)}
-.av{width:30px;height:30px;border-radius:50%;background:var(--acc);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;vertical-align:middle;margin-right:7px;flex-shrink:0}
-.ui{display:inline-flex;flex-direction:column;vertical-align:middle}
-.ui .nm{font-weight:500;font-size:12px}.ui .em{font-size:11px;color:var(--mt)}
-.bdg{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600}
-.bg{background:rgba(16,185,129,.15);color:var(--grn)}.br{background:rgba(239,68,68,.15);color:var(--red)}
-.bb{background:rgba(6,182,212,.15);color:var(--acc3)}.bo{background:rgba(245,158,11,.15);color:var(--ora)}
-.bt{background:rgba(100,116,139,.15);color:var(--mt)}.bp2{background:rgba(124,58,237,.15);color:var(--acc)}
-/* Buttons */
-.btn{padding:7px 13px;border-radius:8px;border:none;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
-.bd{background:rgba(239,68,68,.15);color:var(--red)}.bd:hover{background:var(--red);color:#fff}
-.bi{background:rgba(6,182,212,.15);color:var(--acc3)}.bi:hover{background:var(--acc3);color:#fff}
-.bs{background:rgba(16,185,129,.15);color:var(--grn)}.bs:hover{background:var(--grn);color:#fff}
-.bw2{background:rgba(245,158,11,.15);color:var(--ora)}.bw2:hover{background:var(--ora);color:#000}
-.bex{background:rgba(234,179,8,.15);color:var(--yel);border:1px solid rgba(234,179,8,.2)}.bex:hover{background:var(--yel);color:#000}
-.bex-full{width:100%;padding:11px;background:rgba(234,179,8,.1);color:var(--yel);border:1px solid rgba(234,179,8,.2);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;text-align:center}
-.bex-full:hover{background:var(--yel);color:#000}
-/* Storage bar */
-.sbu{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:20px}
-.sb-bg{height:10px;background:var(--s2);border-radius:10px;overflow:hidden;margin:8px 0}
-.sb-fill{height:100%;background:linear-gradient(to right,var(--acc),var(--acc3));border-radius:10px;transition:width .8s}
-.sb-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--mt)}
-/* Settings */
-.setg{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.setc{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:22px}
-.setc h3{font-size:15px;font-weight:600;margin-bottom:6px}.setc p{font-size:13px;color:var(--mt);margin-bottom:16px;line-height:1.6}
-.dbs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.dbs-item{background:var(--s2);border-radius:10px;padding:12px;text-align:center}
-.dbs-item .num{font-size:22px;font-weight:800;color:var(--acc3)}.dbs-item .tn{font-size:11px;color:var(--mt);margin-top:2px}
+.tc { background: var(--s1); border: 1px solid var(--bdr); border-radius: 16px; overflow: hidden; }
+.th { padding: 16px 20px; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; justify-space-between; gap: 16px; }
+.th h3 { font-size: 15px; font-weight: 700; flex: 1; }
+.ts { padding: 8px 12px; background: var(--s2); border: 1px solid var(--bdr); border-radius: 8px; color: var(--txt); font-size: 12px; outline: none; width: 220px; }
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { background: var(--s2); padding: 12px 16px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--mt); letter-spacing: 0.5px; border-bottom: 1px solid var(--bdr); }
+td { padding: 14px 16px; border-bottom: 1px solid var(--bdr); font-size: 13px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.02); }
+
+.av { width: 32px; height: 32px; border-radius: 50%; background: var(--acc3); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; margin-right: 10px; }
+.ui { display: inline-flex; flex-direction: column; vertical-align: middle; }
+.ui .nm { font-weight: 700; color: var(--txt); }
+.ui .em { font-size: 11px; color: var(--mt); }
+
+.bdg { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.bdg.bg { background: rgba(16,185,129,0.15); color: var(--grn); }
+.bdg.br { background: rgba(239,68,68,0.15); color: var(--red); }
+.bdg.bo { background: rgba(245,158,11,0.15); color: var(--ora); }
+.bdg.bb { background: rgba(99,102,241,0.15); color: var(--acc2); }
+.bdg.bt { background: var(--s2); color: var(--mt); }
+
+.btn { padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+.btn.bp { background: var(--acc); color: #fff; } .btn.bp:hover { background: var(--acc3); }
+.btn.bex { background: rgba(16,185,129,0.15); color: var(--grn); border: 1px solid rgba(16,185,129,0.3); } .btn.bex:hover { background: rgba(16,185,129,0.25); }
+.btn.bd { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); } .btn.bd:hover { background: rgba(239,68,68,0.25); }
+.btn.bi { background: var(--s2); color: var(--txt); border: 1px solid var(--bdr); } .btn.bi:hover { background: var(--s3); }
+
 /* Side Panel */
-.po{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:none;backdrop-filter:blur(4px)}
-.po.ac{display:block}
-.sp{position:fixed;right:0;top:0;width:560px;height:100vh;background:var(--s1);border-left:1px solid var(--bdr);z-index:201;overflow-y:auto;transform:translateX(100%);transition:transform .3s ease}
-/* User panel tabs */
-.up-tabs{display:flex;gap:0;border-bottom:1px solid var(--bdr);overflow-x:auto;flex-shrink:0;padding:0 16px}
-.up-tab{padding:10px 13px;font-size:12px;font-weight:500;color:var(--mt);border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;font-family:inherit;background:none;border-top:none;border-left:none;border-right:none;transition:all .2s}
-.up-tab.ac{color:var(--acc);border-bottom-color:var(--acc)}
-.up-tab:hover{color:var(--tx)}
-.up-tab-body{display:none;padding:18px}.up-tab-body.ac{display:block}
-.sum-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
-.sum-c{background:var(--s2);border-radius:10px;padding:12px;text-align:center}
-.sum-c .sv{font-size:20px;font-weight:800;color:var(--acc3)}.sum-c .sl{font-size:10px;color:var(--mt);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
-.sp.ac{transform:translateX(0)}
-.sph{padding:18px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--s1);z-index:1}
-.sph h3{font-size:16px;font-weight:700}.spc{background:none;border:none;color:var(--mt);font-size:24px;cursor:pointer;line-height:1}
-.spb{padding:22px}
-.ir{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:13px}
-.ir:last-child{border-bottom:none}.ir .k{color:var(--mt)}.ir .v{font-weight:500;text-align:right;max-width:240px;word-break:break-all}
-.ps{margin-top:20px}.ps h4{font-size:12px;font-weight:600;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
-.mb{background:var(--s2);border-radius:8px;padding:10px 12px;margin-bottom:8px}
-.mb .mh{display:flex;justify-content:space-between;margin-bottom:4px}
-.mb .ms{font-weight:600;font-size:12px}.mb .mt2{font-size:11px;color:var(--mt)}.mb .mtx{font-size:12px;color:var(--mt)}
+.po { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 99; display: none; }
+.po.ac { display: block; }
+.sp { position: fixed; top: 0; right: -500px; width: 500px; bottom: 0; background: var(--s1); border-left: 1px solid var(--bdr); z-index: 100; transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; }
+.sp.ac { right: 0; }
+.sph { padding: 20px 24px; border-bottom: 1px solid var(--bdr); display: flex; align-items: center; justify-content: space-between; }
+.sph h3 { font-size: 18px; font-weight: 800; }
+.spc { background: none; border: none; color: var(--mt); font-size: 20px; cursor: pointer; }
+.spb { flex: 1; overflow-y: auto; padding: 24px; }
+.sum-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+.sum-c { background: var(--s2); border: 1px solid var(--bdr); border-radius: 10px; padding: 12px; text-align: center; }
+.sum-c .sv { font-size: 18px; font-weight: 800; }
+.sum-c .sl { font-size: 10px; color: var(--mt); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+.ir { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--bdr); font-size: 12px; }
+.ir .k { color: var(--mt); }
+.ir .v { font-weight: 600; }
+.mb { background: var(--s2); border: 1px solid var(--bdr); border-radius: 10px; padding: 12px; margin-bottom: 8px; }
+.mh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.ms { font-weight: 700; font-size: 13px; }
+.mtx { font-size: 12px; color: var(--mt); }
+.bex-full { width: 100%; padding: 12px; background: rgba(16,185,129,0.15); color: var(--grn); border: 1px solid rgba(16,185,129,0.3); border-radius: 10px; font-weight: 700; font-size: 13px; cursor: pointer; text-align: center; }
+.bex-full:hover { background: rgba(16,185,129,0.25); }
+
+/* Charts & Analytics */
+.mini-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.cc { background: var(--s1); border: 1px solid var(--bdr); border-radius: 16px; padding: 20px; }
+.cc h3 { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: var(--txt); }
+.bars { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding-top: 20px; }
+.bw { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.bar { width: 100%; max-width: 24px; background: var(--acc); border-radius: 4px 4px 0 0; transition: height 0.3s; }
+.bl { font-size: 9px; color: var(--mt); margin-top: 6px; }
+.bv { font-size: 10px; font-weight: 700; color: var(--txt); margin-bottom: 4px; }
+.pie-bars { display: flex; flex-direction: column; gap: 8px; }
+.pb-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.pb-label { width: 90px; color: var(--mt); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
+.pb-bar-bg { flex: 1; height: 8px; background: var(--s2); border-radius: 4px; overflow: hidden; }
+.pb-bar-fill { height: 100%; border-radius: 4px; }
+.pb-val { width: 30px; text-align: right; font-weight: 700; }
+.lb-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--s2); border-radius: 8px; }
+.lb-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--s3); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; }
+.lb-rank.gold { background: #F59E0B; color: #000; }
+.lb-rank.silver { background: #9CA3AF; color: #000; }
+.lb-rank.bronze { background: #D97706; color: #fff; }
+
+/* System Settings & Db Stats */
+.dbs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.dbs-item { background: var(--s2); border: 1px solid var(--bdr); border-radius: 12px; padding: 16px; text-align: center; }
+.dbs-item .num { font-size: 24px; font-weight: 800; color: var(--acc2); }
+.dbs-item .tn { font-size: 12px; color: var(--mt); margin-top: 4px; font-weight: 600; }
+
+.ld { text-align: center; padding: 40px; color: var(--mt); font-size: 13px; }
+.sp2 { width: 20px; height: 20px; border: 2px solid var(--bdr); border-top-color: var(--acc); border-radius: 50%; display: inline-block; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* Toast */
-.toast{position:fixed;bottom:22px;right:22px;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s ease}
-.toast.show{transform:translateY(0);opacity:1}.toast.success{background:var(--grn);color:#fff}.toast.error{background:var(--red);color:#fff}
-/* Loading */
-.ld{text-align:center;padding:36px;color:var(--mt);font-size:14px}
-.sp2{display:inline-block;width:18px;height:18px;border:2px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite;margin-right:7px;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.ft{width:36px;height:36px;object-fit:cover;border-radius:6px;cursor:pointer}
-.ftp{width:36px;height:36px;background:var(--s2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:16px}
-/* Leaderboard */
-.lb-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bdr)}
-.lb-row:last-child{border-bottom:none}
-.lb-rank{width:28px;height:28px;border-radius:50%;background:var(--s2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.lb-rank.gold{background:rgba(234,179,8,.2);color:var(--yel)}
-.lb-rank.silver{background:rgba(148,163,184,.2);color:#94a3b8}
-.lb-rank.bronze{background:rgba(180,83,9,.2);color:#b45309}
-.tab-row{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
-.tab-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mt);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;transition:all .2s}
-.tab-btn.ac{background:rgba(124,58,237,.2);color:var(--acc);border-color:rgba(124,58,237,.3)}
-@media(max-width:900px){.sb{display:none}.mn{margin-left:0}.setg{grid-template-columns:1fr}.sp{width:100%}.mini-grid{grid-template-columns:1fr}}
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; background: var(--s2); border: 1px solid var(--bdr); border-radius: 10px; color: var(--txt); font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 999; display: none; }
+.toast.show { display: block; animation: pop 0.2s ease; }
+.toast.success { border-color: var(--grn); color: var(--grn); }
+.toast.error { border-color: var(--red); color: var(--red); }
+@keyframes pop { from { transform: translateY(20px); opacity: 0; } }
 </style>
 </head>
 <body>
 
-<!-- Login -->
+<!-- Login Screen -->
 <div id="ls">
-  <div class="lc">
-    <div class="logo">🚬</div>
-    <h1>Tamak Admin</h1>
+  <div class="lcard">
+    <div style="font-size:40px;margin-bottom:12px">🚬</div>
+    <h2>Tamak Admin</h2>
     <p>Sign in to access the admin dashboard</p>
     <input type="password" id="apw" placeholder="Admin Password" onkeydown="if(event.key==='Enter')doLogin()"/>
     <button class="bp" onclick="doLogin()">Sign In →</button>
@@ -171,7 +189,6 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
       <a onclick="go('goals')" id="nav-goals"><span class="ni">🎯</span> Goals</a>
       <a onclick="go('savings')" id="nav-savings"><span class="ni">💰</span> Savings</a>
       <a onclick="go('gamification')" id="nav-gamification"><span class="ni">🏆</span> Gamification</a>
-      <a onclick="go('wishlist')" id="nav-wishlist"><span class="ni">🛍</span> Wishlist</a>
       <a onclick="go('chat')" id="nav-chat"><span class="ni">💬</span> Chat</a>
       <a onclick="go('storage')" id="nav-storage"><span class="ni">📁</span> Storage</a>
       <a onclick="go('sos')" id="nav-sos"><span class="ni">🆘</span> SOS Logs<span class="nb" id="sos-badge" style="display:none">0</span></a>
@@ -207,7 +224,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
       <div class="ph"><div><h1>User Management</h1><p>All registered users with full profile data</p></div>
         <div class="ph-actions">
           <button class="btn bex" onclick="dlCSV('/admin/api/users/export/csv','tamak_users.csv')">⬇ Export CSV</button>
-          <button class="btn bw2" onclick="deleteTestAccounts()">🗑 Delete Test Accounts</button>
+          <button class="btn bd" onclick="deleteTestAccounts()">🗑 Delete Test Accounts</button>
         </div>
       </div>
       <div class="tc">
@@ -220,7 +237,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
 
     <!-- CHECK-INS -->
     <div class="pg" id="pg-checkins">
-      <div class="ph"><div><h1>Daily Check-ins</h1><p>All user mood & craving logs</p></div>
+      <div class="ph"><div><h1>Daily Check-ins</h1><p>All user mood, craving & reflection notes</p></div>
         <button class="btn bex" onclick="dlCSV('/admin/api/checkins/export/csv','tamak_checkins.csv')">⬇ Export CSV</button>
       </div>
       <div class="tc">
@@ -260,7 +277,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
 
     <!-- GAMIFICATION -->
     <div class="pg" id="pg-gamification">
-      <div class="ph"><div><h1>Gamification</h1><p>XP, levels, streaks & badges leaderboard</p></div>
+      <div class="ph"><div><h1>Gamification Leaderboard</h1><p>Streak tracking & unlocked badges</p></div>
         <button class="btn bex" onclick="dlCSV('/admin/api/gamification/export/csv','tamak_gamification.csv')">⬇ Export CSV</button>
       </div>
       <div class="tc">
@@ -268,19 +285,6 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
           <button class="btn bi" onclick="loadGamification()">↻ Refresh</button>
         </div>
         <div class="tw" id="gamification-wrap"><div class="ld"><span class="sp2"></span></div></div>
-      </div>
-    </div>
-
-    <!-- WISHLIST -->
-    <div class="pg" id="pg-wishlist">
-      <div class="ph"><div><h1>Wishlist Items</h1><p>Items users are saving towards</p></div>
-        <button class="btn bex" onclick="dlCSV('/admin/api/wishlist/export/csv','tamak_wishlist.csv')">⬇ Export CSV</button>
-      </div>
-      <div class="tc">
-        <div class="th"><h3>Wishlist Items <span id="wl-c" style="color:var(--mt);font-weight:400;font-size:12px"></span></h3>
-          <button class="btn bi" onclick="loadWishlist()">↻ Refresh</button>
-        </div>
-        <div class="tw" id="wishlist-wrap"><div class="ld"><span class="sp2"></span></div></div>
       </div>
     </div>
 
@@ -296,18 +300,18 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
         <div class="th"><h3>Messages <span id="msg-c" style="color:var(--mt);font-weight:400;font-size:12px"></span></h3>
           <button class="btn bi" onclick="loadMessages()">↻ Refresh</button>
         </div>
-        <div id="msg-wrap" style="padding:14px;max-height:560px;overflow-y:auto"><div class="ld"><span class="sp2"></span></div></div>
+        <div style="padding:20px" id="msg-wrap"><div class="ld"><span class="sp2"></span></div></div>
       </div>
     </div>
 
     <!-- STORAGE -->
     <div class="pg" id="pg-storage">
-      <div class="ph"><div><h1>Storage Management</h1><p>Uploaded files and disk usage</p></div>
+      <div class="ph"><div><h1>Storage Management</h1><p>Uploaded media files & images</p></div>
         <button class="btn bex" onclick="dlCSV('/admin/api/files/export/csv','tamak_files.csv')">⬇ Export CSV</button>
       </div>
-      <div id="stor-bar"></div>
+      <div id="stor-bar" style="margin-bottom:20px"></div>
       <div class="tc">
-        <div class="th"><h3>Files <span id="file-c" style="color:var(--mt);font-weight:400;font-size:12px"></span></h3>
+        <div class="th"><h3>Uploaded Files <span id="file-c" style="color:var(--mt);font-weight:400;font-size:12px"></span></h3>
           <button class="btn bi" onclick="loadFiles()">↻ Refresh</button>
         </div>
         <div class="tw" id="files-wrap"><div class="ld"><span class="sp2"></span></div></div>
@@ -316,37 +320,25 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
 
     <!-- SOS -->
     <div class="pg" id="pg-sos">
-      <div class="ph"><div><h1>SOS Logs</h1><p>Emergency craving alerts from users</p></div>
-        <button class="btn bex" onclick="dlCSV('/admin/api/sos/export/csv','tamak_sos.csv')">⬇ Export CSV</button>
+      <div class="ph"><div><h1>SOS Emergency Logs</h1><p>Emergency SOS triggers and distraction clicks</p></div>
+        <button class="btn bex" onclick="dlCSV('/admin/api/sos/export/csv','tamak_sos_logs.csv')">⬇ Export CSV</button>
       </div>
       <div id="sos-wrap"><div class="ld"><span class="sp2"></span></div></div>
     </div>
 
     <!-- SETTINGS -->
     <div class="pg" id="pg-settings">
-      <div class="ph"><div><h1>Settings</h1><p>Admin controls and system info</p></div></div>
-      <div class="setg">
-        <div class="setc"><h3>⬇ Export Full Database</h3><p>Download all 9 tables as a single CSV file for backup or external analysis.</p>
-          <button class="bex-full" onclick="exportAll()">⬇ Download Full DB Export (CSV)</button>
-        </div>
-        <div class="setc"><h3>🗑 Wipe Chat Messages</h3><p>Permanently delete all peer support messages. Cannot be undone.</p>
-          <button style="width:100%;padding:11px;background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='rgba(239,68,68,.1)';this.style.color='var(--red)'" onclick="clearAllMessages()">Clear All Chat Messages</button>
-        </div>
-        <div class="setc"><h3>👻 Delete Test Accounts</h3><p>Remove all <code style="background:var(--s2);padding:1px 5px;border-radius:4px">@example.com</code> test users and their data.</p>
-          <button style="width:100%;padding:11px;background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s" onmouseover="this.style.background='var(--red)';this.style.color='#fff'" onmouseout="this.style.background='rgba(239,68,68,.1)';this.style.color='var(--red)'" onclick="deleteTestAccounts()">Delete Test Accounts</button>
-        </div>
-        <div class="setc"><h3>🔑 Backend Info</h3><p></p>
-          <div style="font-size:13px">
-            <div class="ir"><span class="k">Backend URL</span><span class="v" id="burl">—</span></div>
-            <div class="ir"><span class="k">Storage Limit</span><span class="v">20 GB</span></div>
-            <div class="ir"><span class="k">Auth</span><span class="v">Custom JWT + Google OAuth2</span></div>
-            <div class="ir"><span class="k">Database</span><span class="v">PostgreSQL 16</span></div>
-            <div class="ir"><span class="k">Runtime</span><span class="v">Node.js / Express.js</span></div>
-          </div>
-        </div>
-        <div class="setc" style="grid-column:1/-1"><h3>🗄 Database Table Row Counts</h3><p style="margin-bottom:18px">Live count of all rows across every table.</p>
-          <div class="dbs" id="dbs-wrap"><div class="ld"><span class="sp2"></span></div></div>
-        </div>
+      <div class="ph"><div><h1>System Settings</h1><p>Database statistics & configuration</p></div></div>
+      <div class="cc" style="margin-bottom:20px">
+        <h3>Backend Info</h3>
+        <div class="ir"><span class="k">Backend Base URL</span><span class="v" id="burl" style="color:var(--acc2)"></span></div>
+        <div class="ir"><span class="k">Database Host</span><span class="v">PostgreSQL (163.227.239.97)</span></div>
+        <div class="ir"><span class="k">Storage Limit</span><span class="v">20 GB (21,474,836,480 Bytes)</span></div>
+        <div class="ir"><span class="k">Active Tables</span><span class="v">9 Schema Tables</span></div>
+      </div>
+      <div class="cc">
+        <h3>Database Table Rows</h3>
+        <div class="dbs-grid" id="dbs-wrap"><div class="ld"><span class="sp2"></span> Loading DB stats...</div></div>
       </div>
     </div>
 
@@ -392,29 +384,29 @@ function go(name){
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('ac'));
   document.getElementById('pg-'+name).classList.add('ac');
   document.getElementById('nav-'+name).classList.add('ac');
-  const fns={overview:loadOverview,analytics:loadAnalytics,users:loadUsers,checkins:loadCheckins,goals:loadGoals,savings:loadSavings,gamification:loadGamification,wishlist:loadWishlist,chat:loadMessages,storage:loadFiles,sos:loadSOS,settings:loadDbStats};
+  const fns={overview:loadOverview,analytics:loadAnalytics,users:loadUsers,checkins:loadCheckins,goals:loadGoals,savings:loadSavings,gamification:loadGamification,chat:loadMessages,storage:loadFiles,sos:loadSOS,settings:loadDbStats};
   if(fns[name]) fns[name]();
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
 async function loadOverview(){
-  const [stats,checkins30] = await Promise.all([apiFetch('/admin/api/stats'),apiFetch('/admin/api/analytics')]);
+  const sg = document.getElementById('sg');
+  sg.innerHTML = '<div class="ld"><span class="sp2"></span> Loading stats...</div>';
+  const stats = await apiFetch('/admin/api/stats');
   if(!stats) return;
-  const mb = b=>(b/1048576).toFixed(1);
-  document.getElementById('sg').innerHTML = [
-    sc('👥','Total Users',stats.total_users,`+${stats.users_today} today`,stats.users_today>0),
-    sc('🔥','Active (7 Days)',stats.active_users_7d,'',''),
-    sc('✅','Check-ins',stats.total_checkins,'',''),
-    sc('🎯','Goals',stats.total_goals,`${stats.completed_goals} completed`,null),
-    sc('💰','Total Savings',`৳${stats.total_savings}`,'across all users',null),
-    sc('💬','Chat Messages',stats.total_messages,'',''),
-    sc('🆘','SOS Alerts',stats.total_sos,stats.total_sos===0?'All clear':'Needs review',stats.total_sos===0),
-    sc('📁','Storage',mb(stats.storage_used_bytes)+' MB','of 20,480 MB (20 GB)',null),
-    sc('😤','Avg Craving',stats.avg_craving_level||'—','/10 scale',null),
-    sc('🚭','Smoke-free Users',stats.smoke_free_users,'at least once',null),
-  ].join('');
 
-  if(stats.total_sos>0){document.getElementById('sos-badge').style.display='block';document.getElementById('sos-badge').textContent=stats.total_sos;}
+  const checkins30 = await apiFetch('/admin/api/analytics');
+
+  sg.innerHTML = [
+    sc('👥','Total Users',stats.total_users,`+${stats.users_today} today`,true),
+    sc('✅','Daily Check-ins',stats.total_checkins,`${stats.smoke_free_users} tobacco-free`,true),
+    sc('💰','Total Savings',`৳${stats.total_savings}`,`${stats.completed_goals} goals completed`,true),
+    sc('🎯','Savings Goals',stats.total_goals,`${stats.completed_goals} completed`,true),
+    sc('💬','Community Chat',stats.total_messages,'total sent',null),
+    sc('🆘','SOS Alerts',stats.total_sos,'life saver logs',null),
+    sc('📁','Storage Used',`${(stats.storage_used_bytes/1048576).toFixed(1)} MB`,'of 20,480 MB',null),
+    sc('🔥','Active Users (7d)',stats.active_users_7d,'recent active',true),
+  ].join('');
 
   // Growth chart
   const gc=document.getElementById('growth-chart');
@@ -454,10 +446,10 @@ async function loadAnalytics(){
     miniCard('🆘 SOS Mode Used',`<div class="pie-bars">${d.sos_mode_dist?.length?pbChart(d.sos_mode_dist,'count','selected_mode','linear-gradient(to right,var(--red),var(--ora))'):'<div style="color:var(--mt);font-size:13px;padding:8px 0">No SOS triggered yet</div>'}</div>`),
     miniCard('🎯 Goals Completion',`<div class="pie-bars">${pbChart(d.goals_progress.map(g=>({label:g.is_completed?'Completed':'In Progress',count:g.count})),'count','label')}</div>`),
     miniCard('💰 Top Savers (৳)',`<div style="display:flex;flex-direction:column;gap:6px">${(d.top_savers||[]).slice(0,8).map((u,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${u.display_name||u.email||'Unknown'}</div></div><div style="font-size:13px;font-weight:700;color:var(--grn)">৳${u.total_saved}</div></div>`).join('')||'<div style="color:var(--mt);font-size:13px">No savings yet</div>'}</div>`),
-    miniCard('🔥 Streak Leaderboard',`<div style="display:flex;flex-direction:column;gap:6px">${(d.streak_leaderboard||[]).slice(0,8).map((u,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${u.display_name||u.email||'Unknown'}</div><div style="font-size:11px;color:var(--mt)">Lv.${u.level} · ${u.total_xp} XP</div></div><div style="font-size:13px;font-weight:700;color:var(--ora)">🔥${u.longest_streak}d</div></div>`).join('')||'<div style="color:var(--mt);font-size:13px">No streak data</div>'}</div>`),
+    miniCard('🔥 Streak Leaderboard',`<div style="display:flex;flex-direction:column;gap:6px">${(d.streak_leaderboard||[]).slice(0,8).map((u,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${u.display_name||u.email||'Unknown'}</div><div style="font-size:11px;color:var(--mt)">Current: ${u.current_streak}d</div></div><div style="font-size:13px;font-weight:700;color:var(--ora)">🔥${u.longest_streak}d</div></div>`).join('')||'<div style="color:var(--mt);font-size:13px">No streak data</div>'}</div>`),
     miniCard('✅ Top Check-in Users',`<div style="display:flex;flex-direction:column;gap:6px">${(d.top_checkin_users||[]).slice(0,8).map((u,i)=>`<div class="lb-row"><div class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${u.display_name||u.email||'Unknown'}</div></div><div style="font-size:13px;font-weight:700;color:var(--acc3)">${u.checkins} days</div></div>`).join('')||'<div style="color:var(--mt);font-size:13px">No check-in data</div>'}</div>`),
     miniCard('😤 Craving Trend (30d)',`<div class="bars" style="height:80px">${(d.craving_trend||[]).map(r=>{const p=Math.round((+r.avg_craving/10)*100);return `<div class="bw"><div class="bv" style="font-size:9px">${r.avg_craving}</div><div class="bar" style="height:${p}%;background:linear-gradient(to top,var(--red),var(--ora))"></div></div>`;}).join('')||'<span style="color:var(--mt);font-size:12px">No data</span>'}</div>`),
-    miniCard('🚭 Smoke-free Days (30d)',`<div class="bars" style="height:80px">${(d.smoke_free_by_day||[]).slice(-14).map(r=>{const mx2=Math.max(...(d.smoke_free_by_day||[]).map(x=>+x.smoke_free),1);const p=Math.round((+r.smoke_free/mx2)*100);return `<div class="bw"><div class="bv" style="font-size:9px">${r.smoke_free}</div><div class="bar" style="height:${p}%;background:linear-gradient(to top,var(--grn),var(--acc3))"></div></div>`;}).join('')||'<span style="color:var(--mt);font-size:12px">No data</span>'}</div>`),
+    miniCard('🚭 Tobacco-free Days (30d)',`<div class="bars" style="height:80px">${(d.smoke_free_by_day||[]).slice(-14).map(r=>{const mx2=Math.max(...(d.smoke_free_by_day||[]).map(x=>+x.smoke_free),1);const p=Math.round((+r.smoke_free/mx2)*100);return `<div class="bw"><div class="bv" style="font-size:9px">${r.smoke_free}</div><div class="bar" style="height:${p}%;background:linear-gradient(to top,var(--grn),var(--acc3))"></div></div>`;}).join('')||'<span style="color:var(--mt);font-size:12px">No data</span>'}</div>`),
   ].join('');
 }
 
@@ -469,10 +461,11 @@ async function loadUsers(search=''){
   if(!d) return;
   document.getElementById('uc').textContent=`(${d.total})`;
   if(!d.users.length){w.innerHTML='<div class="ld">No users found</div>';return;}
-  w.innerHTML=`<table><thead><tr><th>User</th><th>Joined</th><th>Age/Gender</th><th>Plan</th><th>Check-ins</th><th>Saved ৳</th><th>SOS</th><th>Type</th><th>Actions</th></tr></thead><tbody>
+  w.innerHTML=`<table><thead><tr><th>User</th><th>Joined</th><th>Age / Gender</th><th>Plan</th><th>Check-ins</th><th>Saved ৳</th><th>SOS</th><th>Type</th><th>Actions</th></tr></thead><tbody>
   ${d.users.map(u=>{const isTest=u.email.includes('@example.com');const init=(u.display_name||u.email)[0].toUpperCase();const dt=new Date(u.created_at).toLocaleDateString();return `<tr>
     <td><span class="av">${init}</span><span class="ui"><span class="nm">${u.display_name||'—'}</span><span class="em">${u.email}</span></span></td>
-    <td style="font-size:12px">${dt}</td><td style="font-size:12px">${u.age||'—'} / ${u.gender||'—'}</td>
+    <td style="font-size:12px">${dt}</td>
+    <td style="font-size:12px">${u.age?u.age:'—'} / ${u.gender?u.gender:'—'}</td>
     <td>${u.plan_duration?u.plan_duration+'d':'—'}</td>
     <td><span class="bdg bb">${u.checkin_count}</span></td>
     <td><span class="bdg bg">৳${u.total_saved||0}</span></td>
@@ -504,13 +497,12 @@ async function viewUser(id,name){
     <div class="sum-grid" style="margin-top:14px">
       <div class="sum-c"><div class="sv">${s.total_checkins}</div><div class="sl">Check-ins</div></div>
       <div class="sum-c"><div class="sv" style="color:var(--grn)">৳${s.total_saved}</div><div class="sl">Total Saved</div></div>
-      <div class="sum-c"><div class="sv" style="color:var(--ora)">${s.smoke_free_days}</div><div class="sl">Smoke-free</div></div>
+      <div class="sum-c"><div class="sv" style="color:var(--ora)">${s.smoke_free_days}</div><div class="sl">Tobacco-free</div></div>
       <div class="sum-c"><div class="sv">${s.total_goals}</div><div class="sl">Goals</div></div>
       <div class="sum-c"><div class="sv" style="color:var(--acc)">${s.completed_goals}</div><div class="sl">Done</div></div>
       <div class="sum-c"><div class="sv">${s.total_messages}</div><div class="sl">Messages</div></div>
       <div class="sum-c"><div class="sv">${s.total_files}</div><div class="sl">Files</div></div>
       <div class="sum-c"><div class="sv" style="color:var(--red)">${s.total_sos}</div><div class="sl">SOS</div></div>
-      <div class="sum-c"><div class="sv">${s.missions_completed}</div><div class="sl">Missions</div></div>
     </div>
 
     ${sh('👤','Profile')}
@@ -520,34 +512,28 @@ async function viewUser(id,name){
       <div class="ir"><span class="k">Age</span><span class="v">${p.age||'—'}</span></div>
       <div class="ir"><span class="k">Gender</span><span class="v">${p.gender||'—'}</span></div>
       <div class="ir"><span class="k">Education</span><span class="v">${p.educational_info||'—'}</span></div>
-      <div class="ir"><span class="k">Plan</span><span class="v">${p.plan_duration?p.plan_duration+' days':'—'}</span></div>
+      <div class="ir"><span class="k">Plan Duration</span><span class="v">${p.plan_duration?p.plan_duration+' days':'—'}</span></div>
       <div class="ir"><span class="k">Quit Date</span><span class="v">${p.quit_date?new Date(p.quit_date).toLocaleDateString():'—'}</span></div>
-      <div class="ir"><span class="k">Auth</span><span class="v">${p.google_id?'🔵 Google':'📧 Email'}</span></div>
-      <div class="ir"><span class="k">User ID</span><span class="v" style="font-size:10px">${p.id}</span></div>
-      <div class="ir"><span class="k">Joined</span><span class="v">${new Date(p.created_at).toLocaleString()}</span></div>
-      ${p.ai_quit_plan?`<div style="margin-top:6px"><div style="font-size:11px;color:var(--mt);font-weight:600;margin-bottom:4px">AI QUIT PLAN</div><div style="font-size:11px;color:var(--mt);line-height:1.7;background:var(--s2);padding:8px;border-radius:8px">${String(p.ai_quit_plan).slice(0,500)}${String(p.ai_quit_plan).length>500?'…':''}</div></div>`:''}
+      <div class="ir"><span class="k">AI Quit Plan</span><span class="v">${p.ai_quit_plan?'Generated ✓':'Not generated'}</span></div>
     </div>
 
-    ${sh('🏆','XP & Streaks')}
-    ${gm ? `<div style="font-size:13px">
-      <div class="ir"><span class="k">Level</span><span class="v"><span class="bdg bp2">Lv.${gm.level}</span></span></div>
-      <div class="ir"><span class="k">Total XP</span><span class="v">${gm.total_xp} XP</span></div>
+    ${gm?`
+    ${sh('🏆','Gamification Progress')}
+    <div style="font-size:13px">
       <div class="ir"><span class="k">Current Streak</span><span class="v">🔥 ${gm.current_streak} days</span></div>
       <div class="ir"><span class="k">Longest Streak</span><span class="v">⭐ ${gm.longest_streak} days</span></div>
+      <div class="ir"><span class="k">Unlocked Badges</span><span class="v">${(gm.badges||[]).join(', ')||'None'}</span></div>
       <div class="ir"><span class="k">Last Check-in</span><span class="v">${gm.last_check_in_date?new Date(gm.last_check_in_date).toLocaleDateString():'—'}</span></div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${(gm.badges||[]).length?gm.badges.map(b=>`<span class="bdg bp2" style="padding:4px 10px">${b}</span>`).join(''):'<span style="color:var(--mt);font-size:12px">No badges yet</span>'}</div>`
-    :'<div style="color:var(--mt);font-size:12px">No gamification data</div>'}
+    </div>`:''}
 
-    ${sh('✅','Check-ins',`${d.checkins.length} records`)}
-    ${d.checkins.length?`<div style="overflow-x:auto"><table><thead><tr><th>Date</th><th>Mood</th><th>Craving</th><th>Smoked?</th><th>Tobacco?</th><th>Cigs</th></tr></thead><tbody>
+    ${sh('✅','Daily Check-ins',`${d.checkins.length} recorded`)}
+    ${d.checkins.length?`<div style="max-height:200px;overflow-y:auto"><table><thead><tr><th>Date</th><th>Mood</th><th>Craving</th><th>Used Tobacco?</th><th>Note</th></tr></thead><tbody>
     ${d.checkins.map(c=>`<tr>
       <td style="font-size:11px">${new Date(c.check_in_date).toLocaleDateString()}</td>
-      <td><span class="bdg bb" style="font-size:10px">${c.mood||'—'}</span></td>
-      <td><span class="bdg ${+c.craving_level>6?'br':+c.craving_level>3?'bo':'bg'}" style="font-size:10px">${c.craving_level||'—'}/10</span></td>
-      <td><span class="bdg ${c.smoked_today?'br':'bg'}" style="font-size:10px">${c.smoked_today?'Yes':'No'}</span></td>
-      <td><span class="bdg ${c.used_tobacco?'br':'bg'}" style="font-size:10px">${c.used_tobacco?'Yes':'No'}</span></td>
-      <td style="font-size:11px">${c.cigarettes_smoked||0}</td>
+      <td><span class="bdg bb">${c.mood||'—'}</span></td>
+      <td><span class="bdg ${+c.craving_level>6?'br':+c.craving_level>3?'bo':'bg'}">${c.craving_level||'—'}/10</span></td>
+      <td><span class="bdg ${c.used_tobacco?'br':'bg'}">${c.used_tobacco?'Yes':'No'}</span></td>
+      <td style="font-size:11px">${c.note||'—'}</td>
     </tr>`).join('')}</tbody></table></div>`:'<div style="color:var(--mt);font-size:12px">No check-ins yet</div>'}
 
     ${sh('🎯','Goals',`${s.total_goals} total · ${s.completed_goals} done`)}
@@ -559,10 +545,7 @@ async function viewUser(id,name){
       <div><div style="font-size:18px;font-weight:800">${d.savings.length}</div><div style="font-size:10px;color:var(--mt)">Logs</div></div>
       <div><div style="font-size:18px;font-weight:800;color:var(--acc3)">৳${Math.round(tSav/d.savings.length)}</div><div style="font-size:10px;color:var(--mt)">Avg</div></div>
     </div>
-    ${d.savings.map(sv=>`<div class="mb"><div class="mh"><span class="ms" style="color:var(--grn)">৳${sv.amount}</span><span class="mt2">${new Date(sv.logged_at).toLocaleString()}</span></div></div>`).join('')}`:'<div style="color:var(--mt);font-size:12px">No savings yet</div>'}
-
-    ${sh('🛍','Wishlist',`${d.wishlist.length} items`)}
-    ${d.wishlist.length?d.wishlist.map(w=>`<div class="mb"><div class="mh"><span style="font-size:17px">${w.category_icon||'🛍'}</span><span class="ms" style="margin-left:6px">${w.item_name}</span><span class="bdg ${w.is_achieved?'bg':'bt'}">${w.is_achieved?'✓':'Pending'}</span></div><div class="mtx">৳${w.target_amount} · ${new Date(w.created_at).toLocaleDateString()}</div></div>`).join(''):'<div style="color:var(--mt);font-size:12px">No wishlist items</div>'}
+    ${d.savings.map(sv=>`<div class="mb"><div class="mh"><span class="ms" style="color:var(--grn)">৳${sv.amount}</span><span class="mt2">${new Date(sv.created_at).toLocaleString()}</span></div></div>`).join('')}`:'<div style="color:var(--mt);font-size:12px">No savings yet</div>'}
 
     ${sh('💬','Chat Messages',`${d.messages.length} sent`)}
     ${d.messages.length?d.messages.map(m=>`<div class="mb"><div class="mh"><span class="ms" style="font-size:10px;color:var(--mt)">${new Date(m.created_at).toLocaleString()}</span></div>${m.image_url?`<img src="${m.image_url}" style="max-width:90px;border-radius:6px;margin:4px 0" onerror="this.style.display='none'"/>`:''}
@@ -582,9 +565,6 @@ async function viewUser(id,name){
 
 function closePanel(){document.getElementById('sp').classList.remove('ac');document.getElementById('po').classList.remove('ac');}
 
-
-
-
 async function deleteUser(id,email){if(!confirm(`Delete "${email}"? All their data will be permanently removed.`)) return;const r=await fetch(`${BASE}/admin/api/users/${id}`,{method:'DELETE',headers:ah()});if(r.ok){toast('User deleted','success');closePanel();loadUsers(document.getElementById('usrq')?.value||'');}else toast('Failed','error');}
 async function deleteTestAccounts(){if(!confirm('Delete ALL @example.com test accounts?')) return;const r=await fetch(`${BASE}/admin/api/users/bulk/test-accounts`,{method:'DELETE',headers:ah()});if(r.ok){const d=await r.json();toast(`Deleted ${d.deleted} test accounts`,'success');loadUsers();}else toast('Failed','error');}
 
@@ -594,15 +574,14 @@ async function loadCheckins(){
   const d=await apiFetch('/admin/api/checkins');if(!d) return;
   document.getElementById('chk-c').textContent=`(${d.checkins.length})`;
   if(!d.checkins.length){w.innerHTML='<div class="ld">No check-ins yet</div>';return;}
-  w.innerHTML=`<table><thead><tr><th>User</th><th>Date</th><th>Mood</th><th>Craving</th><th>Smoked?</th><th>Used Tobacco?</th><th>Cigarettes</th></tr></thead><tbody>
+  w.innerHTML=`<table><thead><tr><th>User</th><th>Date</th><th>Mood</th><th>Craving Level</th><th>Used Tobacco?</th><th>Note</th></tr></thead><tbody>
   ${d.checkins.map(c=>`<tr>
     <td><span class="ui"><span class="nm">${c.display_name||'—'}</span><span class="em">${c.email||'—'}</span></span></td>
     <td style="font-size:12px">${new Date(c.check_in_date).toLocaleDateString()}</td>
     <td><span class="bdg bb">${c.mood||'—'}</span></td>
     <td><span class="bdg ${+c.craving_level>6?'br':+c.craving_level>3?'bo':'bg'}">${c.craving_level||'—'}/10</span></td>
-    <td><span class="bdg ${c.smoked_today?'br':'bg'}">${c.smoked_today?'Yes':'No'}</span></td>
     <td><span class="bdg ${c.used_tobacco?'br':'bg'}">${c.used_tobacco?'Yes':'No'}</span></td>
-    <td>${c.cigarettes_smoked||0}</td>
+    <td style="font-size:12px">${c.note||'—'}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 
@@ -633,7 +612,7 @@ async function loadSavings(){
   ${d.savings.map(s=>`<tr>
     <td><span class="ui"><span class="nm">${s.display_name||'—'}</span><span class="em">${s.email||'—'}</span></span></td>
     <td><span class="bdg bg">৳${s.amount}</span></td>
-    <td style="font-size:12px;color:var(--mt)">${new Date(s.logged_at).toLocaleString()}</td>
+    <td style="font-size:12px;color:var(--mt)">${new Date(s.created_at).toLocaleString()}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 
@@ -643,30 +622,13 @@ async function loadGamification(){
   const d=await apiFetch('/admin/api/gamification');if(!d) return;
   document.getElementById('gam-c').textContent=`(${d.gamification.length})`;
   if(!d.gamification.length){w.innerHTML='<div class="ld">No gamification data yet</div>';return;}
-  w.innerHTML=`<table><thead><tr><th>Rank</th><th>User</th><th>Level</th><th>Total XP</th><th>Current Streak</th><th>Longest Streak</th><th>Badges</th></tr></thead><tbody>
+  w.innerHTML=`<table><thead><tr><th>Rank</th><th>User</th><th>Current Streak</th><th>Longest Streak</th><th>Badges</th><th>Last Check-in</th></tr></thead><tbody>
   ${d.gamification.map((g,i)=>`<tr>
     <td><span class="lb-rank ${i===0?'gold':i===1?'silver':i===2?'bronze':''}">${i+1}</span></td>
     <td><span class="ui"><span class="nm">${g.display_name||'—'}</span><span class="em">${g.email||'—'}</span></span></td>
-    <td><span class="bdg bp2">Lv.${g.level}</span></td>
-    <td><span class="bdg bb">${g.total_xp} XP</span></td>
     <td>🔥 ${g.current_streak}d</td><td>⭐ ${g.longest_streak}d</td>
-    <td style="font-size:11px;color:var(--mt)">${(g.badges||[]).slice(0,3).join(', ')||'None'}</td>
-  </tr>`).join('')}</tbody></table>`;
-}
-
-// ── WISHLIST ──────────────────────────────────────────────────────────────────
-async function loadWishlist(){
-  const w=document.getElementById('wishlist-wrap');w.innerHTML='<div class="ld"><span class="sp2"></span></div>';
-  const d=await apiFetch('/admin/api/wishlist');if(!d) return;
-  document.getElementById('wl-c').textContent=`(${d.wishlist.length})`;
-  if(!d.wishlist.length){w.innerHTML='<div class="ld">No wishlist items yet</div>';return;}
-  w.innerHTML=`<table><thead><tr><th>User</th><th>Item</th><th>Target ৳</th><th>Icon</th><th>Achieved?</th><th>Created</th></tr></thead><tbody>
-  ${d.wishlist.map(w2=>`<tr>
-    <td><span class="ui"><span class="nm">${w2.display_name||'—'}</span><span class="em">${w2.email||'—'}</span></span></td>
-    <td style="font-weight:500">${w2.item_name}</td><td>৳${w2.target_amount}</td>
-    <td style="font-size:18px">${w2.category_icon||'—'}</td>
-    <td><span class="bdg ${w2.is_achieved?'bg':'bt'}">${w2.is_achieved?'✓ Achieved':'Pending'}</span></td>
-    <td style="font-size:12px;color:var(--mt)">${new Date(w2.created_at).toLocaleDateString()}</td>
+    <td style="font-size:11px;color:var(--mt)">${(g.badges||[]).join(', ')||'None'}</td>
+    <td style="font-size:12px;color:var(--mt)">${g.last_check_in_date?new Date(g.last_check_in_date).toLocaleDateString():'—'}</td>
   </tr>`).join('')}</tbody></table>`;
 }
 
