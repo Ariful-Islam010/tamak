@@ -338,7 +338,7 @@ tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,0.01
         <div class="setc"><h3>🔑 Backend Info</h3><p></p>
           <div style="font-size:13px">
             <div class="ir"><span class="k">Backend URL</span><span class="v" id="burl">—</span></div>
-            <div class="ir"><span class="k">Storage Limit</span><span class="v">1 GB</span></div>
+            <div class="ir"><span class="k">Storage Limit</span><span class="v">20 GB</span></div>
             <div class="ir"><span class="k">Auth</span><span class="v">Custom JWT + Google OAuth2</span></div>
             <div class="ir"><span class="k">Database</span><span class="v">PostgreSQL 16</span></div>
             <div class="ir"><span class="k">Runtime</span><span class="v">Node.js / Express.js</span></div>
@@ -409,7 +409,7 @@ async function loadOverview(){
     sc('💰','Total Savings',`৳${stats.total_savings}`,'across all users',null),
     sc('💬','Chat Messages',stats.total_messages,'',''),
     sc('🆘','SOS Alerts',stats.total_sos,stats.total_sos===0?'All clear':'Needs review',stats.total_sos===0),
-    sc('📁','Storage',mb(stats.storage_used_bytes)+' MB','of 1024 MB',null),
+    sc('📁','Storage',mb(stats.storage_used_bytes)+' MB','of 20,480 MB (20 GB)',null),
     sc('😤','Avg Craving',stats.avg_craving_level||'—','/10 scale',null),
     sc('🚭','Smoke-free Users',stats.smoke_free_users,'at least once',null),
   ].join('');
@@ -691,9 +691,9 @@ async function clearAllMessages(){if(!confirm('Delete ALL chat messages?')) retu
 async function loadFiles(){
   const w=document.getElementById('files-wrap');w.innerHTML='<div class="ld"><span class="sp2"></span></div>';
   const d=await apiFetch('/admin/api/files');if(!d) return;
-  const usedMb=(d.total_bytes/1048576).toFixed(2),maxMb=1024,pct=Math.min((usedMb/maxMb)*100,100).toFixed(1);
+  const usedMb=(d.total_bytes/1048576).toFixed(2),maxMb=20480,pct=Math.min((usedMb/maxMb)*100,100).toFixed(1);
   const col=pct>80?'var(--red)':pct>50?'var(--ora)':'var(--acc)';
-  document.getElementById('stor-bar').innerHTML=`<div class="sbu"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">💾 Storage Usage</h3><div style="font-size:28px;font-weight:800;margin:8px 0">${usedMb} <span style="font-size:14px;font-weight:400;color:var(--mt)">MB of ${maxMb} MB</span></div><div class="sb-bg"><div class="sb-fill" style="width:${pct}%;background:${col}"></div></div><div class="sb-labels"><span>${pct}% used</span><span>${(maxMb-usedMb).toFixed(0)} MB free</span></div></div>`;
+  document.getElementById('stor-bar').innerHTML=`<div class="sbu"><h3 style="font-size:15px;font-weight:600;margin-bottom:12px">💾 Storage Usage</h3><div style="font-size:28px;font-weight:800;margin:8px 0">${usedMb} <span style="font-size:14px;font-weight:400;color:var(--mt)">MB of 20,480 MB (20 GB)</span></div><div class="sb-bg"><div class="sb-fill" style="width:${pct}%;background:${col}"></div></div><div class="sb-labels"><span>${pct}% used</span><span>${((maxMb-usedMb)/1024).toFixed(2)} GB free</span></div></div>`;
   document.getElementById('file-c').textContent=`(${d.total_count} files)`;
   if(!d.files.length){w.innerHTML='<div class="ld">No files uploaded</div>';return;}
   w.innerHTML=`<table><thead><tr><th>Preview</th><th>File</th><th>Uploader</th><th>Size</th><th>Type</th><th>Date</th><th>Actions</th></tr></thead><tbody>
