@@ -143,50 +143,54 @@ class QuitPlanScreen extends ConsumerWidget {
                     isPending: daysUntilStart > 0,
                   ),
 
-                  // Show completion buttons only if plan has started and not answered today yet
-                  if (daysUntilStart == 0 && !quitPlan.hasAnsweredToday) ...[
+                  // Show completion buttons or status card if plan has started
+                  if (daysUntilStart == 0) ...[
                     const SizedBox(height: 28),
-
-                    // Completion Question
-                    const Text(
-                      "আজকের পরিকল্পনা কি সম্পন্ন করেছেন?",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF222222),
+                    if (!quitPlan.hasAnsweredToday) ...[
+                      // Completion Question
+                      const Text(
+                        "আজকের পরিকল্পনা কি সম্পন্ন করেছেন?",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF222222),
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 14),
+                      const SizedBox(height: 14),
 
-                    // Yes / No Buttons
-                    _CompletionButtons(
-                      isGoalStarted: quitPlan.isGoalStarted,
-                      onYes: () async {
-                        await quitPlan.submitPlanResponse(true);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("দারুণ! আজকের লক্ষ্য সফলভাবে সম্পন্ন হয়েছে।"),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          Navigator.pop(context);
-                        }
-                      },
-                      onNo: () async {
-                        await quitPlan.submitPlanResponse(false);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("ধন্যবাদ! আপনার উত্তরটি রেকর্ড করা হয়েছে। আগামীকাল চেষ্টা করুন।"),
-                              behavior: SnackBarBehavior.floating,
-                            ),
-                          );
-                          Navigator.pop(context);
-                        }
-                      },
-                    ),
+                      // Yes / No Buttons
+                      _CompletionButtons(
+                        isGoalStarted: quitPlan.isGoalStarted,
+                        onYes: () async {
+                          await quitPlan.submitPlanResponse(true);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("দারুণ! আজকের লক্ষ্য সফলভাবে সম্পন্ন হয়েছে।"),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                        onNo: () async {
+                          await quitPlan.submitPlanResponse(false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("ধন্যবাদ! আপনার উত্তরটি রেকর্ড করা হয়েছে। আগামীকাল চেষ্টা করুন।"),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ] else ...[
+                      // Show locked status card after answering once today
+                      _AnsweredStatusCard(
+                        isCompleted: quitPlan.isCompletedToday,
+                      ),
+                    ],
                   ],
 
                   const SizedBox(height: 30),
@@ -700,3 +704,82 @@ class _CompletionButtons extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────────
+// Answered Status Card (Shown once answered for today)
+// ─────────────────────────────────────────────────
+class _AnsweredStatusCard extends StatelessWidget {
+  final bool isCompleted;
+
+  const _AnsweredStatusCard({required this.isCompleted});
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = isCompleted ? const Color(0xFFDCFCE7) : const Color(0xFFFEF2F2);
+    final borderColor = isCompleted ? const Color(0xFF86EFAC) : const Color(0xFFFECACA);
+    final iconColor = isCompleted ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final title = isCompleted ? "আজকের লক্ষ্য সম্পন্ন করা হয়েছে! ✅" : "আজকের স্ট্যাটাস রেকর্ড করা হয়েছে ❌";
+    final desc = isCompleted
+        ? "দারুণ কাজ! আজ আপনি সফলভাবে আপনার লক্ষ্য অর্জন করেছেন। আগামীকালের লক্ষ্যের জন্য প্রস্তুত থাকুন।"
+        : "আজকের পরিকল্পনা পুরোপুরি সম্পন্ন না হলেও হতাশ হবেন না! আগামীকাল আবার নতুন উদ্দীপনায় চেষ্টা করুন।";
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: iconColor.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isCompleted ? Icons.check_circle_rounded : Icons.info_rounded,
+              color: iconColor,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isCompleted ? const Color(0xFF14532D) : const Color(0xFF7F1D1D),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  desc,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF991B1B),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

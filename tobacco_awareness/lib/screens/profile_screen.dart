@@ -6,6 +6,7 @@ import '../services/hive_helper.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../utils/error_utils.dart';
 import 'auth_screen.dart';
 import 'privacy_security_screen.dart';
 import 'help_support_screen.dart';
@@ -141,7 +142,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ত্রুটি: $e")),
+          SnackBar(content: Text(ErrorUtils.getFriendlyErrorMessage(e))),
         );
       }
     } finally {

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/check_in_provider.dart';
+import '../providers/gamification_provider.dart';
 
 class DailyCheckInScreen extends ConsumerStatefulWidget {
   const DailyCheckInScreen({super.key});
@@ -329,6 +330,7 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
                                       final messenger = ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
                                       await ref.read(checkInProvider).submitCheckIn();
+                                      ref.read(gamificationProvider).loadGamificationData();
                                       if (mounted) {
                                         messenger.showSnackBar(const SnackBar(
                                             content: Text(

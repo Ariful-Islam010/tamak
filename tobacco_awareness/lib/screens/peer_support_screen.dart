@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../providers/chat_provider.dart';
+import '../utils/error_utils.dart';
 
 class PeerSupportScreen extends ConsumerStatefulWidget {
   const PeerSupportScreen({super.key});
@@ -40,7 +41,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("মেসেজ পাঠাতে ব্যর্থ হয়েছে: $e")),
+          SnackBar(content: Text(ErrorUtils.getFriendlyErrorMessage(e))),
         );
       }
     }
@@ -70,7 +71,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("ছবি পাঠাতে ব্যর্থ হয়েছে: $e")),
+          SnackBar(content: Text(ErrorUtils.getFriendlyErrorMessage(e))),
         );
       }
     }
@@ -647,7 +648,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("সম্পাদনা করতে সমস্যা হয়েছে: $e")),
+                      SnackBar(content: Text(ErrorUtils.getFriendlyErrorMessage(e))),
                     );
                   }
                 }
@@ -686,7 +687,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("ডিলিট করতে সমস্যা হয়েছে: $e")),
+                      SnackBar(content: Text(ErrorUtils.getFriendlyErrorMessage(e))),
                     );
                   }
                 }

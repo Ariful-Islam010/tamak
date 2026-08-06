@@ -8,7 +8,7 @@ class GroqAiService {
 
   static Future<String?> generateQuitPlan({
     required int durationInDays,
-    required int cigarettesPerDay,
+    int cigarettesPerDay = 0,
     required String age,
     required String gender,
   }) async {
@@ -24,7 +24,7 @@ class GroqAiService {
           'age': age,
           'gender': gender,
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(minutes: 3));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -42,7 +42,7 @@ class GroqAiService {
         
         return jsonEncode(plansArray);
       } else {
-        debugPrint('Python Backend Error: ${response.statusCode} - ${response.body}');
+        debugPrint('Backend Error: ${response.statusCode} - ${response.body}');
         return null;
       }
     } catch (e) {
@@ -61,13 +61,13 @@ class GroqAiService {
         body: jsonEncode({
           'triggerReason': triggerReason,
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['advice'].toString().trim();
       } else {
-        debugPrint('Python Backend Error: ${response.body}');
+        debugPrint('Backend Error: ${response.body}');
         return null;
       }
     } catch (e) {

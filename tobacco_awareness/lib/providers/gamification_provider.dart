@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
@@ -132,26 +133,48 @@ class GamificationProvider extends ChangeNotifier {
 
   Future<void> _loadFromDatabaseCache(String userId) async {
     try {
+      if (Hive.isBoxOpen('daily_checkins')) {
+        final box = Hive.box('daily_checkins');
+        final String? userJson = box.get(userId);
+        if (userJson != null) {
+          try {
+            final Map<String, dynamic> records = Map<String, dynamic>.from(jsonDecode(userJson));
+            List<dynamic> localCheckIns = [];
+            records.forEach((dateStr, val) {
+              final data = Map<String, dynamic>.from(val);
+              data['check_in_date'] = dateStr;
+              localCheckIns.add(data);
+            });
+            if (localCheckIns.isNotEmpty) {
+              _totalCheckIns = localCheckIns.length;
+              _calculateStreaksAndTree(localCheckIns);
+            }
+          } catch (_) {}
+        }
+      }
+
       final cached = await HiveHelper().getGamification(userId);
       if (cached != null) {
-        _currentStreak = cached['streak'] as int? ?? 0;
+        _currentStreak = cached['streak'] as int? ?? _currentStreak;
 
         final badgesJsonStr = cached['badges'] as String?;
         if (badgesJsonStr != null && badgesJsonStr.isNotEmpty) {
           final Map<String, dynamic> stats = jsonDecode(badgesJsonStr);
-          _longestStreak = stats['longest_streak'] as int? ?? 0;
-          _totalSmokeFreeDays = stats['total_smoke_free_days'] as int? ?? 0;
-          _totalCheckIns = stats['total_checkins'] as int? ?? 0;
-          _totalSavingsAmount = stats['total_savings'] as int? ?? 0;
-          _planDuration = stats['plan_duration'] as int? ?? 7;
-          _hasPlan = stats['has_plan'] as bool? ?? false;
-          _completedTasksCount = stats['completed_tasks'] as int? ?? 0;
-          _sosCount = stats['sos_count'] as int? ?? 0;
-          _messagesCount = stats['messages_count'] as int? ?? 0;
-          _plantStage = stats['plant_stage'] as int? ?? 0;
-          _hasPestAttack = stats['has_pest'] as bool? ?? false;
-          _pestDaysClean = stats['pest_days_clean'] as int? ?? 0;
-          _completedTrees = stats['completed_trees'] as int? ?? 0;
+          _longestStreak = stats['longest_streak'] as int? ?? _longestStreak;
+          _totalSmokeFreeDays = stats['total_smoke_free_days'] as int? ?? _totalSmokeFreeDays;
+          if (stats['total_checkins'] != null && (stats['total_checkins'] as int) > _totalCheckIns) {
+            _totalCheckIns = stats['total_checkins'] as int;
+          }
+          _totalSavingsAmount = stats['total_savings'] as int? ?? _totalSavingsAmount;
+          _planDuration = stats['plan_duration'] as int? ?? _planDuration;
+          _hasPlan = stats['has_plan'] as bool? ?? _hasPlan;
+          _completedTasksCount = stats['completed_tasks'] as int? ?? _completedTasksCount;
+          _sosCount = stats['sos_count'] as int? ?? _sosCount;
+          _messagesCount = stats['messages_count'] as int? ?? _messagesCount;
+          _plantStage = stats['plant_stage'] as int? ?? _plantStage;
+          _hasPestAttack = stats['has_pest'] as bool? ?? _hasPestAttack;
+          _pestDaysClean = stats['pest_days_clean'] as int? ?? _pestDaysClean;
+          _completedTrees = stats['completed_trees'] as int? ?? _completedTrees;
         }
       }
     } catch (e) {
@@ -270,41 +293,37 @@ class GamificationProvider extends ChangeNotifier {
       return;
     }
 
-    List<DateTime> smokeFreeDates = [];
-    int smokeFreeDays = 0;
-
+    // Deduplicate smokeFreeDates by calendar date (YYYY-MM-DD)
+    final Map<String, DateTime> uniqueMap = {};
     for (var checkIn in checkInsData) {
       final usedTobacco = checkIn['used_tobacco'] == true;
-      if (!usedTobacco) {
-        smokeFreeDays++;
+      if (!usedTobacco && checkIn['check_in_date'] != null) {
         final dateStr = checkIn['check_in_date'].toString().split('T')[0];
-        smokeFreeDates.add(DateTime.parse(dateStr));
+        final dt = DateTime.parse(dateStr);
+        final key = TimeUtils.getBstDateString(dt);
+        uniqueMap[key] = DateTime(dt.year, dt.month, dt.day);
       }
     }
-    _totalSmokeFreeDays = smokeFreeDays;
+
+    _totalSmokeFreeDays = uniqueMap.length;
+    final smokeFreeDates = uniqueMap.values.toList()..sort((a, b) => b.compareTo(a)); // Descending
 
     // Calculate streaks
     int currentStreak = 0;
     int longestStreak = 0;
-    int tempStreak = 0;
-
-    smokeFreeDates.sort((a, b) => b.compareTo(a)); // Descending
 
     if (smokeFreeDates.isNotEmpty) {
       final todayStr = TimeUtils.todayBstDateString;
-      final latestStr =
-          smokeFreeDates[0].toIso8601String().split('T')[0];
-      final daysDiff = TimeUtils.daysDifferenceBst(
-          DateTime.parse(todayStr), DateTime.parse(latestStr));
+      final todayDt = DateTime.parse(todayStr);
+      final daysDiffFromToday = TimeUtils.daysDifferenceBst(todayDt, smokeFreeDates[0]);
 
-      if (daysDiff <= 1) {
+      if (daysDiffFromToday <= 1) {
         currentStreak = 1;
         for (int i = 1; i < smokeFreeDates.length; i++) {
-          final diff =
-              smokeFreeDates[i - 1].difference(smokeFreeDates[i]).inDays;
+          final diff = TimeUtils.daysDifferenceBst(smokeFreeDates[i - 1], smokeFreeDates[i]);
           if (diff == 1) {
             currentStreak++;
-          } else {
+          } else if (diff > 1) {
             break;
           }
         }
@@ -313,18 +332,17 @@ class GamificationProvider extends ChangeNotifier {
 
     // Longest Streak
     if (smokeFreeDates.isNotEmpty) {
-      tempStreak = 1;
+      int tempStreak = 1;
       longestStreak = 1;
-      final ascDates =
-          List<DateTime>.from(smokeFreeDates).reversed.toList();
+      final ascDates = smokeFreeDates.reversed.toList();
       for (int i = 1; i < ascDates.length; i++) {
-        final diff = ascDates[i].difference(ascDates[i - 1]).inDays;
+        final diff = TimeUtils.daysDifferenceBst(ascDates[i], ascDates[i - 1]);
         if (diff == 1) {
           tempStreak++;
           if (tempStreak > longestStreak) {
             longestStreak = tempStreak;
           }
-        } else {
+        } else if (diff > 1) {
           tempStreak = 1;
         }
       }

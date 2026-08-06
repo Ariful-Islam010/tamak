@@ -41,7 +41,7 @@ class TamakmuktoJibonApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'তামাকমুক্ত জীবন',
+      title: 'QuitMate',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),

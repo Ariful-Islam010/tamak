@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/auth_service.dart';
-import 'auth_screen.dart';
+import '../services/backend_service.dart';
 import 'home_dashboard_screen.dart';
+import 'auth_screen.dart';
+import 'profile_assessment_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -123,40 +125,25 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
     Timer(const Duration(milliseconds: 2400), () {
       if (!mounted) return;
 
-      final user = ref.read(authServiceProvider).currentUser;
-      if (user == null) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (_, _, _) => const AuthScreen(),
-            transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
-          ),
-        );
-        return;
-      }
+      final authService = ref.read(authServiceProvider);
+      final currentUser = authService.currentUser;
 
-      if (user.planDuration == null ||
-          user.age == null ||
-          user.gender == null ||
-          user.quitDate == null) {
-        ref.read(authServiceProvider).signOut();
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 600),
-            pageBuilder: (_, _, _) => const AuthScreen(),
-            transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
-          ),
-        );
-        return;
+      Widget destination;
+      if (currentUser != null && BackendService.token != null) {
+        if (currentUser.planDuration != null) {
+          destination = const HomeDashboardScreen();
+        } else {
+          destination = const ProfileAssessmentScreen();
+        }
+      } else {
+        destination = const AuthScreen();
       }
 
       Navigator.pushReplacement(
         context,
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (_, _, _) => const HomeDashboardScreen(),
+          pageBuilder: (_, _, _) => destination,
           transitionsBuilder: (_, anim, _, child) => FadeTransition(opacity: anim, child: child),
         ),
       );
@@ -282,7 +269,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
                       child: FadeTransition(
                         opacity: _quoteFade,
                         child: const Text(
-                          "তামাকমুক্ত জীবন",
+                          "QuitMate",
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,

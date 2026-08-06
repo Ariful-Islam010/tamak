@@ -21,14 +21,15 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _classController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
-  final TextEditingController _cigarettesPerDayController = TextEditingController();
+  final TextEditingController _customDurationController = TextEditingController();
 
   String? _selectedGender;
   int? _selectedDuration;
   DateTime? _selectedDate;
+  bool _isCustomDuration = false;
 
   final List<String> _genders = ["পুরুষ", "মহিলা", "অন্যান্য"];
-  final List<int> _durations = [7, 14, 30];
+  final List<int> _durations = [7, 14, 30, 60];
 
   int _selectedGenderIndex = 0;
   int _selectedDurationIndex = 0;
@@ -38,7 +39,6 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
     super.initState();
     _nameController.text = ""; // Empty by default
     _ageController.text = ""; // Empty by default
-    _cigarettesPerDayController.text = ""; // Empty by default
     _selectedGender = _genders[0]; // Default: পুরুষ
     _selectedDuration = _durations[0]; // Default: 7 days
   }
@@ -49,7 +49,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
     _nameController.dispose();
     _classController.dispose();
     _ageController.dispose();
-    _cigarettesPerDayController.dispose();
+    _customDurationController.dispose();
     super.dispose();
   }
 
@@ -95,12 +95,26 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
         return true;
       case 3: // Gender - always has a default
         return _selectedGender != null;
-      case 4: // Cigarettes per day - MUST be entered
-        final cigs = int.tryParse(_cigarettesPerDayController.text.trim());
-        if (cigs == null || cigs < 0) {
+      case 4: // Plan duration
+        if (_isCustomDuration) {
+          final customVal = int.tryParse(_customDurationController.text.trim());
+          if (customVal == null || customVal <= 0 || customVal > 365) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("অনুগ্রহ করে ১ থেকে ৩৬৫ দিনের মধ্যে দিন সংখ্যা প্রবেশ করান!"),
+                backgroundColor: AppTheme.errorColor,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return false;
+          }
+          _selectedDuration = customVal;
+          return true;
+        }
+        if (_selectedDuration == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("অনুগ্রহ করে দৈনিক ধূমপানের পরিমাণ সঠিকভাবে টাইপ করুন!"),
+              content: Text("অনুগ্রহ করে তামাক ছাড়ার মেয়াদ নির্বাচন করুন!"),
               backgroundColor: AppTheme.errorColor,
               behavior: SnackBarBehavior.floating,
             ),
@@ -108,9 +122,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
           return false;
         }
         return true;
-      case 5: // Plan duration - always has a default
-        return _selectedDuration != null;
-      case 6: // Quit date - MUST be selected
+      case 5: // Quit date - MUST be selected
         if (_selectedDate == null) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -130,7 +142,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
   void _nextPage() {
     if (!_validateCurrentPage()) return;
 
-    if (_currentPage < 6) {
+    if (_currentPage < 5) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
@@ -161,14 +173,40 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return const Center(child: CircularProgressIndicator());
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 20.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: AppTheme.primaryGreen),
+                  SizedBox(height: 20),
+                  Text(
+                    "AI আপনার জন্য বিশেষ পরিকল্পনা তৈরি করছে...",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "সবগুলো দিনের গাইড ধাপে ধাপে সঠিকভাবে প্রস্তুত হচ্ছে, অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করুন।",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
       },
     );
 
     // Generate AI Plan
     final String? aiPlan = await GroqAiService.generateQuitPlan(
       durationInDays: _selectedDuration ?? 7,
-      cigarettesPerDay: int.tryParse(_cigarettesPerDayController.text) ?? 5,
+      cigarettesPerDay: 0,
       age: _ageController.text,
       gender: _selectedGender ?? "পুরুষ",
     );
@@ -264,7 +302,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
             children: [
               // Progress Indicator
               LinearProgressIndicator(
-                value: (_currentPage + 1) / 7,
+                value: (_currentPage + 1) / 6,
                 backgroundColor: Colors.grey.withValues(alpha: 0.2),
                 valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
               ),
@@ -282,7 +320,6 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
                     _buildClassStep(),
                     _buildAgeStep(),
                     _buildGenderStep(),
-                    _buildCigarettesStep(),
                     _buildPlanStep(),
                     _buildDateStep(),
                   ],
@@ -295,7 +332,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
                   height: 56,
                   child: ElevatedButton(
                     onPressed: _nextPage,
-                    child: Text(_currentPage == 6 ? "সম্পন্ন করুন" : "পরবর্তী"),
+                    child: Text(_currentPage == 5 ? "সম্পন্ন করুন" : "পরবর্তী"),
                   ),
                 ),
               ),
@@ -318,11 +355,13 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
             title,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 24),
           ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight),
-          ),
+          if (subtitle.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textLight),
+            ),
+          ],
           const SizedBox(height: 32),
           child,
         ],
@@ -421,64 +460,160 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
     );
   }
 
-  Widget _buildCigarettesStep() {
-    return _buildStepContainer(
-      "ধূমপানের পরিমাণ",
-      "আপনি দিনে গড়ে কয়টি সিগারেট পান করেন? (অবশ্যই পূরণ করতে হবে)",
-      TextField(
-        controller: _cigarettesPerDayController,
-        keyboardType: TextInputType.number,
-        decoration: const InputDecoration(
-          hintText: "যেমন: ৫",
-        ),
-      ),
-    );
-  }
-
   Widget _buildPlanStep() {
     return _buildStepContainer(
-      "আপনার লক্ষ্য",
-      "আপনি কতদিনের মধ্যে ধূমপান ছাড়ার পরিকল্পনা করছেন?",
-      SizedBox(
-        height: 250,
-        child: ListWheelScrollView.useDelegate(
-          itemExtent: 80,
-          perspective: 0.005,
-          diameterRatio: 1.5,
-          physics: const FixedExtentScrollPhysics(),
-          onSelectedItemChanged: (index) {
-            setState(() {
-              _selectedDurationIndex = index;
-              _selectedDuration = _durations[index];
-            });
-          },
-          childDelegate: ListWheelChildBuilderDelegate(
-            builder: (context, index) {
-              final days = _durations[index];
-              final isSelected = index == _selectedDurationIndex;
-              return Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: isSelected ? 160 : 120,
-                  height: isSelected ? 80 : 50,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected ? AppTheme.primaryGreen : Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    "$days দিন",
-                    style: TextStyle(
-                      fontSize: isSelected ? 24 : 18,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.white : AppTheme.textColor.withValues(alpha: 0.5),
+      "তামাক ছাড়ার পরিকল্পনা",
+      "",
+      SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              "অপশন ১: মেয়াদী প্যাকেজ নির্বাচন করুন",
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+            const SizedBox(height: 10),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 2.2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: _durations.length,
+              itemBuilder: (context, index) {
+                final days = _durations[index];
+                final isSelected = !_isCustomDuration && _selectedDuration == days;
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isCustomDuration = false;
+                      _selectedDurationIndex = index;
+                      _selectedDuration = days;
+                      _customDurationController.clear();
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primaryGreen
+                          : AppTheme.cardBackgroundColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primaryGreen
+                            : Colors.grey.withValues(alpha: 0.3),
+                        width: isSelected ? 2 : 1,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primaryGreen.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "$days দিন",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : AppTheme.textColor,
+                          ),
+                        ),
+                        Text(
+                          index == 0
+                              ? "১ সপ্তাহ"
+                              : index == 1
+                                  ? "২ সপ্তাহ"
+                                  : index == 2
+                                      ? "১ মাস"
+                                      : "২ মাস",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isSelected
+                                ? Colors.white.withValues(alpha: 0.9)
+                                : AppTheme.textColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text(
+                  "অপশন ২: নিজের ইচ্ছেমতো দিন টাইপ করুন",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                  ),
                 ),
-              );
-            },
-            childCount: _durations.length,
-          ),
+                const Spacer(),
+                Switch(
+                  value: _isCustomDuration,
+                  activeThumbColor: AppTheme.primaryGreen,
+                  onChanged: (val) {
+                    setState(() {
+                      _isCustomDuration = val;
+                      if (!val) {
+                        _selectedDuration = _durations[_selectedDurationIndex];
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+            if (_isCustomDuration) ...[
+              const SizedBox(height: 8),
+              TextField(
+                controller: _customDurationController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                onChanged: (val) {
+                  final d = int.tryParse(val.trim());
+                  if (d != null && d > 0 && d <= 365) {
+                    setState(() {
+                      _selectedDuration = d;
+                    });
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: "দিন সংখ্যা টাইপ করুন",
+                  hintText: "যেমন: ২১, ৪৫, ৯০ দিন",
+                  suffixText: "দিন",
+                  prefixIcon: const Icon(Icons.edit_calendar, color: AppTheme.primaryGreen),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                "সর্বনিম্ন ১ দিন থেকে সর্বোচ্চ ৩৬৫ দিন পর্যন্ত যেকোনো সংখ্যা টাইপ করতে পারবেন।",
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ],
         ),
       ),
     );

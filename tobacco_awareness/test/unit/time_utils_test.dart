@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tamakmukto_jibon/utils/time_utils.dart';
+import 'package:quit_mate/utils/time_utils.dart';
 
 void main() {
   group('TimeUtils Unit Tests', () {

@@ -1,5 +1,5 @@
-name: tamakmukto_jibon
-description: "তামাকমুক্ত জীবন - ধূমপান ছাড়ার AI সহায়ক অ্যাপ। Quit smoking with AI-powered daily plans, streak tracking, peer support and more."
+name: quit_mate
+description: "QuitMate - ধূমপান ছাড়ার AI সহায়ক অ্যাপ। Quit smoking with AI-powered daily plans, streak tracking, peer support and more."
 publish_to: 'none'
 
 # The following defines the version and build number for your application.

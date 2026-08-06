@@ -233,14 +233,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   String _getNetworkErrorMessage(dynamic error) {
     final errorStr = error.toString().toLowerCase();
 
-    // Google Sign-In SHA-1 / Developer Error (ApiException 10)
-    if (errorStr.contains('10:') ||
-        errorStr.contains('developer_error') ||
-        errorStr.contains('api_exception')) {
-      return 'Google Sign-In কনফিগারেশন ত্রুটি!\n\nFirebase Console-এ অ্যাপের SHA-1 Fingerprint যোগ করা হয়নি।';
-    }
-
-    // Network / internet connection / Backend URL unreachable errors
+    // Network / internet connection errors
     if (error is SocketException ||
         errorStr.contains('socketexception') ||
         errorStr.contains('network is unreachable') ||
@@ -250,27 +243,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
         errorStr.contains('no route to host') ||
         errorStr.contains('network_error') ||
         errorStr.contains('networkerror')) {
-      return 'সার্ভার বা ইন্টারনেট সংযোগে সমস্যা!\n\nআপনার backend (BACKEND_URL) সঠিক আছে কিনা অথবা মোবাইল ইন্টারনেটের সংযোগ চেক করুন।';
+      return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না!\n\nঅনুগ্রহ করে আপনার মোবাইল ডাটা বা ওয়াইফাই চেক করে আবার চেষ্টা করুন। 📡';
     }
 
     // Timeout errors
     if (error is TimeoutException ||
         errorStr.contains('timeout') ||
         errorStr.contains('timed out')) {
-      return 'সংযোজক সার্ভারে সাড়া পাওয়া যাচ্ছে না!\n\nBACKEND_URL অথবা ইন্টারনেট সংযোগ দুর্বল হতে পারে।';
+      return 'সার্ভার থেকে সাড়া পেতে দেরি হচ্ছে!\n\nঅনুগ্রহ করে কিছুক্ষণের মধ্যে আবার চেষ্টা করুন। ⏳';
     }
 
     // Google Sign-In cancelled
     if (errorStr.contains('sign_in_cancelled') ||
         errorStr.contains('canceled') ||
         errorStr.contains('cancelled')) {
-      return 'সাইন-ইন বাতিল করা হয়েছে।\n\nলগইন করতে আবার চেষ্টা করুন।';
+      return 'সাইন-ইন প্রক্রিয়াটি বাতিল করা হয়েছে। 🔄';
     }
 
     // Google Sign-In failed
     if (errorStr.contains('sign_in_failed') ||
         errorStr.contains('google')) {
-      return 'গুগল সাইন-ইন ব্যর্থ হয়েছে!\n\nFirebase/Google Credentials এবং নেটওয়ার্ক চেক করুন।';
+      return 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।\n\nঅনুগ্রহ করে ইন্টারনেট কানেকশন চেক করে আবার চেষ্টা করুন।';
     }
 
     // Server/API errors
@@ -278,11 +271,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
         errorStr.contains('500') ||
         errorStr.contains('503') ||
         errorStr.contains('502')) {
-      return 'সার্ভারে সমস্যা হচ্ছে!\n\nকিছুক্ষণ পরে আবার চেষ্টা করুন।';
+      return 'সার্ভার সাময়িকভাবে ব্যস্ত আছে।\n\nকিছুক্ষণ পর আবার চেষ্টা করুন।';
     }
 
     // Default message
-    return 'লগইন করতে সমস্যা হয়েছে: $error';
+    return 'লগইন করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন। 🙏';
   }
 
   /// Error dialog দেখায় - snackbar এর চেয়ে বেশি visible

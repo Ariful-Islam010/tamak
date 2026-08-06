@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tamakmukto_jibon/providers/money_saver_provider.dart';
+import 'package:quit_mate/providers/money_saver_provider.dart';
 
 /// MoneySaverProvider-এর pure logic টেস্ট করার জন্য
 /// একটি টেস্টযোগ্য সাবক্লাস তৈরি করা হয়েছে

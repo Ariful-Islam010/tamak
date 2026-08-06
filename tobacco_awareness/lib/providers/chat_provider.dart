@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as socket_io;
 
 import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
@@ -16,7 +16,7 @@ class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   final Set<String> _deletedMessageIds = {};
   bool _isLoading = false;
-  IO.Socket? _socket;
+  socket_io.Socket? _socket;
 
 
   List<Map<String, dynamic>> get messages => _messages;
@@ -37,7 +37,7 @@ class ChatProvider extends ChangeNotifier {
 
   void _initSocket() {
     try {
-      _socket = IO.io(BackendService.baseUrl, <String, dynamic>{
+      _socket = socket_io.io(BackendService.baseUrl, <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': true,
       });
@@ -107,9 +107,14 @@ class ChatProvider extends ChangeNotifier {
           if (_deletedMessageIds.contains(idStr)) continue;
 
           final senderData = row['sender'] as Map<String, dynamic>?;
-          final createdAtStr = row['created_at'] != null
-              ? DateTime.parse(row['created_at'])
-              : DateTime.now();
+          DateTime createdAtStr;
+          if (row['created_at'] != null) {
+            final str = row['created_at'].toString();
+            final parsed = DateTime.parse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
+            createdAtStr = parsed.toLocal();
+          } else {
+            createdAtStr = DateTime.now();
+          }
 
           final formatter = DateFormat('hh:mm a');
           String formattedTime = formatter

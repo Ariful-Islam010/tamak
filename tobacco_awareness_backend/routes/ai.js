@@ -5,60 +5,91 @@ const config = require('../config');
 
 const groq = new Groq({ apiKey: config.GROQ_API_KEY });
 
+/**
+ * Generate a specific chunk of days (max 20 days per chunk) using Groq llama-3.3-70b-versatile
+ */
+async function generatePlanChunk({ startDay, endDay, totalDays, age, gender, cigarettesPerDay }) {
+  const isFirstChunk = startDay === 1;
+  const isFinalChunk = endDay === totalDays;
+
+  const prompt = `
+You are an AI assistant helping a user quit tobacco usage.
+User Profile: Age ${age}, Gender ${gender}.
+Total Quit Duration: ${totalDays} days.
+
+Task: Generate day-by-day quit plan objects ONLY for Day ${startDay} to Day ${endDay} (inclusive) in clear, high-quality Bengali language.
+
+For each day in range [${startDay} to ${endDay}], produce a JSON object with:
+1. "day": Exact day number as integer (from ${startDay} to ${endDay})
+2. "title": Concise focus title in Bengali
+3. "desc": Detailed strategy/guidance in clear Bengali
+4. "user_task": Specific action required from the user today
+5. "ai_task": What AI assistant has prepared for today
+6. "daily_target": Today's maximum target (e.g. "সম্পূর্ণ ট্র্যাকিং", "নিয়ন্ত্রণ রাখা", "০ (শূন্য) - তামাকমুক্ত থাকুন!").
+
+Theme progression context:
+${isFirstChunk ? `- Day 1: Daily Check-in & Triggers (আজ অ্যাপের 'Daily Check-in' সম্পন্ন করতে হবে এবং ট্রিগার পয়েন্ট ডায়েরিতে রাখতে হবে।)
+- Day 2: The SOS Emergency (আজ তামাক ব্যবহারের তীব্র ইচ্ছা হলে অ্যাপের 'SOS Emergency' অপশনটি ব্যবহার করতে হবে।)
+- Day 3: Peer Support (Community) (আজ সাপোর্ট গ্রুপে অন্যদের সাথে অভিজ্ঞতা শেয়ার করুন।)
+- Day 4: Money Saver Goal (আজ অ্যাপের 'Money Saver' অপশনে গিয়ে নিজের একটি গোল সেট করুন।)
+- Day 5: Virtual Quit-Tree (ভার্চুয়াল গাছের যত্ন নিন ও স্ট্রিক বজায় রাখুন।)
+- Day 6: Educational Content (এডুকেশনাল আর্টিকেল পড়ুন এবং আত্মবিশ্বাসী থাকুন।)` : ''}
+${isFinalChunk ? `- Day ${totalDays}: The Celebration! (অভিনন্দন! সফলভাবে চ্যালেঞ্জ শেষ করেছেন, মানি সেভারের গোল পূরণ করুন ও ব্যাজ শেয়ার করুন।)` : ''}
+- For other days: Maintain logical sequence, focus on breaking habits, managing cravings, physical exercise, mindfulness, saving money, avoiding triggers, and personal recovery milestones.
+
+CRITICAL INSTRUCTIONS:
+- Output EXACTLY ${endDay - startDay + 1} day objects corresponding to days ${startDay} to ${endDay}.
+- Ensure Bengali spelling, grammar, and font characters are flawless. Do NOT generate corrupted or gibberish text.
+- Return ONLY a valid JSON object with a single key "plans" that contains the array of these day objects.
+`;
+
+  const chatCompletion = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      {
+        role: 'system',
+        content: "You are a helpful assistant that only outputs valid JSON. You must output a JSON object containing a 'plans' array with valid day objects in clear Bengali.",
+      },
+      { role: 'user', content: prompt },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.6,
+  });
+
+  const content = chatCompletion.choices[0]?.message?.content || '{}';
+  const parsed = JSON.parse(content);
+  return Array.isArray(parsed.plans) ? parsed.plans : (Array.isArray(parsed) ? parsed : []);
+}
+
 // POST /api/ai/generate-plan
 router.post('/generate-plan', async (req, res) => {
   try {
-    const { durationInDays, cigarettesPerDay, age, gender } = req.body;
+    const { durationInDays, cigarettesPerDay = 0, age, gender } = req.body;
+    const totalDays = parseInt(durationInDays, 10) || 7;
 
-    const prompt = `
-You are an AI assistant helping a user quit smoking.
-User Profile: Age ${age}, Gender ${gender}, smokes ${cigarettesPerDay} cigarettes per day.
-Goal: Quit smoking in ${durationInDays} days.
+    const CHUNK_SIZE = 20; // 20-day chunks for synchronized, non-truncating generation
+    let allPlans = [];
 
-Please generate a day-by-day quit plan for ${durationInDays} days in Bengali language.
-For each day, provide:
-1. day: The day number (e.g., 1, 2, 3)
-2. title: Title of the day's focus
-3. desc: Description of the strategy
-4. user_task: What the user specifically needs to do today
-5. ai_task: What you (the AI) have done/prepared for them to help today
-6. daily_target: Today's maximum allowed cigarettes (e.g. "সর্বোচ্চ ৪টি", "সর্বোচ্চ ২টি", "০ (শূন্য)টি - চ্যালেঞ্জ কমপ্লিট!").
+    for (let startDay = 1; startDay <= totalDays; startDay += CHUNK_SIZE) {
+      const endDay = Math.min(startDay + CHUNK_SIZE - 1, totalDays);
+      console.log(`[AI Plan Generation] Generating Days ${startDay} to ${endDay} of ${totalDays}...`);
+      
+      const chunkPlans = await generatePlanChunk({
+        startDay,
+        endDay,
+        totalDays,
+        age,
+        gender,
+        cigarettesPerDay,
+      });
 
-Strictly use the following structured themes for the days (scaled or adapted to ${durationInDays} days, ensuring a smooth reduction from ${cigarettesPerDay} to 0 by the final days):
-- Day 1: Daily Check-in & Triggers
-  Process/Description: আজ cigarette কমানোর দরকার নেই। তবে অ্যাপের 'Daily Check-in' সম্পন্ন করতে হবে এবং সেখানে 'Note' বা ডায়েরির জায়গায় আজ আপনাকে কোন বিষয়গুলো সিগারেট খাওয়ার জন্য ট্রিগার করেছে (যেমন: কাজের চাপ, আড্ডা) তা লিখতে হবে।
-  Daily Target: ${cigarettesPerDay}টি (সর্বোচ্চ)
-- Day 2: The SOS Emergency
-  Process/Description: আজ সিগারেট খাওয়ার তীব্র ইচ্ছা হলেই অ্যাপের 'SOS Emergency' বাটনে চাপ দিন। সেখানে আপনার ট্রিগার রিজনটি লিখুন এবং এআই-এর দেওয়া তাৎক্ষণিক পরামর্শটি মেনে চলুন।
-- Day 3: Peer Support (Community)
-  Process/Description: ধূমপান ছাড়ার এই জার্নিতে আপনি একা নন! আজ অ্যাপের 'Peer Support' বা সাপোর্ট গ্রুপে গিয়ে আপনার আজকের অভিজ্ঞতা শেয়ার করুন অথবা অন্য কারো মেসেজে উচ্চারণমূলক রিপ্লাই দিন।
-- Day 4: Money Saver Goal
-  Process/Description: সিগারেট না খেয়ে প্রতিদিন যে টাকাটা বাঁচাচ্ছেন, তা দিয়ে কী করতে চান? আজই অ্যাপের 'Money Saver' অপশনে গিয়ে আপনার একটি স্বপ্নের গোল (যেমন: পছন্দের কোনো গ্যাজেট বা খাবার) সেট করুন।
-- Day 5: Virtual Quit-Tree
-  Process/Description: আপনার প্রতিদিনের চেক-ইন এর উপর ভিত্তি করে আপনার ড্যাশবোর্ডে একটি ভার্চুয়াল গাছ বড় হচ্ছে! আজ আপনার কাজ হলো তামাকমুক্ত থেকে আপনার স্ট্রিক (Streak) ধরে রাখা এবং গাছটির বৃদ্ধি নিশ্চিত করা।
-- Day 6: Educational Content
-  Process/Description: আজ অ্যাপের এডুকেশনাল সেকশন বা লাইব্রেরি থেকে ধূমপান ছাড়ার উপায় বা এর ক্ষতিকর দিক নিয়ে অন্তত একটি আর্টিকেল পড়ুন এবং নিজেকে মোটিভেটেড রাখুন।
-- Day 7 (or final day): The Celebration!
-  Process/Description: অভিনন্দন! আপনি সফলভাবে আপনার চ্যালেঞ্জের শেষ দিনে পৌঁছেছেন। আজ মানি সেভারে জমানো টাকা দিয়ে আপনার সেট করা গোলটি পূরণ করুন এবং আপনার সফলতার ব্যাজটি (Badge) সাপোর্ট গ্রুপে শেয়ার করুন!
+      allPlans = allPlans.concat(chunkPlans);
+    }
 
-Return ONLY a valid JSON object with a single key "plans" that contains an array of these day objects. The objects must have keys: "day", "title", "desc", "user_task", "ai_task", "daily_target". Do not include any markdown block wrapper or extra text.
-`;
+    // Ensure day numbers are sorted properly
+    allPlans.sort((a, b) => (a.day || 0) - (b.day || 0));
 
-    const chatCompletion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
-      messages: [
-        {
-          role: 'system',
-          content: "You are a helpful assistant that only outputs valid JSON. You must output a JSON object containing a 'plans' array with the day-by-day tasks.",
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
-
-    const content = chatCompletion.choices[0]?.message?.content || '{}';
-    return res.json(JSON.parse(content));
+    return res.json({ plans: allPlans });
   } catch (error) {
     console.error('Error calling Groq API:', error);
     return res.status(500).json({ detail: error.message });
@@ -71,7 +102,7 @@ router.post('/get-sos-advice', async (req, res) => {
     const { triggerReason } = req.body;
 
     const chatCompletion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'system',
@@ -83,7 +114,7 @@ router.post('/get-sos-advice', async (req, res) => {
         },
       ],
       temperature: 0.7,
-      max_tokens: 150,
+      max_tokens: 200,
     });
 
     const advice = chatCompletion.choices[0]?.message?.content?.trim() || '';
@@ -95,3 +126,4 @@ router.post('/get-sos-advice', async (req, res) => {
 });
 
 module.exports = router;
+

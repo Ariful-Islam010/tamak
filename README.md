@@ -37,9 +37,9 @@ Tobacco_Awareness/
 │   ├── docs/                  ← Documentation
 │   └── app_publishing_pack/   ← Play Store assets
 │
-└── tobacco_awareness_backend/ ← Python FastAPI Backend
-    ├── main.py                ← API endpoints
-    ├── requirements.txt       ← Python dependencies
+└── tobacco_awareness_backend/ ← Node.js Express Backend
+    ├── server.js              ← API server entry point
+    ├── package.json           ← Node.js dependencies
     └── .env.example           ← Environment template
 ```
 
@@ -55,14 +55,12 @@ flutter pub get
 flutter run
 ```
 
-### Python Backend
+### Node.js Backend
 ```bash
 cd tobacco_awareness_backend
-python -m venv venv
-venv\Scripts\activate        # Windows
-pip install -r requirements.txt
+npm install
 # Create .env from .env.example
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+npm start
 ```
 
 ---
@@ -72,12 +70,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 | Layer | Technology |
 |-------|-----------|
 | Mobile | Flutter (Dart) |
-| State Management | Provider |
-| Backend | FastAPI (Python) |
-| Database | Supabase (PostgreSQL) |
-| AI | Groq API (LLaMA 3.1) |
-| Image Storage | Cloudinary |
-| Auth | Supabase Auth + Google Sign-In |
+| State Management | Riverpod |
+| Backend | Node.js (Express) |
+| Database | PostgreSQL (Coolify) |
+| AI | Groq API |
+| Auth | JWT Auth |
 | Notifications | flutter_local_notifications |
 
 ---
