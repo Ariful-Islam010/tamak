@@ -30,7 +30,7 @@ class DynamicBadge {
 class GamificationProvider extends ChangeNotifier {
   int _currentStreak = 0;
   int _longestStreak = 0;
-  int _totalSmokeFreeDays = 0;
+  int _totalTobaccoFreeDays = 0;
   int _totalCheckIns = 0;
   int _totalSavingsAmount = 0;
   int _planDuration = 7;
@@ -49,7 +49,8 @@ class GamificationProvider extends ChangeNotifier {
 
   int get currentStreak => _currentStreak;
   int get longestStreak => _longestStreak;
-  int get totalSmokeFreeDays => _totalSmokeFreeDays;
+  int get totalTobaccoFreeDays => _totalTobaccoFreeDays;
+  int get totalSmokeFreeDays => _totalTobaccoFreeDays; // Compatibility alias
   int get totalCheckIns => _totalCheckIns;
   int get totalSavingsAmount => _totalSavingsAmount;
   int get planDuration => _planDuration;
@@ -161,7 +162,7 @@ class GamificationProvider extends ChangeNotifier {
         if (badgesJsonStr != null && badgesJsonStr.isNotEmpty) {
           final Map<String, dynamic> stats = jsonDecode(badgesJsonStr);
           _longestStreak = stats['longest_streak'] as int? ?? _longestStreak;
-          _totalSmokeFreeDays = stats['total_smoke_free_days'] as int? ?? _totalSmokeFreeDays;
+          _totalTobaccoFreeDays = stats['total_smoke_free_days'] as int? ?? (stats['total_tobacco_free_days'] as int? ?? _totalTobaccoFreeDays);
           if (stats['total_checkins'] != null && (stats['total_checkins'] as int) > _totalCheckIns) {
             _totalCheckIns = stats['total_checkins'] as int;
           }
@@ -186,7 +187,8 @@ class GamificationProvider extends ChangeNotifier {
     try {
       final Map<String, dynamic> stats = {
         'longest_streak': _longestStreak,
-        'total_smoke_free_days': _totalSmokeFreeDays,
+        'total_tobacco_free_days': _totalTobaccoFreeDays,
+        'total_smoke_free_days': _totalTobaccoFreeDays,
         'total_checkins': _totalCheckIns,
         'total_savings': _totalSavingsAmount,
         'plan_duration': _planDuration,
@@ -285,7 +287,7 @@ class GamificationProvider extends ChangeNotifier {
     if (checkInsData.isEmpty) {
       _currentStreak = 0;
       _longestStreak = 0;
-      _totalSmokeFreeDays = 0;
+      _totalTobaccoFreeDays = 0;
       _plantStage = 0;
       _hasPestAttack = false;
       _pestDaysClean = 0;
@@ -293,7 +295,7 @@ class GamificationProvider extends ChangeNotifier {
       return;
     }
 
-    // Deduplicate smokeFreeDates by calendar date (YYYY-MM-DD)
+    // Deduplicate tobaccoFreeDates by calendar date (YYYY-MM-DD)
     final Map<String, DateTime> uniqueMap = {};
     for (var checkIn in checkInsData) {
       final usedTobacco = checkIn['used_tobacco'] == true;
@@ -305,22 +307,22 @@ class GamificationProvider extends ChangeNotifier {
       }
     }
 
-    _totalSmokeFreeDays = uniqueMap.length;
-    final smokeFreeDates = uniqueMap.values.toList()..sort((a, b) => b.compareTo(a)); // Descending
+    _totalTobaccoFreeDays = uniqueMap.length;
+    final tobaccoFreeDates = uniqueMap.values.toList()..sort((a, b) => b.compareTo(a)); // Descending
 
     // Calculate streaks
     int currentStreak = 0;
     int longestStreak = 0;
 
-    if (smokeFreeDates.isNotEmpty) {
+    if (tobaccoFreeDates.isNotEmpty) {
       final todayStr = TimeUtils.todayBstDateString;
       final todayDt = DateTime.parse(todayStr);
-      final daysDiffFromToday = TimeUtils.daysDifferenceBst(todayDt, smokeFreeDates[0]);
+      final daysDiffFromToday = TimeUtils.daysDifferenceBst(todayDt, tobaccoFreeDates[0]);
 
       if (daysDiffFromToday <= 1) {
         currentStreak = 1;
-        for (int i = 1; i < smokeFreeDates.length; i++) {
-          final diff = TimeUtils.daysDifferenceBst(smokeFreeDates[i - 1], smokeFreeDates[i]);
+        for (int i = 1; i < tobaccoFreeDates.length; i++) {
+          final diff = TimeUtils.daysDifferenceBst(tobaccoFreeDates[i - 1], tobaccoFreeDates[i]);
           if (diff == 1) {
             currentStreak++;
           } else if (diff > 1) {
@@ -331,10 +333,10 @@ class GamificationProvider extends ChangeNotifier {
     }
 
     // Longest Streak
-    if (smokeFreeDates.isNotEmpty) {
+    if (tobaccoFreeDates.isNotEmpty) {
       int tempStreak = 1;
       longestStreak = 1;
-      final ascDates = smokeFreeDates.reversed.toList();
+      final ascDates = tobaccoFreeDates.reversed.toList();
       for (int i = 1; i < ascDates.length; i++) {
         final diff = TimeUtils.daysDifferenceBst(ascDates[i], ascDates[i - 1]);
         if (diff == 1) {
@@ -374,7 +376,7 @@ class GamificationProvider extends ChangeNotifier {
 
     // Tree grows strictly based on progress towards plan duration
     double progress =
-        _planDuration > 0 ? (_totalSmokeFreeDays / _planDuration) : 0.0;
+        _planDuration > 0 ? (_totalTobaccoFreeDays / _planDuration) : 0.0;
     int plantStage = 0;
     if (progress >= 1.0) {
       plantStage = 5;

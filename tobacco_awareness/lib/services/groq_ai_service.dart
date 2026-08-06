@@ -8,7 +8,6 @@ class GroqAiService {
 
   static Future<String?> generateQuitPlan({
     required int durationInDays,
-    int cigarettesPerDay = 0,
     required String age,
     required String gender,
   }) async {
@@ -20,7 +19,6 @@ class GroqAiService {
         },
         body: jsonEncode({
           'durationInDays': durationInDays,
-          'cigarettesPerDay': cigarettesPerDay,
           'age': age,
           'gender': gender,
         }),

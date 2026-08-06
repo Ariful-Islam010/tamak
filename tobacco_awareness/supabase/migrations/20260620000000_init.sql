@@ -49,9 +49,7 @@ CREATE TABLE public.daily_checkins (
     check_in_date DATE NOT NULL,
     mood TEXT,
     craving_level INTEGER,
-    smoked_today BOOLEAN,
     used_tobacco BOOLEAN,
-    cigarettes_smoked INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(user_id, check_in_date)
 );

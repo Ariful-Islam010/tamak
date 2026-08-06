@@ -72,10 +72,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     final moneyProvider = ref.watch(moneySaverProvider);
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
-    int smokeFreeDays = 0;
+    int tobaccoFreeDays = 0;
     if (user?.quitDate != null) {
       final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1;
-      if (diff >= 1) smokeFreeDays = diff;
+      if (diff >= 1) tobaccoFreeDays = diff;
     }
 
     final int totalSaved = moneyProvider.totalSavings;
@@ -185,7 +185,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                     Expanded(
                       child: _DashboardStatCard(
                         title: "তামাকমুক্ত দিন",
-                        value: _toBengali(smokeFreeDays),
+                        value: _toBengali(tobaccoFreeDays),
                         icon: Icons.air,
                         color: AppTheme.primaryGreen,
                       ),

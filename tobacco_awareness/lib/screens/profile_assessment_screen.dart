@@ -206,7 +206,6 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
     // Generate AI Plan
     final String? aiPlan = await GroqAiService.generateQuitPlan(
       durationInDays: _selectedDuration ?? 7,
-      cigarettesPerDay: 0,
       age: _ageController.text,
       gender: _selectedGender ?? "পুরুষ",
     );

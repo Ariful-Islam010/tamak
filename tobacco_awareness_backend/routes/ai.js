@@ -8,7 +8,7 @@ const groq = new Groq({ apiKey: config.GROQ_API_KEY });
 /**
  * Generate a specific chunk of days (max 20 days per chunk) using Groq llama-3.3-70b-versatile
  */
-async function generatePlanChunk({ startDay, endDay, totalDays, age, gender, cigarettesPerDay }) {
+async function generatePlanChunk({ startDay, endDay, totalDays, age, gender }) {
   const isFirstChunk = startDay === 1;
   const isFinalChunk = endDay === totalDays;
 
@@ -64,7 +64,7 @@ CRITICAL INSTRUCTIONS:
 // POST /api/ai/generate-plan
 router.post('/generate-plan', async (req, res) => {
   try {
-    const { durationInDays, cigarettesPerDay = 0, age, gender } = req.body;
+    const { durationInDays, age, gender } = req.body;
     const totalDays = parseInt(durationInDays, 10) || 7;
 
     const CHUNK_SIZE = 20; // 20-day chunks for synchronized, non-truncating generation
@@ -80,7 +80,6 @@ router.post('/generate-plan', async (req, res) => {
         totalDays,
         age,
         gender,
-        cigarettesPerDay,
       });
 
       allPlans = allPlans.concat(chunkPlans);

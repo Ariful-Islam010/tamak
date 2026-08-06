@@ -15,13 +15,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, String>> _onboardingData = [
     {
-      "title": "ধূমপান ছাড়ার সময় এখনই!",
+      "title": "তামাক ছাড়ার সময় এখনই!",
       "description": "একটি নতুন এবং সুস্থ জীবনের পথে আজই প্রথম ধাপ ফেলুন।",
       "image": "assets/images/onboarding1.png", // Placeholder
     },
     {
       "title": "নিজেকে নতুনভাবে গড়ুন।",
-      "description": "প্রতিটি দিন ধূমপানমুক্ত থাকা আপনার জন্য একটি নতুন বিজয়।",
+      "description": "প্রতিটি দিন তামাকমুক্ত থাকা আপনার জন্য একটি নতুন বিজয়।",
       "image": "assets/images/onboarding2.png", // Placeholder
     },
     {

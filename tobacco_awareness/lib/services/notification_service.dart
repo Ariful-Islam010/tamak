@@ -232,7 +232,7 @@ class NotificationService {
         // Plan hasn't started yet
         final daysLeft = -diff;
         notifTitle = '⏳ পরিকল্পনা শুরু হতে $daysLeft দিন বাকি!';
-        notifBody = 'প্রস্তুত থাকুন। ধূমপান ছাড়ার যাত্রা শুরু হতে চলেছে! 🜏';
+        notifBody = 'প্রস্তুত থাকুন। তামাকমুক্ত জীবনের যাত্রা শুরু হতে চলেছে! 🜏';
       } else if (diff == 0) {
         // Day 1
         notifTitle = '🌅 আজ আপনার পরিকল্পনার ১ম দিন!';

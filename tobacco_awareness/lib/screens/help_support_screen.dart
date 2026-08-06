@@ -54,7 +54,7 @@ class HelpSupportScreen extends StatelessWidget {
             _buildGuideItem(
               context,
               "২. দৈনিক চেক-ইন (Daily Check-in)",
-              "প্রতিদিন আপনার ধূমপানের তীব্রতা, মুড এবং তামাক ব্যবহারের তথ্য ট্র্যাক করুন। এটি আপনার ট্র্যাক রেকর্ড বজায় রাখতে সাহায্য করবে।",
+              "প্রতিদিন আপনার ক্রেভিংয়ের তীব্রতা, মুড এবং তামাক ব্যবহারের তথ্য ট্র্যাক করুন। এটি আপনার ট্র্যাক রেকর্ড বজায় রাখতে সাহায্য করবে।",
               Icons.check_circle_outline,
               AppTheme.primaryGreen,
             ),
@@ -62,7 +62,7 @@ class HelpSupportScreen extends StatelessWidget {
             _buildGuideItem(
               context,
               "৩. টাকা সেভার (Money Saver)",
-              "ধূমপান না করে বাঁচানো টাকা দিয়ে আপনার স্বপ্ন বা ইচ্ছেগুলো যোগ করুন এবং জমানো টাকার প্রোগ্রেস ট্র্যাক করুন।",
+              "তামাক ব্যবহার না করে বাঁচানো টাকা দিয়ে আপনার স্বপ্ন বা ইচ্ছেগুলো যোগ করুন এবং জমানো টাকার প্রোগ্রেস ট্র্যাক করুন।",
               Icons.savings_outlined,
               AppTheme.accentYellow,
             ),
@@ -78,7 +78,7 @@ class HelpSupportScreen extends StatelessWidget {
             _buildGuideItem(
               context,
               "৫. এস.ও.এস ইমার্জেন্সি (SOS)",
-              "ধূমপান করার তীব্র ইচ্ছে বা ক্রেভিং হলে এস.ও.এস বাটন চাপুন। ৫ মিনিটের ডিপ-ব্রিথিং বা পানি পানের উপদেশ মেনে নিজের মনকে শান্ত রাখুন।",
+              "তামাক ব্যবহার করার তীব্র ইচ্ছে বা ক্রেভিং হলে এস.ও.এস বাটন চাপুন। ৫ মিনিটের ডিপ-ব্রিথিং বা পানি পানের উপদেশ মেনে নিজের মনকে শান্ত রাখুন।",
               Icons.warning_amber_rounded,
               AppTheme.errorColor,
             ),
