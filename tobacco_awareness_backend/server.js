@@ -15,7 +15,7 @@ const gamificationRouter = require('./routes/gamification');
 const chatRouter = require('./routes/chat');
 const uploadRouter = require('./routes/upload');
 const aiRouter = require('./routes/ai');
-const adminRouter = require('./routes/admin');
+const adminRouter = require('./admin');
 
 const app = express();
 const server = http.createServer(app);
@@ -61,10 +61,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/upload', uploadRouter);
 app.use('/api/ai', aiRouter);
 
-// Admin Dashboard
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
-app.get('/admin/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+// Admin Dashboard & API Router
 app.use('/admin', adminRouter);
 
 server.listen(3000, '0.0.0.0', () => {

@@ -26,8 +26,9 @@ function toCSV(rows) {
   return lines.join('\n');
 }
 
-// ── Serve Admin HTML ──────────────────────────────────────────────────────────
-router.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/admin.html')));
+// ── Serve Admin Static Assets & HTML ──────────────────────────────────────────
+router.use(express.static(path.join(__dirname, 'public')));
+router.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'admin.html')));
 
 // ── Stats ─────────────────────────────────────────────────────────────────────
 router.get('/api/stats', requireAdmin, async (req, res) => {
