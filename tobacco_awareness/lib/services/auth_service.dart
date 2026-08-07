@@ -425,8 +425,6 @@ class AuthService extends ChangeNotifier {
               final body2 = {
                 'id': userId,
                 'email': resolvedEmail,
-                'display_name': updated.displayName,
-                'photo_url': updated.photoUrl,
                 'updated_at': DateTime.now().toIso8601String(),
               };
               await HiveHelper().saveSetting(
@@ -442,31 +440,11 @@ class AuthService extends ChangeNotifier {
               }
             }
           } else {
-            // New user — create profile with email only; name set via assessment
+            // New user — create profile model for current session
             _currentUser = UserModel(
               uid: userId,
               email: resolvedEmail,
-              displayName: null,
-              photoUrl: null,
             );
-            final body2 = {
-              'id': userId,
-              'email': resolvedEmail,
-              'display_name': null,
-              'photo_url': null,
-              'updated_at': DateTime.now().toIso8601String(),
-            };
-            await HiveHelper().saveSetting(
-                'cached_user_profile_$userId', jsonEncode(body2));
-            try {
-              await http.post(
-                Uri.parse('${BackendService.baseUrl}/api/profile'),
-                headers: BackendService.headers(),
-                body: jsonEncode(body2),
-              ).timeout(const Duration(seconds: 10));
-            } catch (e) {
-              debugPrint("Error saving new user profile to backend: $e");
-            }
           }
         }
         _isLoading = false;

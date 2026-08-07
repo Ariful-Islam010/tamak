@@ -17,21 +17,36 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/goals
+// POST /api/goals (Create or Update goal current_amount)
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const body = req.body;
-    body.user_id = body.user_id || userId;
+    const { title, target_amount, current_amount, is_completed, icon_name } = req.body;
 
-    const keys = Object.keys(body);
-    const values = Object.values(body);
-    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-    
-    const result = await query(
-      `INSERT INTO money_saver_goals (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
-      values
+    if (!title || !target_amount) {
+      return res.status(400).json({ detail: 'Title and target_amount are required' });
+    }
+
+    const existing = await query(
+      'SELECT id FROM money_saver_goals WHERE user_id = $1 AND title = $2',
+      [userId, title]
     );
+
+    let result;
+    if (existing.rowCount > 0) {
+      result = await query(
+        `UPDATE money_saver_goals
+         SET current_amount = $1, is_completed = $2, target_amount = $3
+         WHERE id = $4 RETURNING *`,
+        [current_amount || 0, is_completed || false, target_amount, existing.rows[0].id]
+      );
+    } else {
+      result = await query(
+        `INSERT INTO money_saver_goals (user_id, title, target_amount, current_amount, is_completed, icon_name)
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, title, target_amount, current_amount || 0, is_completed || false, icon_name || 'star']
+      );
+    }
     return res.json(result.rows);
   } catch (error) {
     return res.status(500).json({ detail: error.message });

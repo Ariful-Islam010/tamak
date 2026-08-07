@@ -108,6 +108,50 @@ class HelpSupportScreen extends StatelessWidget {
             
             const SizedBox(height: 32),
             
+            // Medical Disclaimer Section for Google Play Policy Compliance
+            Text(
+              "স্বাস্থ্য ও মেডিকেল ডিসক্লেইমার",
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textColor,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFCD34D), width: 1),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.health_and_safety_outlined, color: Color(0xFFD97706), size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "গুরুত্বপূর্ণ সতর্কবার্তা (Medical Disclaimer)",
+                          style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF92400E), fontSize: 14),
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          "QuitMate অ্যাপটি তামাক ও ধূমপান ত্যাগে উৎসাহিত করার জন্য একটি প্রোগ্রেস ট্র্যাকিং ও অভ্যাস পরিবর্তন সহায়িকা। অ্যাপের তথ্য বা এআই (AI) নির্দেশাবলী কোনো লাইসেন্সপ্রাপ্ত ডাক্তারের পেশাদার পরামর্শ বা চিকিৎসার বিকল্প নয়। যেকোনো স্বাস্থ্য সংক্রান্ত জটিলতায় বিশেষজ্ঞ ডাক্তারের সিদ্ধান্ত অনুসরণ করুন।",
+                          style: TextStyle(color: Color(0xFFB45309), height: 1.4, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
             // Contact Section (Email-only)
             Text(
               "যোগাযোগ করুন",
@@ -146,7 +190,7 @@ class HelpSupportScreen extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "ariful010@gmail.com",
+                          "ariful010a@gmail.com",
                           style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold),
                         ),
                       ],

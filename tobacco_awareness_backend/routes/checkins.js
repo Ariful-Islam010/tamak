@@ -24,25 +24,27 @@ router.get('/today', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/checkins
+// POST /api/checkins (UPSERT with note support)
 router.post('/', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
-    const body = req.body;
+    const { check_in_date, craving_level, mood, used_tobacco, note } = req.body;
     
-    // Set user_id if not present
-    body.user_id = body.user_id || userId;
-    
-    const keys = Object.keys(body);
-    const values = Object.values(body);
-    const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+    const date = check_in_date || getBstTodayStr();
     
     const result = await query(
-      `INSERT INTO daily_checkins (${keys.join(', ')}) VALUES (${placeholders}) RETURNING *`,
-      values
+      `INSERT INTO daily_checkins (user_id, check_in_date, craving_level, mood, used_tobacco, note)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, check_in_date) DO UPDATE SET
+         craving_level = EXCLUDED.craving_level,
+         mood = EXCLUDED.mood,
+         used_tobacco = EXCLUDED.used_tobacco,
+         note = COALESCE(EXCLUDED.note, daily_checkins.note)
+       RETURNING *`,
+      [userId, date, craving_level || 5, mood || 'Normal', used_tobacco || false, note || null]
     );
     
-    return res.json(result.rows);
+    return res.json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

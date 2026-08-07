@@ -113,6 +113,40 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
             Text("অনলাইন গ্রুপ চ্যাট", style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal, color: Colors.white70)),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: "কম্যুনিটি গাইডলাইন ও নিরাপত্তা",
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Row(
+                    children: [
+                      Icon(Icons.shield_outlined, color: Color(0xFF075E54)),
+                      SizedBox(width: 8),
+                      Text("কম্যুনিটি গাইডলাইন", style: TextStyle(fontSize: 18)),
+                    ],
+                  ),
+                  content: const Text(
+                    "১. চ্যাট গ্রুপে অপরের প্রতি শ্রদ্ধাশীল থাকুন।\n\n"
+                    "২. কোনো গালিগালাজ, অশালীন বক্তব্য বা বিজ্ঞাপনী লিংক পোস্ট করা সম্পূর্ণ নিষিদ্ধ।\n\n"
+                    "৩. অশালীন কন্টেন্ট বা অনাকাঙ্ক্ষিত ব্যবহারকারী রিপোর্ট করতে ইমেইল করুন: ariful010a@gmail.com\n\n"
+                    "৪. নিয়ম অমান্যকারী ব্যবহারকারীকে ব্যাকএন্ড থেকে স্থায়ীভাবে ব্লক করা হবে।",
+                    style: TextStyle(fontSize: 13, height: 1.4),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("বুঝতে পেরেছি", style: TextStyle(color: Color(0xFF075E54), fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [

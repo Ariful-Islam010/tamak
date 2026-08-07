@@ -186,6 +186,26 @@ class MoneySaverProvider extends ChangeNotifier {
                 }),
               )
               .timeout(const Duration(seconds: 10));
+
+          // Also sync active goal allocated savings to backend money_saver_goals table
+          final allocations = getAllocatedSavings();
+          for (int i = 0; i < _dreams.length; i++) {
+            final dream = _dreams[i];
+            final allocated = allocations[i];
+            final target = dream["target"] as int;
+            await http.post(
+              Uri.parse('${BackendService.baseUrl}/api/goals'),
+              headers: BackendService.headers(),
+              body: jsonEncode({
+                'user_id': userId,
+                'title': dream["title"],
+                'target_amount': target,
+                'current_amount': allocated,
+                'is_completed': allocated >= target,
+                'icon_name': 'star',
+              }),
+            ).timeout(const Duration(seconds: 5));
+          }
         } catch (e) {
           debugPrint("Error syncing savings to backend: $e");
         }

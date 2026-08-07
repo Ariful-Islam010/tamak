@@ -329,7 +329,10 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
                                   : () async {
                                       final messenger = ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
-                                      await ref.read(checkInProvider).submitCheckIn();
+                                      final noteText = _reflectionController.text.trim();
+                                      await ref.read(checkInProvider).submitCheckIn(
+                                        note: noteText.isNotEmpty ? noteText : null,
+                                      );
                                       ref.read(gamificationProvider).loadGamificationData();
                                       if (mounted) {
                                         messenger.showSnackBar(const SnackBar(

@@ -115,7 +115,7 @@ class CheckInProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> submitCheckIn() async {
+  Future<void> submitCheckIn({String? note}) async {
     try {
       final userId = BackendService.userId ?? 'guest';
       final today = TimeUtils.todayBstDateString;
@@ -153,6 +153,7 @@ class CheckInProvider extends ChangeNotifier {
                   'craving_level': _cravingLevel.toInt(),
                   'mood': _selectedMood ?? 'Normal',
                   'used_tobacco': _usedTobacco ?? false,
+                  'note': note,
                 }),
               )
               .timeout(const Duration(seconds: 10));
