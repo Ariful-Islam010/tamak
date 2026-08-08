@@ -105,13 +105,15 @@ class AuthService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final rawBody = response.body;
-        if (rawBody == 'null' || rawBody.isEmpty) {
-          _currentUser ??= UserModel(uid: BackendService.userId!);
+        if (rawBody == 'null' || rawBody == '{}' || rawBody.isEmpty) {
+          debugPrint("Profile empty or user deleted on backend. Clearing session.");
+          await _clearSession();
           return;
         }
         final data = jsonDecode(rawBody);
-        if (data == null) {
-          _currentUser ??= UserModel(uid: BackendService.userId!);
+        if (data == null || data is! Map || data.isEmpty || data['id'] == null) {
+          debugPrint("Profile data invalid or user deleted. Clearing session.");
+          await _clearSession();
           return;
         }
 
@@ -139,8 +141,8 @@ class AuthService extends ChangeNotifier {
           gender: data['gender'],
         );
         await _setupNotificationsAndWelcome();
-      } else if (response.statusCode == 401 || response.statusCode == 403) {
-        debugPrint("Auth error in _fetchAndSetProfile. Clearing session.");
+      } else if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
+        debugPrint("Auth or user not found error in _fetchAndSetProfile. Clearing session.");
         await _clearSession();
       }
     } catch (e) {
@@ -485,6 +487,41 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       debugPrint("Error signing out: $e");
+    }
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+      if (BackendService.token != null) {
+        try {
+          final response = await http.delete(
+            Uri.parse('${BackendService.baseUrl}/api/profile/delete-account'),
+            headers: BackendService.headers(),
+          ).timeout(const Duration(seconds: 10));
+          debugPrint("Delete account response: ${response.statusCode}");
+        } catch (e) {
+          debugPrint("Backend delete request error: $e");
+        }
+      }
+      try {
+        await _googleSignIn.disconnect();
+      } catch (e) {
+        debugPrint("Google disconnect error: $e");
+      }
+      await _googleSignIn.signOut();
+      await _clearSession();
+      NotificationService().cancelDailyNotifications().catchError((e) {
+        debugPrint("Error cancelling notifications: $e");
+      });
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      debugPrint("Error deleting account: $e");
+      rethrow;
     }
   }
 }

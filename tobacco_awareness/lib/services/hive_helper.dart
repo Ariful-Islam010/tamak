@@ -198,4 +198,20 @@ class HiveHelper {
       return {};
     }
   }
+
+  // ─── BLOCKED USER HELPERS ───
+  Future<void> saveBlockedUserIds(Set<String> userIds) async {
+    await saveSetting('blocked_user_ids', jsonEncode(userIds.toList()));
+  }
+
+  Future<Set<String>> getBlockedUserIds() async {
+    final raw = await getSetting('blocked_user_ids');
+    if (raw == null || raw.isEmpty) return {};
+    try {
+      final List<dynamic> list = jsonDecode(raw);
+      return list.map((e) => e.toString()).toSet();
+    } catch (_) {
+      return {};
+    }
+  }
 }

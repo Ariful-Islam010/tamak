@@ -161,7 +161,6 @@ class QuitPlanScreen extends ConsumerWidget {
 
                       // Yes / No Buttons
                       _CompletionButtons(
-                        isGoalStarted: quitPlan.isGoalStarted,
                         onYes: () async {
                           await quitPlan.submitPlanResponse(true);
                           if (context.mounted) {
@@ -594,41 +593,49 @@ class _TaskSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────
-// Completion Buttons Widget
+// Completion Buttons Widget (Single Tap Protected)
 // ─────────────────────────────────────────────────
-class _CompletionButtons extends StatelessWidget {
-  final bool isGoalStarted;
+class _CompletionButtons extends StatefulWidget {
   final VoidCallback onYes;
   final VoidCallback onNo;
 
   const _CompletionButtons({
-    required this.isGoalStarted,
     required this.onYes,
     required this.onNo,
   });
 
   @override
+  State<_CompletionButtons> createState() => _CompletionButtonsState();
+}
+
+class _CompletionButtonsState extends State<_CompletionButtons> {
+  bool _isSubmitting = false;
+
+  void _handleTap(VoidCallback callback) {
+    if (_isSubmitting) return;
+    setState(() => _isSubmitting = true);
+    callback();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // হ্যাঁ বাটন
+        // হ্যাঁ বাটন (১ ক্লিকেই কাজ করবে)
         Expanded(
           child: GestureDetector(
-            onTap: isGoalStarted ? null : onYes,
-            child: Container(
+            onTap: () => _handleTap(widget.onYes),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: isGoalStarted
-                    ? const Color(0xFFEEEEEE)
-                    : Colors.white,
+                color: _isSubmitting ? Colors.grey.shade200 : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: isGoalStarted
-                      ? const Color(0xFFCCCCCC)
-                      : const Color(0xFFDDDDDD),
+                  color: _isSubmitting ? Colors.grey.shade400 : const Color(0xFFDDDDDD),
                   width: 1,
                 ),
-                boxShadow: isGoalStarted
+                boxShadow: _isSubmitting
                     ? []
                     : [
                         BoxShadow(
@@ -640,19 +647,17 @@ class _CompletionButtons extends StatelessWidget {
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                children: const [
                   Text(
                     "হ্যাঁ",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isGoalStarted
-                          ? const Color(0xFFAAAAAA)
-                          : const Color(0xFF222222),
+                      color: Color(0xFF222222),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  const Text("✅", style: TextStyle(fontSize: 18)),
+                  SizedBox(width: 6),
+                  Text("✅", style: TextStyle(fontSize: 18)),
                 ],
               ),
             ),
@@ -661,26 +666,29 @@ class _CompletionButtons extends StatelessWidget {
 
         const SizedBox(width: 14),
 
-        // না বাটন
+        // না বাটন (১ ক্লিকেই কাজ করবে)
         Expanded(
           child: GestureDetector(
-            onTap: onNo,
-            child: Container(
+            onTap: () => _handleTap(widget.onNo),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: _isSubmitting ? Colors.grey.shade200 : Colors.white,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: const Color(0xFFDDDDDD),
+                  color: _isSubmitting ? Colors.grey.shade400 : const Color(0xFFDDDDDD),
                   width: 1,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
+                boxShadow: _isSubmitting
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -706,7 +714,7 @@ class _CompletionButtons extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────
-// Answered Status Card (Shown once answered for today)
+// Answered Status Card (Concise 1-line text)
 // ─────────────────────────────────────────────────
 class _AnsweredStatusCard extends StatelessWidget {
   final bool isCompleted;
@@ -718,63 +726,46 @@ class _AnsweredStatusCard extends StatelessWidget {
     final bgColor = isCompleted ? const Color(0xFFDCFCE7) : const Color(0xFFFEF2F2);
     final borderColor = isCompleted ? const Color(0xFF86EFAC) : const Color(0xFFFECACA);
     final iconColor = isCompleted ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
-    final title = isCompleted ? "আজকের লক্ষ্য সম্পন্ন করা হয়েছে! ✅" : "আজকের স্ট্যাটাস রেকর্ড করা হয়েছে ❌";
-    final desc = isCompleted
-        ? "দারুণ কাজ! আজ আপনি সফলভাবে আপনার লক্ষ্য অর্জন করেছেন। আগামীকালের লক্ষ্যের জন্য প্রস্তুত থাকুন।"
-        : "আজকের পরিকল্পনা পুরোপুরি সম্পন্ন না হলেও হতাশ হবেন না! আগামীকাল আবার নতুন উদ্দীপনায় চেষ্টা করুন।";
+    final title = isCompleted ? "আজকের লক্ষ্য সম্পন্ন করা হয়েছে! ✅" : "আজকের পরিকল্পনাটি বাস্তবায়ন করেননি ❌";
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: iconColor.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: iconColor.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: iconColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isCompleted ? Icons.check_circle_rounded : Icons.info_rounded,
+              isCompleted ? Icons.check_circle_rounded : Icons.cancel_rounded,
               color: iconColor,
-              size: 28,
+              size: 24,
             ),
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isCompleted ? const Color(0xFF14532D) : const Color(0xFF7F1D1D),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  desc,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isCompleted ? const Color(0xFF15803D) : const Color(0xFF991B1B),
-                    height: 1.4,
-                  ),
-                ),
-              ],
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: isCompleted ? const Color(0xFF14532D) : const Color(0xFF7F1D1D),
+              ),
             ),
           ),
         ],

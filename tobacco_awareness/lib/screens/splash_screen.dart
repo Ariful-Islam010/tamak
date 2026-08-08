@@ -129,7 +129,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with TickerProvider
       final currentUser = authService.currentUser;
 
       Widget destination;
-      if (currentUser != null && BackendService.token != null) {
+      if (currentUser != null && BackendService.token != null && currentUser.email != null && currentUser.email!.isNotEmpty) {
         if (currentUser.planDuration != null) {
           destination = const HomeDashboardScreen();
         } else {

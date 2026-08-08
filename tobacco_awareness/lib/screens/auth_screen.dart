@@ -219,10 +219,53 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                             ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () => _showPrivacyPolicyDialog(context),
+                    child: Text(
+                      "সাইন-ইন করার মাধ্যমে আমাদের প্রাইভেসি পলিসিতে সম্মতি দিচ্ছেন",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textLight.withValues(alpha: 0.8),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.privacy_tip_outlined, color: AppTheme.primaryGreen),
+            SizedBox(width: 8),
+            Text("প্রাইভেসি পলিসি", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Text(
+            "QuitMate অ্যাপ আপনার ব্যক্তিগত তথ্যের গোপনীয়তা রক্ষা করতে প্রতিশ্রুতিবদ্ধ।\n\n"
+            "• আমরা শুধুমাত্র আপনার অ্যাকাউন্ট সেশন ও দৈনিক অগ্রগতি ডাটা সুরক্ষিতভাবে সংরক্ষণ করি।\n"
+            "• আপনার কোনো ডাটা তৃতীয় পক্ষের কাছে বিক্রি বা শেয়ার করা হয় না।\n"
+            "• যেকোনো সময় 'প্রাইভেসি ও সিকিউরিটি' মেনু থেকে স্থায়ীভাবে আপনার সমস্ত ডাটা মুছে ফেলা সম্ভব।",
+            style: TextStyle(fontSize: 14, height: 1.5),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("বন্ধ করুন", style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

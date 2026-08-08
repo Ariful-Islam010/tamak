@@ -85,10 +85,7 @@ class NotificationService {
 
     if (androidImpl != null) {
       final granted = await androidImpl.requestNotificationsPermission();
-      final exactAlarmGranted =
-          await androidImpl.requestExactAlarmsPermission();
-      debugPrint(
-          '🔔 Notification permission: $granted, Exact alarm: $exactAlarmGranted');
+      debugPrint('🔔 Notification permission granted: $granted');
       return granted ?? false;
     }
     return true;

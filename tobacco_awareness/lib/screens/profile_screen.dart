@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -332,6 +333,140 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showDeleteAccountDialog(BuildContext context) {
+    final randomCode = "DELETE-${Random().nextInt(9000) + 1000}";
+    final textController = TextEditingController();
+    bool isMatch = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (dialogCtx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "অ্যাকাউন্ট ডিলিট নিশ্চিতকরণ",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "সতর্কতা: অ্যাকাউন্ট ডিলিট করলে আপনার সমস্ত অগ্রগতি, স্ট্রাইক, ব্যাজ ও হিস্ট্রি স্থায়ীভাবে মুছে যাবে। এটি আর পুনরুদ্ধার করা সম্ভব হবে না।",
+                    style: TextStyle(fontSize: 14, color: Color(0xFF4B5563), height: 1.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          "নিচে প্রদর্শিত সিকিউরিটি কোডটি হুবহু টাইপ করুন:",
+                          style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 6),
+                        SelectableText(
+                          randomCode,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 2,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: textController,
+                    onChanged: (val) {
+                      setDialogState(() {
+                        isMatch = val.trim() == randomCode;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: "যেমন: $randomCode",
+                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Colors.red, width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text("বাতিল", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+              ),
+              ElevatedButton(
+                onPressed: isMatch
+                    ? () async {
+                        Navigator.pop(dialogCtx);
+                        _executeAccountDeletion(context);
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  disabledBackgroundColor: Colors.red.shade200,
+                ),
+                child: const Text("স্থায়ীভাবে ডিলিট করুন", style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _executeAccountDeletion(BuildContext context) async {
+    try {
+      await ref.read(authServiceProvider).deleteAccount();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("আপনার অ্যাকাউন্ট ও تمام ডেটা স্থায়ীভাবে মুছে ফেলা হয়েছে।"),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AuthScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("অ্যাকাউন্ট ডিলিট করতে সমস্যা হয়েছে: $e")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = ref.watch(authServiceProvider);
@@ -512,6 +647,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         context,
                         MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
                       ),
+                    ),
+                    Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
+                    _buildSettingsTile(
+                      context, 
+                      "অ্যাকাউন্ট মুছে ফেলুন", 
+                      Icons.delete_forever_outlined, 
+                      Colors.red,
+                      onTap: () => _showDeleteAccountDialog(context),
                     ),
                   ],
                 ),

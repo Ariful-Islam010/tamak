@@ -15,11 +15,12 @@ final chatProvider = ChangeNotifierProvider<ChatProvider>((ref) => ChatProvider(
 class ChatProvider extends ChangeNotifier {
   List<Map<String, dynamic>> _messages = [];
   final Set<String> _deletedMessageIds = {};
+  final Set<String> _blockedUserIds = {};
   bool _isLoading = false;
   socket_io.Socket? _socket;
 
-
   List<Map<String, dynamic>> get messages => _messages;
+  Set<String> get blockedUserIds => _blockedUserIds;
   bool get isLoading => _isLoading;
 
   ChatProvider() {
@@ -29,6 +30,9 @@ class ChatProvider extends ChangeNotifier {
   Future<void> _init() async {
     final savedDeleted = await HiveHelper().getDeletedMessageIds();
     _deletedMessageIds.addAll(savedDeleted);
+    final savedBlocked = await HiveHelper().getBlockedUserIds();
+    _blockedUserIds.addAll(savedBlocked);
+
     await _loadMessagesFromCache();
     await loadMessages();
 
@@ -51,6 +55,15 @@ class ChatProvider extends ChangeNotifier {
         loadMessages();
       });
 
+      _socket?.on('delete_message', (data) {
+        if (data != null && data['id'] != null) {
+          final delId = data['id'].toString();
+          _deletedMessageIds.add(delId);
+          _messages.removeWhere((m) => m["id"].toString() == delId);
+          notifyListeners();
+        }
+      });
+
       _socket?.onDisconnect((_) => debugPrint('⚡ Disconnected from WebSocket Server'));
     } catch (e) {
       debugPrint('Error setting up Socket.io: $e');
@@ -61,10 +74,28 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> _loadMessagesFromCache() async {
     try {
-      final userId = BackendService.userId ?? 'guest';
-      final cachedMessages = await HiveHelper().getChatMessages(userId);
+      final userId = BackendService.userId ?? 'community_chat_messages';
+      var cachedMessages = await HiveHelper().getChatMessages(userId);
+      if (cachedMessages.isEmpty && userId != 'community_chat_messages') {
+        cachedMessages = await HiveHelper().getChatMessages('community_chat_messages');
+      }
       if (cachedMessages.isNotEmpty) {
-        _messages = cachedMessages.where((m) => !_deletedMessageIds.contains(m["id"].toString())).toList();
+        final List<Map<String, dynamic>> restored = [];
+        for (var m in cachedMessages) {
+          final idStr = m["id"]?.toString();
+          if (idStr != null && _deletedMessageIds.contains(idStr)) continue;
+
+          final map = Map<String, dynamic>.from(m);
+          if (map['createdAt'] is String) {
+            map['createdAt'] = DateTime.tryParse(map['createdAt']) ?? DateTime.now();
+          }
+          // Ensure isMe is accurately evaluated for current user
+          if (BackendService.userId != null && map['sender_id'] != null) {
+            map['isMe'] = map['sender_id'] == BackendService.userId;
+          }
+          restored.add(map);
+        }
+        _messages = restored;
         notifyListeners();
       }
     } catch (e) {
@@ -74,8 +105,19 @@ class ChatProvider extends ChangeNotifier {
 
   Future<void> _saveMessagesToCache() async {
     try {
-      final userId = BackendService.userId ?? 'guest';
-      await HiveHelper().saveChatMessages(userId, _messages);
+      final userId = BackendService.userId ?? 'community_chat_messages';
+      final serializable = _messages.map((m) {
+        final map = Map<String, dynamic>.from(m);
+        if (map['createdAt'] is DateTime) {
+          map['createdAt'] = (map['createdAt'] as DateTime).toIso8601String();
+        }
+        return map;
+      }).toList();
+
+      await HiveHelper().saveChatMessages('community_chat_messages', serializable);
+      if (userId != 'community_chat_messages') {
+        await HiveHelper().saveChatMessages(userId, serializable);
+      }
     } catch (e) {
       debugPrint("Error saving messages to cache: $e");
     }
@@ -84,6 +126,7 @@ class ChatProvider extends ChangeNotifier {
   Future<void> loadMessages() async {
     if (BackendService.token == null) {
       _isLoading = false;
+      await _loadMessagesFromCache();
       notifyListeners();
       return;
     }
@@ -147,6 +190,7 @@ class ChatProvider extends ChangeNotifier {
 
           fetchedMessages.add({
             "id": row['id'],
+            "sender_id": row['sender_id'],
             "isMe": isMe,
             "sender": senderName ?? "ব্যবহারকারী",
             "senderPhoto": senderData?['photo_url'] ?? senderData?['avatar_url'],
@@ -166,20 +210,73 @@ class ChatProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint("Error loading messages: $e");
+      if (_messages.isEmpty) {
+        await _loadMessagesFromCache();
+      }
     }
     _isLoading = false;
     notifyListeners();
   }
 
+
+  Future<void> blockUser(String userId) async {
+    _blockedUserIds.add(userId);
+    await HiveHelper().saveBlockedUserIds(_blockedUserIds);
+    notifyListeners();
+  }
+
+  Future<void> unblockUser(String userId) async {
+    _blockedUserIds.remove(userId);
+    await HiveHelper().saveBlockedUserIds(_blockedUserIds);
+    notifyListeners();
+  }
+
+  Future<void> reportContent({
+    dynamic messageId,
+    String? reportedUserId,
+    required String reason,
+  }) async {
+    if (BackendService.token == null) return;
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/chat/report'),
+            headers: BackendService.headers(),
+            body: jsonEncode({
+              'message_id': messageId,
+              'reported_user_id': reportedUserId,
+              'reason': reason,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 400) {
+        throw Exception("রিপোর্ট পাঠাতে সমস্যা হয়েছে (${response.statusCode})");
+      }
+    } catch (e) {
+      debugPrint("Error reporting content: $e");
+      rethrow;
+    }
+  }
+
   Future<void> sendMessage(String text, String userName,
       {String? imageUrl}) async {
-    final userId = BackendService.userId;
-    if (userId == null || BackendService.token == null) return;
+    var userId = BackendService.userId;
+    var token = BackendService.token;
+    if (userId == null || token == null) {
+      token = await HiveHelper().getSetting('auth_access_token');
+      userId = await HiveHelper().getSetting('auth_user_id');
+      if (token != null && userId != null) {
+        BackendService.setAuth(token, userId);
+      } else {
+        throw Exception("মেসেজ পাঠাতে অনুগ্রহ করে পুনরায় লগইন করুন");
+      }
+    }
 
     if (text.trim().isEmpty && imageUrl == null) return;
 
     try {
-      await http
+      final response = await http
           .post(
             Uri.parse('${BackendService.baseUrl}/api/chat/messages'),
             headers: BackendService.headers(),
@@ -190,6 +287,12 @@ class ChatProvider extends ChangeNotifier {
             }),
           )
           .timeout(const Duration(seconds: 10));
+
+      if (response.statusCode >= 400) {
+        final err = jsonDecode(response.body);
+        final detail = err is Map ? err['detail'] ?? response.body : response.body;
+        throw Exception("মেসেজ পাঠাতে ব্যর্থ: $detail");
+      }
 
       // Immediately reload messages
       await loadMessages();

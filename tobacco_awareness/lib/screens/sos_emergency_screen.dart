@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:http/http.dart' as http;
 import '../services/hive_helper.dart';
+import '../services/backend_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_utils.dart';
@@ -21,6 +23,23 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
     with TickerProviderStateMixin {
   late AnimationController _breathController;
   final AudioPlayer _audioPlayer = AudioPlayer();
+
+  Future<void> _logSosToBackend(String mode, {String? distraction}) async {
+    if (BackendService.token == null) return;
+    try {
+      await http.post(
+        Uri.parse('${BackendService.baseUrl}/api/profile/sos-log'),
+        headers: BackendService.headers(),
+        body: jsonEncode({
+          'selected_mode': mode,
+          'distraction_clicked': distraction,
+        }),
+      ).timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint("Error logging SOS: $e");
+    }
+  }
+
 
   Timer? _timer;
   Timer? _breathTimer;
@@ -88,6 +107,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
     final prefs = HiveHelper();
     await prefs.saveSetting('water_done_date', TimeUtils.todayBstDateString);
     setState(() => _waterDone = true);
+    _logSosToBackend('distraction', distraction: 'drink_water');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ পানি পান করা হয়েছে! শাবাশ!'), backgroundColor: Color(0xFF00C6A7)),
@@ -99,6 +119,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
     final prefs = HiveHelper();
     await prefs.saveSetting('walking_done_date', TimeUtils.todayBstDateString);
     setState(() => _walkingDone = true);
+    _logSosToBackend('distraction', distraction: 'walking');
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ হাঁটাহাঁটি সম্পূর্ণ! অসাধারণ!'), backgroundColor: Color(0xFF00C6A7)),
@@ -108,6 +129,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
 
   void _startWaitTimer() {
     setState(() { _mode = _Mode.waiting; _secondsRemaining = 300; });
+    _logSosToBackend('5_min_timer');
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_secondsRemaining > 0) {

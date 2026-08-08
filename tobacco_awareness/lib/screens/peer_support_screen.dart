@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/backend_service.dart';
 import '../providers/chat_provider.dart';
 import '../utils/error_utils.dart';
 
@@ -18,6 +21,7 @@ class PeerSupportScreen extends ConsumerStatefulWidget {
 class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final Set<String> _expandedBlockedMessages = {};
 
   @override
   void dispose() {
@@ -89,6 +93,297 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
     });
   }
 
+  void _showFullScreenImage(BuildContext context, String? imageUrl, String? localImagePath) {
+    if (imageUrl == null && localImagePath == null) return;
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: localImagePath != null
+                    ? Image.file(File(localImagePath))
+                    : Image.network(imageUrl!),
+              ),
+            ),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(ctx),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showUserProfileCard(BuildContext context, String? userId, String userName, String? userPhoto) async {
+    final chatData = ref.read(chatProvider);
+    final isBlocked = userId != null && chatData.blockedUserIds.contains(userId);
+    
+    Map<String, dynamic>? userDetails;
+    if (userId != null) {
+      try {
+        final res = await http.get(
+          Uri.parse('${BackendService.baseUrl}/api/chat/user-profile/$userId'),
+          headers: BackendService.headers(),
+        ).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          userDetails = jsonDecode(res.body);
+        }
+      } catch (e) {
+        debugPrint("Error fetching user details: $e");
+      }
+    }
+
+    final int streakDays = userDetails?['current_streak'] ?? 0;
+    final List<dynamic> rawBadges = userDetails?['badges'] ?? [];
+    final List<String> badges = rawBadges.map((e) => e.toString()).toList();
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    if (userPhoto != null || userDetails?['photo_url'] != null) {
+                      _showFullScreenImage(context, userDetails?['photo_url'] ?? userPhoto, null);
+                    }
+                  },
+                  child: CircleAvatar(
+                    radius: 40,
+                    backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                    backgroundImage: (userPhoto != null || userDetails?['photo_url'] != null)
+                        ? NetworkImage(userDetails?['photo_url'] ?? userPhoto!)
+                        : null,
+                    child: (userPhoto == null && userDetails?['photo_url'] == null)
+                        ? const Icon(Icons.person, size: 48, color: AppTheme.primaryGreen)
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  userName,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            "$streakDays দিন তামাকমুক্ত",
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (badges.isNotEmpty) ...[
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text("অর্জিত ব্যাজসমূহ:", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: badges.map((badge) {
+                      return Chip(
+                        avatar: const Icon(Icons.emoji_events_rounded, size: 16, color: Colors.amber),
+                        label: Text(badge, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600)),
+                        backgroundColor: Colors.amber.shade50,
+                        side: BorderSide(color: Colors.amber.shade200),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: userId == null ? null : () async {
+                          Navigator.pop(ctx);
+                          if (isBlocked) {
+                            await ref.read(chatProvider).unblockUser(userId);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("ইউজার আনব্লক করা হয়েছে")),
+                              );
+                            }
+                          } else {
+                            await ref.read(chatProvider).blockUser(userId);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("ইউজার ব্লক করা হয়েছে"), backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: isBlocked ? AppTheme.primaryGreen : Colors.red,
+                          side: BorderSide(color: isBlocked ? AppTheme.primaryGreen : Colors.red),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: Icon(isBlocked ? Icons.lock_open : Icons.block, size: 18),
+                        label: Text(isBlocked ? "আনব্লক" : "ব্লক"),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: userId == null ? null : () {
+                          Navigator.pop(ctx);
+                          _showReportReasonDialog(context, reportedUserId: userId);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.flag_rounded, size: 18),
+                        label: const Text("রিপোর্ট"),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showReportReasonDialog(BuildContext context, {dynamic messageId, String? reportedUserId}) {
+    String selectedReason = "গালিগালাজ বা অসৌজন্যমূলক ভাষা";
+    final customReasonController = TextEditingController();
+
+    final List<String> reasons = [
+      "গালিগালাজ বা অসৌজন্যমূলক ভাষা",
+      "আপত্তিকর বা খারাপ ছবি/কনটেন্ট",
+      "স্প্যাম বা বিভ্রান্তিকর তথ্য",
+      "অন্যান্য",
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.flag_rounded, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text("রিপোর্টের কারণ নির্বাচন করুন", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...reasons.map((r) {
+                      final isSelected = selectedReason == r;
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                          color: isSelected ? Colors.red : Colors.grey,
+                        ),
+                        title: Text(r, style: const TextStyle(fontSize: 14)),
+                        onTap: () {
+                          setDialogState(() => selectedReason = r);
+                        },
+                      );
+                    }),
+                    if (selectedReason == "অন্যান্য")
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: TextField(
+                          controller: customReasonController,
+                          decoration: const InputDecoration(
+                            hintText: "বিস্তারিত কারণ লিখুন...",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("বাতিল", style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final finalReason = selectedReason == "অন্যান্য" && customReasonController.text.trim().isNotEmpty
+                        ? customReasonController.text.trim()
+                        : selectedReason;
+                    Navigator.pop(ctx);
+                    try {
+                      await ref.read(chatProvider).reportContent(
+                            messageId: messageId,
+                            reportedUserId: reportedUserId,
+                            reason: finalReason,
+                          );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("রিপোর্ট সফলভাবে জমা দেওয়া হয়েছে। আমাদের টিম এটি পর্যালোচনা করবে।"),
+                            backgroundColor: AppTheme.primaryGreen,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("রিপোর্ট পাঠাতে ব্যর্থ: $e")),
+                        );
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child: const Text("রিপোর্ট পাঠান", style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final chatData = ref.watch(chatProvider);
@@ -130,10 +425,10 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                     ],
                   ),
                   content: const Text(
-                    "১. চ্যাট গ্রুপে অপরের প্রতি শ্রদ্ধাশীল থাকুন।\n\n"
-                    "২. কোনো গালিগালাজ, অশালীন বক্তব্য বা বিজ্ঞাপনী লিংক পোস্ট করা সম্পূর্ণ নিষিদ্ধ।\n\n"
-                    "৩. অশালীন কন্টেন্ট বা অনাকাঙ্ক্ষিত ব্যবহারকারী রিপোর্ট করতে ইমেইল করুন: ariful010a@gmail.com\n\n"
-                    "৪. নিয়ম অমান্যকারী ব্যবহারকারীকে ব্যাকএন্ড থেকে স্থায়ীভাবে ব্লক করা হবে।",
+                    "১. কম্যুনিটি চ্যাটে সবাই সবার প্রতি শ্রদ্ধাশীল থাকুন।\n\n"
+                    "২. কোনো অশালীন বক্তব্য, গালিগালাজ বা বিজ্ঞাপনী লিংক পোস্ট করা সম্পূর্ণ নিষিদ্ধ।\n\n"
+                    "৩. কোনো অশালীন মেসেজ দেখলে তাতে চেপে ধরে (Long-press) সহজেই 'রিপোর্ট' অপশন ব্যবহার করতে পারেন।\n\n"
+                    "৪. কম্যুনিটির পরিবেশ রক্ষায় নিয়ম অমান্যকারী মেসেজ মুছে ফেলা হবে এবং প্রয়োজনীয় ব্যবস্থা নেওয়া হবে।",
                     style: TextStyle(fontSize: 13, height: 1.4),
                   ),
                   actions: [
@@ -185,6 +480,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                     final msg = messages[index];
                     String text = msg["text"] ?? "";
                     String sender = msg["sender"] ?? "ব্যবহারকারী";
+                    String? senderId = msg["sender_id"]?.toString();
                     String? senderPhoto = msg["senderPhoto"];
                     String? imageUrl = msg["imageUrl"];
                     String? localImagePath = msg["localImagePath"];
@@ -204,10 +500,48 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                     if ((imageUrl != null || localImagePath != null) && text.trim().isEmpty) {
                       text = "📷 একটি ছবি শেয়ার করেছেন";
                     }
+
+                    final isBlocked = senderId != null && chatData.blockedUserIds.contains(senderId);
+                    final isExpanded = _expandedBlockedMessages.contains(msg["id"].toString());
+
+                    if (isBlocked && !isExpanded) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Center(
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _expandedBlockedMessages.add(msg["id"].toString());
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.grey.shade400),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.block, size: 16, color: Colors.grey),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    "🚫 ১টি ব্লক করা বার্তা (দেখতে ট্যাপ করুন)",
+                                    style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
                     
                     return _buildChatBubble(
                       context,
                       msg["id"],
+                      senderId,
                       text,
                       sender,
                       senderPhoto,
@@ -288,6 +622,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
   Widget _buildChatBubble(
     BuildContext context, 
     dynamic messageId,
+    String? senderId,
     String text, 
     String sender, 
     String? senderPhoto,
@@ -320,17 +655,20 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isMe)
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: isCounselor ? AppTheme.accentYellow : Colors.grey.shade300,
-              backgroundImage: senderPhoto != null ? NetworkImage(senderPhoto) : null,
-              child: senderPhoto == null
-                  ? Icon(
-                      isCounselor ? Icons.verified_user : Icons.person,
-                      size: 20,
-                      color: isCounselor ? Colors.white : Colors.grey.shade600,
-                    )
-                  : null,
+            GestureDetector(
+              onTap: () => _showUserProfileCard(context, senderId, sender, senderPhoto),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: isCounselor ? AppTheme.accentYellow : Colors.grey.shade300,
+                backgroundImage: senderPhoto != null ? NetworkImage(senderPhoto) : null,
+                child: senderPhoto == null
+                    ? Icon(
+                        isCounselor ? Icons.verified_user : Icons.person,
+                        size: 20,
+                        color: isCounselor ? Colors.white : Colors.grey.shade600,
+                      )
+                    : null,
+              ),
             ),
           if (!isMe) const SizedBox(width: 6),
           
@@ -338,7 +676,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
             child: GestureDetector(
               onLongPress: () {
                 HapticFeedback.mediumImpact();
-                _showMessageOptions(context, messageId, text, isMe, imageUrl, createdAt);
+                _showMessageOptions(context, messageId, senderId, text, isMe, imageUrl, createdAt);
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -378,32 +716,35 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                           ? Stack(
                               alignment: Alignment.bottomRight,
                               children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: localImagePath != null
-                                    ? Image.file(
-                                        File(localImagePath),
-                                        height: 250,
-                                        width: 250,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.network(
-                                        imageUrl ?? '',
-                                        height: 250,
-                                        width: 250,
-                                        fit: BoxFit.cover,
-                                        loadingBuilder: (context, child, loadingProgress) {
-                                          if (loadingProgress == null) return child;
-                                          return Container(
-                                            height: 250,
-                                            width: 250,
-                                            color: Colors.grey.shade200,
-                                            child: const Center(
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                GestureDetector(
+                                  onTap: () => _showFullScreenImage(context, imageUrl, localImagePath),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: localImagePath != null
+                                      ? Image.file(
+                                          File(localImagePath),
+                                          height: 250,
+                                          width: 250,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Image.network(
+                                          imageUrl ?? '',
+                                          height: 250,
+                                          width: 250,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, loadingProgress) {
+                                            if (loadingProgress == null) return child;
+                                            return Container(
+                                              height: 250,
+                                              width: 250,
+                                              color: Colors.grey.shade200,
+                                              child: const Center(
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                  ),
                                 ),
                                 // Time & done icon overlay on bottom right
                                 Positioned(
@@ -452,12 +793,15 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                 if (!isMe)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      sender,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: isCounselor ? AppTheme.accentOrange : const Color(0xFF075E54),
-                                        fontWeight: FontWeight.bold,
+                                    child: GestureDetector(
+                                      onTap: () => _showUserProfileCard(context, senderId, sender, senderPhoto),
+                                      child: Text(
+                                        sender,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: isCounselor ? AppTheme.accentOrange : const Color(0xFF075E54),
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -465,32 +809,35 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                 if (imageUrl != null || localImagePath != null)
                                   Padding(
                                     padding: const EdgeInsets.only(bottom: 6, top: 4),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: localImagePath != null
-                                        ? Image.file(
-                                            File(localImagePath),
-                                            height: 200,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Image.network(
-                                            imageUrl ?? '',
-                                            height: 200,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                            loadingBuilder: (context, child, loadingProgress) {
-                                              if (loadingProgress == null) return child;
-                                              return Container(
-                                                height: 150,
-                                                width: double.infinity,
-                                                color: Colors.grey.shade200,
-                                                child: const Center(
-                                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                                ),
-                                              );
-                                            },
-                                          ),
+                                    child: GestureDetector(
+                                      onTap: () => _showFullScreenImage(context, imageUrl, localImagePath),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: localImagePath != null
+                                          ? Image.file(
+                                              File(localImagePath),
+                                              height: 200,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Image.network(
+                                              imageUrl ?? '',
+                                              height: 200,
+                                              width: double.infinity,
+                                              fit: BoxFit.cover,
+                                              loadingBuilder: (context, child, loadingProgress) {
+                                                if (loadingProgress == null) return child;
+                                                return Container(
+                                                  height: 150,
+                                                  width: double.infinity,
+                                                  color: Colors.grey.shade200,
+                                                  child: const Center(
+                                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                      ),
                                     ),
                                   ),
               
@@ -553,6 +900,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
   void _showMessageOptions(
     BuildContext context, 
     dynamic messageId, 
+    String? senderId,
     String text, 
     bool isMe, 
     String? imageUrl,
@@ -600,6 +948,15 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("মেসেজ কপি করা হয়েছে!")),
                     );
+                  },
+                ),
+              if (!isMe)
+                ListTile(
+                  leading: const Icon(Icons.flag_rounded, color: Colors.orange),
+                  title: const Text("রিপোর্ট করুন (Report Message)", style: TextStyle(fontWeight: FontWeight.w600, color: Colors.orange)),
+                  onTap: () {
+                    Navigator.pop(modalCtx);
+                    _showReportReasonDialog(context, messageId: messageId, reportedUserId: senderId);
                   },
                 ),
               if (isMe && imageUrl == null)
