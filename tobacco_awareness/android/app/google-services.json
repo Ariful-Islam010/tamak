@@ -22,6 +22,22 @@
           }
         },
         {
+          "client_id": "82683276860-a1609oug9l627nh3q10g0k54b26h3bs0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ariful010a.tobacco_awareness",
+            "certificate_hash": "7c58840aafc7fe772f214f406c0d010a0c283e86"
+          }
+        },
+        {
+          "client_id": "82683276860-k17ftk2ecm0s9c1jstom1q3u44a5ecb8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ariful010a.tobacco_awareness",
+            "certificate_hash": "9ea9ed882118906d1c91788545058d24c24eda34"
+          }
+        },
+        {
           "client_id": "82683276860-ohnod8t0p086j4tp86qic15tgkkoqro8.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
