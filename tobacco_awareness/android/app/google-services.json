@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "82683276860-ohnod8t0p086j4tp86qic15tgkkoqro8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ariful010a.tobacco_awareness",
+            "certificate_hash": "7f589b43ae88a5b521ae018e2dd30e927348c858"
+          }
+        },
+        {
           "client_id": "82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com",
           "client_type": 3
         }
