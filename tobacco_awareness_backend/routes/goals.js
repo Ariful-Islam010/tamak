@@ -47,7 +47,7 @@ router.post('/', requireAuth, async (req, res) => {
         [userId, title, target_amount, current_amount || 0, is_completed || false, icon_name || 'star']
       );
     }
-    return res.json(result.rows);
+    return res.json(result.rows[0]);
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

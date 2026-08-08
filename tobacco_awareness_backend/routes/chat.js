@@ -140,25 +140,16 @@ router.post('/report', requireAuth, async (req, res) => {
   }
 });
 
-// DELETE /api/chat/messages/:id
+// DELETE /api/chat/messages/:id (User can only delete their own message)
 router.delete('/messages/:id', requireAuth, async (req, res) => {
   try {
     const messageId = req.params.id;
     const userId = req.user.sub;
     
-    // First, try to delete if user is the sender
-    let result = await query(
+    const result = await query(
       'DELETE FROM peer_support_messages WHERE id = $1 AND sender_id = $2 RETURNING *',
       [messageId, userId]
     );
-    
-    if (result.rowCount === 0) {
-      // Fallback if not sender (admin/moderation deletion)
-      result = await query(
-        'DELETE FROM peer_support_messages WHERE id = $1 RETURNING *',
-        [messageId]
-      );
-    }
     
     if (result.rowCount > 0) {
       if (req.io) {
@@ -167,47 +158,33 @@ router.delete('/messages/:id', requireAuth, async (req, res) => {
       return res.json({ status: 'success' });
     }
 
-    return res.status(400).json({ detail: 'Message deletion failed' });
+    return res.status(403).json({ detail: 'Message deletion failed or unauthorized' });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }
 });
 
-// PUT /api/chat/messages/:id
+// PUT /api/chat/messages/:id (User can only edit their own message)
 router.put('/messages/:id', requireAuth, async (req, res) => {
   try {
     const messageId = req.params.id;
     const userId = req.user.sub;
-    const body = req.body;
+    const { content } = req.body;
     
-    if (Object.keys(body).length === 0) {
-      return res.json([]);
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ detail: 'Content string is required' });
     }
     
-    const setClause = Object.keys(body).map((key, i) => `${key} = $${i + 1}`).join(', ');
-    const values = Object.values(body);
-    
-    // First, try to update if user is the sender
-    let result = await query(
-      `UPDATE peer_support_messages SET ${setClause} WHERE id = $${values.length + 1} AND sender_id = $${values.length + 2} RETURNING *`,
-      [...values, messageId, userId]
+    const result = await query(
+      'UPDATE peer_support_messages SET content = $1 WHERE id = $2 AND sender_id = $3 RETURNING *',
+      [content.trim(), messageId, userId]
     );
     
     if (result.rowCount > 0) {
-      return res.json(result.rows);
+      return res.json(result.rows[0]);
     }
 
-    // Fallback if not sender
-    let resultSr = await query(
-      `UPDATE peer_support_messages SET ${setClause} WHERE id = $${values.length + 1} RETURNING *`,
-      [...values, messageId]
-    );
-    
-    if (resultSr.rowCount > 0) {
-      return res.json(resultSr.rows);
-    }
-
-    return res.status(400).json({ detail: 'Message edit failed' });
+    return res.status(403).json({ detail: 'Message edit failed or unauthorized' });
   } catch (error) {
     return res.status(500).json({ detail: error.message });
   }

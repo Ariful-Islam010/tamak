@@ -330,15 +330,24 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
                                       final messenger = ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
                                       final noteText = _reflectionController.text.trim();
-                                      await ref.read(checkInProvider).submitCheckIn(
-                                        note: noteText.isNotEmpty ? noteText : null,
-                                      );
-                                      ref.read(gamificationProvider).loadGamificationData();
-                                      if (mounted) {
-                                        messenger.showSnackBar(const SnackBar(
-                                            content: Text(
-                                                "চেক-ইন সম্পন্ন হয়েছে! ✅")));
-                                        navigator.pop();
+                                      try {
+                                        await ref.read(checkInProvider).submitCheckIn(
+                                          note: noteText.isNotEmpty ? noteText : null,
+                                        );
+                                        ref.read(gamificationProvider).loadGamificationData();
+                                        if (mounted) {
+                                          messenger.showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  "চেক-ইন সম্পন্ন হয়েছে! ✅")));
+                                          navigator.pop();
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          final errStr = e.toString().replaceAll("Exception: ", "");
+                                          messenger.showSnackBar(SnackBar(
+                                              backgroundColor: Colors.red,
+                                              content: Text("চেক-ইন ব্যর্থ হয়েছে: $errStr")));
+                                        }
                                       }
                                     },
                               style: ElevatedButton.styleFrom(

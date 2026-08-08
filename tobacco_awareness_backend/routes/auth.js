@@ -21,6 +21,9 @@ router.post('/signup', async (req, res) => {
     );
 
     const user = result.rows[0];
+    await query('INSERT INTO user_profiles (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [user.id]);
+    await query('INSERT INTO gamification_progress (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [user.id]);
+
     const token = generateToken(user);
 
     return res.json({ user, access_token: token });
@@ -44,6 +47,9 @@ router.post('/signin', async (req, res) => {
     if (!isValid) {
       return res.status(400).json({ detail: 'Invalid credentials' });
     }
+
+    await query('INSERT INTO user_profiles (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [user.id]);
+    await query('INSERT INTO gamification_progress (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [user.id]);
 
     const token = generateToken(user);
     return res.json({ user: { id: user.id, email: user.email }, access_token: token });
@@ -90,6 +96,9 @@ router.post('/signin-google', async (req, res) => {
         await query('UPDATE users SET google_id = $1 WHERE id = $2', [google_id, user.id]);
       }
     }
+
+    await query('INSERT INTO user_profiles (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [user.id]);
+    await query('INSERT INTO gamification_progress (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING', [user.id]);
 
     const token = generateToken(user);
     return res.json({ user: { id: user.id, email: user.email }, access_token: token });

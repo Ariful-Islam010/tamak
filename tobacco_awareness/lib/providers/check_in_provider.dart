@@ -116,54 +116,54 @@ class CheckInProvider extends ChangeNotifier {
   }
 
   Future<void> submitCheckIn({String? note}) async {
-    try {
-      final userId = BackendService.userId ?? 'guest';
-      final today = TimeUtils.todayBstDateString;
+    final userId = BackendService.userId ?? 'guest';
+    final today = TimeUtils.todayBstDateString;
 
-      // Save locally to SQLite first for speed
-      await HiveHelper().saveCheckIn(
-        userId,
-        today,
-        _selectedMood ?? 'Normal',
-        _cravingLevel,
-        _usedTobacco ?? false,
-      );
+    if (userId != 'guest' && BackendService.token != null) {
+      final response = await http
+          .post(
+            Uri.parse('${BackendService.baseUrl}/api/checkins'),
+            headers: BackendService.headers(),
+            body: jsonEncode({
+              'user_id': userId,
+              'check_in_date': today,
+              'craving_level': _cravingLevel.toInt(),
+              'mood': _selectedMood ?? 'Normal',
+              'used_tobacco': _usedTobacco ?? false,
+              'note': note,
+            }),
+          )
+          .timeout(const Duration(seconds: 15));
 
-      _hasCheckedInToday = true;
-      notifyListeners();
-
-      final quitDateStr =
-          await HiveHelper().getSetting('user_quit_date_$userId');
-      final quitDate =
-          quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
-      await NotificationService().scheduleEveningCheckIn(
-        quitDate: quitDate,
-        forceTomorrow: true,
-      );
-
-      if (userId != 'guest' && BackendService.token != null) {
-        try {
-          await http
-              .post(
-                Uri.parse('${BackendService.baseUrl}/api/checkins'),
-                headers: BackendService.headers(),
-                body: jsonEncode({
-                  'user_id': userId,
-                  'check_in_date': today,
-                  'craving_level': _cravingLevel.toInt(),
-                  'mood': _selectedMood ?? 'Normal',
-                  'used_tobacco': _usedTobacco ?? false,
-                  'note': note,
-                }),
-              )
-              .timeout(const Duration(seconds: 10));
-        } catch (e) {
-          debugPrint("Error syncing check-in to backend: $e");
-        }
+      if (response.statusCode == 401 || response.statusCode == 404) {
+        debugPrint("Check-in failed with 401/404. User session invalid or deleted.");
+        throw Exception("অ্যাকাউন্টটি আর সক্রিয় নেই। অনুগ্রহ করে আবার লগইন করুন।");
+      } else if (response.statusCode != 200) {
+        debugPrint("Check-in failed with status ${response.statusCode}: ${response.body}");
+        throw Exception("সার্ভারে চেক-ইন জমা দিতে ব্যর্থ হয়েছে (${response.statusCode})");
       }
-    } catch (e) {
-      debugPrint("Error saving check-in status: $e");
     }
+
+    // Save locally to Hive after server confirmation (or for guest)
+    await HiveHelper().saveCheckIn(
+      userId,
+      today,
+      _selectedMood ?? 'Normal',
+      _cravingLevel,
+      _usedTobacco ?? false,
+    );
+
+    _hasCheckedInToday = true;
+    notifyListeners();
+
+    final quitDateStr =
+        await HiveHelper().getSetting('user_quit_date_$userId');
+    final quitDate =
+        quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
+    await NotificationService().scheduleEveningCheckIn(
+      quitDate: quitDate,
+      forceTomorrow: true,
+    );
   }
 
   void clearDraft() {
