@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../services/backend_service.dart';
 import '../services/hive_helper.dart';
+import '../services/sync_service.dart';
 import '../utils/time_utils.dart';
 
 final moneySaverProvider = ChangeNotifierProvider<MoneySaverProvider>((ref) => MoneySaverProvider());
@@ -206,6 +209,18 @@ class MoneySaverProvider extends ChangeNotifier {
               }),
             ).timeout(const Duration(seconds: 5));
           }
+        } on SocketException catch (_) {
+          debugPrint("No internet. Queueing savings log for offline sync.");
+          await SyncService().queueSavings(
+            userId: userId,
+            amount: amount.toDouble(),
+          );
+        } on TimeoutException catch (_) {
+          debugPrint("Connection timed out. Queueing savings log for offline sync.");
+          await SyncService().queueSavings(
+            userId: userId,
+            amount: amount.toDouble(),
+          );
         } catch (e) {
           debugPrint("Error syncing savings to backend: $e");
         }

@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
+import '../services/sync_service.dart';
 import '../utils/time_utils.dart';
 
 final checkInProvider = ChangeNotifierProvider<CheckInProvider>((ref) => CheckInProvider());
@@ -120,27 +123,49 @@ class CheckInProvider extends ChangeNotifier {
     final today = TimeUtils.todayBstDateString;
 
     if (userId != 'guest' && BackendService.token != null) {
-      final response = await http
-          .post(
-            Uri.parse('${BackendService.baseUrl}/api/checkins'),
-            headers: BackendService.headers(),
-            body: jsonEncode({
-              'user_id': userId,
-              'check_in_date': today,
-              'craving_level': _cravingLevel.toInt(),
-              'mood': _selectedMood ?? 'Normal',
-              'used_tobacco': _usedTobacco ?? false,
-              'note': note,
-            }),
-          )
-          .timeout(const Duration(seconds: 15));
+      try {
+        final response = await http
+            .post(
+              Uri.parse('${BackendService.baseUrl}/api/checkins'),
+              headers: BackendService.headers(),
+              body: jsonEncode({
+                'user_id': userId,
+                'check_in_date': today,
+                'craving_level': _cravingLevel.toInt(),
+                'mood': _selectedMood ?? 'Normal',
+                'used_tobacco': _usedTobacco ?? false,
+                'note': note,
+              }),
+            )
+            .timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 401 || response.statusCode == 404) {
-        debugPrint("Check-in failed with 401/404. User session invalid or deleted.");
-        throw Exception("অ্যাকাউন্টটি আর সক্রিয় নেই। অনুগ্রহ করে আবার লগইন করুন।");
-      } else if (response.statusCode != 200) {
-        debugPrint("Check-in failed with status ${response.statusCode}: ${response.body}");
-        throw Exception("সার্ভারে চেক-ইন জমা দিতে ব্যর্থ হয়েছে (${response.statusCode})");
+        if (response.statusCode == 401 || response.statusCode == 404) {
+          debugPrint("Check-in failed with 401/404. User session invalid or deleted.");
+          throw Exception("অ্যাকাউন্টটি আর সক্রিয় নেই। অনুগ্রহ করে আবার লগইন করুন।");
+        } else if (response.statusCode != 200) {
+          debugPrint("Check-in failed with status ${response.statusCode}: ${response.body}");
+          throw Exception("সার্ভারে চেক-ইন জমা দিতে ব্যর্থ হয়েছে (${response.statusCode})");
+        }
+      } on SocketException catch (_) {
+        debugPrint("No internet. Queueing check-in for offline sync.");
+        await SyncService().queueCheckIn(
+          userId: userId,
+          checkInDate: today,
+          cravingLevel: _cravingLevel.toInt(),
+          mood: _selectedMood ?? 'Normal',
+          usedTobacco: _usedTobacco ?? false,
+          note: note,
+        );
+      } on TimeoutException catch (_) {
+        debugPrint("Connection timed out. Queueing check-in for offline sync.");
+        await SyncService().queueCheckIn(
+          userId: userId,
+          checkInDate: today,
+          cravingLevel: _cravingLevel.toInt(),
+          mood: _selectedMood ?? 'Normal',
+          usedTobacco: _usedTobacco ?? false,
+          note: note,
+        );
       }
     }
 

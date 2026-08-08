@@ -11,11 +11,16 @@ import 'firebase_options.dart';
 
 
 
+import 'services/sync_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Hive
   await HiveHelper().init();
+
+  // Initialize Offline Auto-Sync Service
+  await SyncService().init();
 
   // Load environment variables (still needed for any remaining frontend env vars)
   await dotenv.load(fileName: ".env");

@@ -126,3 +126,12 @@ CREATE TABLE IF NOT EXISTS user_reports (
     status TEXT DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 12. High Performance B-Tree Indexes
+CREATE INDEX IF NOT EXISTS idx_daily_checkins_user_date ON daily_checkins (user_id, check_in_date);
+CREATE INDEX IF NOT EXISTS idx_peer_support_messages_created ON peer_support_messages (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_savings_logs_user ON savings_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_money_saver_goals_user ON money_saver_goals (user_id);
+CREATE INDEX IF NOT EXISTS idx_sos_logs_user ON sos_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_reports_created ON user_reports (created_at DESC);
+
