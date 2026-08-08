@@ -115,3 +115,14 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER on_user_created
 AFTER INSERT ON users
 FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- 11. User Reports Table (UGC Moderation & Content Reporting)
+CREATE TABLE IF NOT EXISTS user_reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    reporter_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    reported_user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+    message_id UUID REFERENCES peer_support_messages(id) ON DELETE SET NULL,
+    reason TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

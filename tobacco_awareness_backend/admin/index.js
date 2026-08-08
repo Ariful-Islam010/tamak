@@ -446,8 +446,10 @@ router.get('/api/analytics', requireAdmin, async (req, res) => {
 // ── DB Stats + Full Export ────────────────────────────────────────────────────
 router.get('/api/db-stats', requireAdmin, async (req, res) => {
   try {
-    const tables = ['users','user_profiles','daily_checkins','peer_support_messages','money_saver_goals','savings_logs','gamification_progress','sos_logs','media_files'];
-    const counts = await Promise.all(tables.map(t => query(`SELECT COUNT(*) as count FROM ${t}`).then(r => ({ table: t, count: parseInt(r.rows[0].count) }))));
+    const tables = ['users','user_profiles','daily_checkins','peer_support_messages','money_saver_goals','savings_logs','gamification_progress','sos_logs','media_files','user_reports'];
+    const counts = await Promise.all(tables.map(t => 
+      query(`SELECT COUNT(*) as count FROM ${t}`).then(r => ({ table: t, count: parseInt(r.rows[0].count) })).catch(() => ({ table: t, count: 0 }))
+    ));
     res.json({ tables: counts });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -463,12 +465,17 @@ router.get('/api/export-all/csv', requireAdmin, async (req, res) => {
       sos_logs: `SELECT s.id, u.email, up.display_name, s.selected_mode, s.distraction_clicked, s.trigger_time FROM sos_logs s LEFT JOIN user_profiles up ON s.user_id = up.id LEFT JOIN users u ON s.user_id = u.id`,
       peer_support_messages: `SELECT p.id, u.email, up.display_name, p.content, p.created_at FROM peer_support_messages p LEFT JOIN user_profiles up ON p.sender_id = up.id LEFT JOIN users u ON p.sender_id = u.id ORDER BY p.created_at DESC`,
       media_files: `SELECT mf.id, u.email, mf.file_name, mf.file_size_bytes, mf.mime_type, mf.url, mf.created_at FROM media_files mf LEFT JOIN users u ON mf.user_id = u.id`,
+      user_reports: `SELECT ur.id, ur.reason, ur.status, ur.created_at FROM user_reports ur ORDER BY ur.created_at DESC`,
     };
     let output = '';
     for (const [name, sql] of Object.entries(tables)) {
-      const result = await query(sql);
-      output += `\n\n##### TABLE: ${name.toUpperCase()} (${result.rowCount} rows) #####\n`;
-      output += toCSV(result.rows);
+      try {
+        const result = await query(sql);
+        output += `\n\n##### TABLE: ${name.toUpperCase()} (${result.rowCount} rows) #####\n`;
+        output += toCSV(result.rows);
+      } catch (e) {
+        output += `\n\n##### TABLE: ${name.toUpperCase()} (0 rows - table not found) #####\n`;
+      }
     }
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="tamak_full_export_${new Date().toISOString().slice(0,10)}.csv"`);
@@ -476,4 +483,58 @@ router.get('/api/export-all/csv', requireAdmin, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── UGC Moderation Reports ───────────────────────────────────────────────────
+router.get('/api/reports', requireAdmin, async (req, res) => {
+  try {
+    // Ensure table exists
+    await query(`
+      CREATE TABLE IF NOT EXISTS user_reports (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        reporter_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+        reported_user_id UUID REFERENCES user_profiles(id) ON DELETE CASCADE,
+        message_id UUID REFERENCES peer_support_messages(id) ON DELETE SET NULL,
+        reason TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `).catch(() => {});
+
+    const result = await query(`
+      SELECT ur.id, ur.reporter_id, ur.reported_user_id, ur.message_id, ur.reason, ur.status, ur.created_at,
+             COALESCE(u1.display_name, usr1.email, 'Anonymous') as reporter_name,
+             COALESCE(u2.display_name, usr2.email, 'Unknown') as reported_name,
+             p.content as message_content, p.image_url as message_image
+      FROM user_reports ur
+      LEFT JOIN user_profiles u1 ON ur.reporter_id = u1.id
+      LEFT JOIN users usr1 ON ur.reporter_id = usr1.id
+      LEFT JOIN user_profiles u2 ON ur.reported_user_id = u2.id
+      LEFT JOIN users usr2 ON ur.reported_user_id = usr2.id
+      LEFT JOIN peer_support_messages p ON ur.message_id = p.id
+      ORDER BY ur.created_at DESC
+    `);
+    res.json({ reports: result.rows });
+  } catch (err) { 
+    console.error('Error fetching reports:', err);
+    res.status(500).json({ error: err.message, reports: [] }); 
+  }
+});
+
+router.post('/api/reports/:id/action', requireAdmin, async (req, res) => {
+  try {
+    const reportId = req.params.id;
+    const { action, message_id } = req.body;
+
+    if (action === 'delete_message' && message_id) {
+      await query('DELETE FROM peer_support_messages WHERE id = $1', [message_id]);
+      if (req.io) {
+        req.io.emit('delete_message', { id: message_id });
+      }
+    }
+
+    await query("UPDATE user_reports SET status = $1 WHERE id = $2", [action, reportId]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 module.exports = router;
+

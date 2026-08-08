@@ -190,6 +190,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <a onclick="go('savings')" id="nav-savings"><span class="ni">💰</span> Savings</a>
       <a onclick="go('gamification')" id="nav-gamification"><span class="ni">🏆</span> Gamification</a>
       <a onclick="go('chat')" id="nav-chat"><span class="ni">💬</span> Chat</a>
+      <a onclick="go('reports')" id="nav-reports"><span class="ni">🚩</span> Reports<span class="nb" id="rep-badge" style="display:none">0</span></a>
       <a onclick="go('storage')" id="nav-storage"><span class="ni">📁</span> Storage</a>
       <a onclick="go('sos')" id="nav-sos"><span class="ni">🆘</span> SOS Logs<span class="nb" id="sos-badge" style="display:none">0</span></a>
       <div class="nav-sep">System</div>
@@ -326,6 +327,17 @@ tr:hover td { background: rgba(255,255,255,0.02); }
       <div id="sos-wrap"><div class="ld"><span class="sp2"></span></div></div>
     </div>
 
+    <!-- REPORTS -->
+    <div class="pg" id="pg-reports">
+      <div class="ph"><div><h1>UGC Content Reports</h1><p>User reported chat messages & moderation queue</p></div>
+        <button class="btn bex" onclick="loadReports()">↻ Refresh Reports</button>
+      </div>
+      <div class="tc">
+        <div class="th"><h3>Moderation Queue <span id="rep-c" style="color:var(--mt);font-weight:400;font-size:12px"></span></h3></div>
+        <div class="tw" id="reports-wrap"><div class="ld"><span class="sp2"></span></div></div>
+      </div>
+    </div>
+
     <!-- SETTINGS -->
     <div class="pg" id="pg-settings">
       <div class="ph"><div><h1>System Settings</h1><p>Database statistics & configuration</p></div></div>
@@ -384,7 +396,7 @@ function go(name){
   document.querySelectorAll('nav a').forEach(a=>a.classList.remove('ac'));
   document.getElementById('pg-'+name).classList.add('ac');
   document.getElementById('nav-'+name).classList.add('ac');
-  const fns={overview:loadOverview,analytics:loadAnalytics,users:loadUsers,checkins:loadCheckins,goals:loadGoals,savings:loadSavings,gamification:loadGamification,chat:loadMessages,storage:loadFiles,sos:loadSOS,settings:loadDbStats};
+  const fns={overview:loadOverview,analytics:loadAnalytics,users:loadUsers,checkins:loadCheckins,goals:loadGoals,savings:loadSavings,gamification:loadGamification,chat:loadMessages,reports:loadReports,storage:loadFiles,sos:loadSOS,settings:loadDbStats};
   if(fns[name]) fns[name]();
 }
 
@@ -683,6 +695,46 @@ async function loadSOS(){
     <td><span class="bdg bo">${s.distraction_clicked||'—'}</span></td>
     <td style="font-size:12px;color:var(--mt)">${new Date(s.trigger_time).toLocaleString()}</td>
   </tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ── REPORTS ───────────────────────────────────────────────────────────────────
+async function loadReports(){
+  const w=document.getElementById('reports-wrap');w.innerHTML='<div class="ld"><span class="sp2"></span></div>';
+  const d=await apiFetch('/admin/api/reports');if(!d) return;
+  const list = d.reports || [];
+  document.getElementById('rep-c').textContent=`(${list.length})`;
+  const pendingCount = list.filter(r=>r.status==='pending').length;
+  const badge = document.getElementById('rep-badge');
+  if(badge){
+    if(pendingCount > 0){ badge.textContent=pendingCount; badge.style.display='inline-block'; } else { badge.style.display='none'; }
+  }
+  if(!list.length){w.innerHTML='<div class="cc" style="text-align:center;padding:48px"><div style="font-size:48px;margin-bottom:14px">✅</div><div style="font-size:18px;font-weight:600;margin-bottom:6px">No Reports</div><div style="color:var(--mt);font-size:13px">All community chat messages are clean!</div></div>';return;}
+  w.innerHTML=`<table><thead><tr><th>Reporter</th><th>Reported User</th><th>Message Content</th><th>Reason</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>
+  ${list.map(r=>`<tr>
+    <td><span class="ui"><span class="nm">${r.reporter_name||'Anonymous'}</span></span></td>
+    <td><span class="ui"><span class="nm" style="color:var(--red)">${r.reported_name||'Unknown'}</span></span></td>
+    <td style="font-size:12px;max-width:240px">${r.message_image?`<img src="${r.message_image}" style="max-width:80px;border-radius:4px;display:block;margin-bottom:4px"/>`:''}${r.message_content||'<em>[image or deleted]</em>'}</td>
+    <td><span class="bdg bo">${r.reason||'Violation'}</span></td>
+    <td><span class="bdg ${r.status==='pending'?'br':r.status==='delete_message'?'bd':'bg'}">${(r.status||'pending').toUpperCase()}</span></td>
+    <td style="font-size:12px;color:var(--mt)">${new Date(r.created_at).toLocaleString()}</td>
+    <td style="display:flex;gap:6px">
+      ${r.status==='pending'?`
+        ${r.message_id?`<button class="btn bd" style="padding:4px 8px;font-size:11px" onclick="takeReportAction('${r.id}','delete_message','${r.message_id}')">🗑 Delete Message</button>`:''}
+        <button class="btn bi" style="padding:4px 8px;font-size:11px" onclick="takeReportAction('${r.id}','dismiss',null)">✓ Dismiss</button>
+      `:'<span style="font-size:11px;color:var(--mt)">Completed</span>'}
+    </td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+async function takeReportAction(id, action, messageId){
+  if(!confirm(`Perform "${action}" on this report?`)) return;
+  const r = await fetch(`${BASE}/admin/api/reports/${id}/action`, {
+    method: 'POST',
+    headers: ah(),
+    body: JSON.stringify({ action, message_id: messageId })
+  });
+  if(r.ok){ toast('Report updated successfully', 'success'); loadReports(); }
+  else toast('Failed to update report', 'error');
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────

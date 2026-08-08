@@ -65,4 +65,44 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/profile/sos-log
+router.post('/sos-log', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { selected_mode, distraction_clicked } = req.body;
+    
+    const result = await query(
+      `INSERT INTO sos_logs (user_id, selected_mode, distraction_clicked)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [userId, selected_mode || 'breathing', distraction_clicked || null]
+    );
+
+    return res.json(result.rows[0]);
+  } catch (error) {
+    return res.status(500).json({ detail: error.message });
+  }
+});
+
+// DELETE /api/profile/delete-account
+router.delete('/delete-account', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    
+    // CASCADE delete user account and all user data
+    const result = await query(
+      'DELETE FROM users WHERE id = $1 RETURNING *',
+      [userId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ detail: 'User not found' });
+    }
+
+    return res.json({ status: 'success', message: 'Account and associated data deleted successfully' });
+  } catch (error) {
+    return res.status(500).json({ detail: error.message });
+  }
+});
+
 module.exports = router;
+
