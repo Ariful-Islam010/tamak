@@ -56,8 +56,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '82683276860',
     projectId: 'tamak-506bb',
     storageBucket: 'tamak-506bb.firebasestorage.app',
-    // Web/server client ID from google-services.json (type 3) — required for idToken
-    androidClientId: '82683276860-44b2sfnhnk66pq72blrlc4mesj841bu1.apps.googleusercontent.com',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

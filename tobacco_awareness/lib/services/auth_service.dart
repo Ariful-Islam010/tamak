@@ -9,7 +9,9 @@ import 'notification_service.dart';
 import 'hive_helper.dart';
 import 'backend_service.dart';
 
-final authServiceProvider = ChangeNotifierProvider<AuthService>((ref) => AuthService());
+final authServiceProvider = ChangeNotifierProvider<AuthService>(
+  (ref) => AuthService(),
+);
 
 class AuthService extends ChangeNotifier {
   // Web/server client ID from google-services.json — required to get idToken on Android
@@ -35,8 +37,9 @@ class AuthService extends ChangeNotifier {
   // ─── SESSION MANAGEMENT ───
   Future<void> _loadCachedProfile(String userId) async {
     try {
-      final cachedProfileJson =
-          await HiveHelper().getSetting('cached_user_profile_$userId');
+      final cachedProfileJson = await HiveHelper().getSetting(
+        'cached_user_profile_$userId',
+      );
       if (cachedProfileJson != null && cachedProfileJson.isNotEmpty) {
         final data = jsonDecode(cachedProfileJson);
         if (data is Map<String, dynamic>) {
@@ -98,35 +101,47 @@ class AuthService extends ChangeNotifier {
   Future<void> _fetchAndSetProfile() async {
     if (BackendService.token == null || BackendService.userId == null) return;
     try {
-      final response = await http.get(
-        Uri.parse('${BackendService.baseUrl}/api/profile'),
-        headers: BackendService.headers(),
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse('${BackendService.baseUrl}/api/profile'),
+            headers: BackendService.headers(),
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final rawBody = response.body;
         if (rawBody == 'null' || rawBody == '{}' || rawBody.isEmpty) {
-          debugPrint("Profile empty or user deleted on backend. Clearing session.");
+          debugPrint(
+            "Profile empty or user deleted on backend. Clearing session.",
+          );
           await _clearSession();
           return;
         }
         final data = jsonDecode(rawBody);
-        if (data == null || data is! Map || data.isEmpty || data['id'] == null) {
+        if (data == null ||
+            data is! Map ||
+            data.isEmpty ||
+            data['id'] == null) {
           debugPrint("Profile data invalid or user deleted. Clearing session.");
           await _clearSession();
           return;
         }
 
         await HiveHelper().saveSetting(
-            'cached_user_profile_${BackendService.userId}', rawBody);
+          'cached_user_profile_${BackendService.userId}',
+          rawBody,
+        );
 
         final quitDateVal = data['quit_date'];
         if (quitDateVal != null) {
           await HiveHelper().saveSetting(
-              'user_quit_date_${BackendService.userId}', quitDateVal);
+            'user_quit_date_${BackendService.userId}',
+            quitDateVal,
+          );
         } else {
-          await HiveHelper()
-              .removeSetting('user_quit_date_${BackendService.userId}');
+          await HiveHelper().removeSetting(
+            'user_quit_date_${BackendService.userId}',
+          );
         }
         _currentUser = UserModel(
           uid: BackendService.userId!,
@@ -141,8 +156,12 @@ class AuthService extends ChangeNotifier {
           gender: data['gender'],
         );
         await _setupNotificationsAndWelcome();
-      } else if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
-        debugPrint("Auth or user not found error in _fetchAndSetProfile. Clearing session.");
+      } else if (response.statusCode == 401 ||
+          response.statusCode == 403 ||
+          response.statusCode == 404) {
+        debugPrint(
+          "Auth or user not found error in _fetchAndSetProfile. Clearing session.",
+        );
         await _clearSession();
       }
     } catch (e) {
@@ -158,15 +177,18 @@ class AuthService extends ChangeNotifier {
           quitDate: _currentUser?.quitDate,
         );
         final uid = BackendService.userId;
-        final hasShownWelcomeStr =
-            await HiveHelper().getSetting('welcome_notification_shown_$uid');
+        final hasShownWelcomeStr = await HiveHelper().getSetting(
+          'welcome_notification_shown_$uid',
+        );
         final hasShownWelcome = hasShownWelcomeStr == 'true';
         if (!hasShownWelcome && _currentUser?.displayName != null) {
           await NotificationService().showWelcomeNotification(
             _currentUser!.displayName!.split(' ').first,
           );
-          await HiveHelper()
-              .saveSetting('welcome_notification_shown_$uid', 'true');
+          await HiveHelper().saveSetting(
+            'welcome_notification_shown_$uid',
+            'true',
+          );
         }
       }
     } catch (e) {
@@ -184,11 +206,13 @@ class AuthService extends ChangeNotifier {
       if (BackendService.token != null && BackendService.userId != null) {
         if (updatedUser.quitDate != null) {
           await HiveHelper().saveSetting(
-              'user_quit_date_${BackendService.userId}',
-              updatedUser.quitDate!.toIso8601String());
+            'user_quit_date_${BackendService.userId}',
+            updatedUser.quitDate!.toIso8601String(),
+          );
         } else {
-          await HiveHelper()
-              .removeSetting('user_quit_date_${BackendService.userId}');
+          await HiveHelper().removeSetting(
+            'user_quit_date_${BackendService.userId}',
+          );
         }
         final body = {
           'id': BackendService.userId,
@@ -204,7 +228,9 @@ class AuthService extends ChangeNotifier {
           'updated_at': DateTime.now().toIso8601String(),
         };
         await HiveHelper().saveSetting(
-            'cached_user_profile_${BackendService.userId}', jsonEncode(body));
+          'cached_user_profile_${BackendService.userId}',
+          jsonEncode(body),
+        );
         await http
             .post(
               Uri.parse('${BackendService.baseUrl}/api/profile'),
@@ -227,7 +253,9 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>?> signInWithEmail(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
       _isLoading = true;
       notifyListeners();
@@ -242,7 +270,8 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final token = data['access_token'] as String?;
-        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        final userId =
+            (data['user'] as Map<String, dynamic>?)?['id'] as String?;
         if (token != null && userId != null) {
           await _saveSession(token, userId);
           await _fetchAndSetProfile();
@@ -265,7 +294,9 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>?> signUpWithEmail(
-      String email, String password) async {
+    String email,
+    String password,
+  ) async {
     try {
       _isLoading = true;
       notifyListeners();
@@ -280,7 +311,8 @@ class AuthService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final token = data['access_token'] as String?;
-        final userId = (data['user'] as Map<String, dynamic>?)?['id'] as String?;
+        final userId =
+            (data['user'] as Map<String, dynamic>?)?['id'] as String?;
         if (token != null && userId != null) {
           await _saveSession(token, userId);
           await _fetchAndSetProfile();
@@ -353,7 +385,9 @@ class AuthService extends ChangeNotifier {
       );
       request.headers['Authorization'] = 'Bearer ${BackendService.token}';
       request.files.add(await http.MultipartFile.fromPath('file', file.path));
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final streamed = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
       final responseData = await streamed.stream.bytesToString();
       if (streamed.statusCode == 200) {
         final data = jsonDecode(responseData);
@@ -408,7 +442,9 @@ class AuthService extends ChangeNotifier {
         // Extract email from multiple sources (Google > backend user object)
         final googleEmail = googleUser.email;
         final backendEmail = userMap?['email'] as String?;
-        final resolvedEmail = googleEmail.isNotEmpty ? googleEmail : backendEmail;
+        final resolvedEmail = googleEmail.isNotEmpty
+            ? googleEmail
+            : backendEmail;
         // Note: googleName and googlePhoto intentionally NOT used —
         // name comes from profile assessment, photo from profile screen.
 
@@ -420,7 +456,8 @@ class AuthService extends ChangeNotifier {
           // Name and photo are NOT taken from Google — user sets them themselves
           // via profile assessment (name) and profile screen (photo).
           if (_currentUser != null) {
-            final needsEmailUpdate = (_currentUser!.email == null || _currentUser!.email!.isEmpty);
+            final needsEmailUpdate =
+                (_currentUser!.email == null || _currentUser!.email!.isEmpty);
             if (needsEmailUpdate) {
               final updated = _currentUser!.copyWith(email: resolvedEmail);
               _currentUser = updated;
@@ -430,29 +467,29 @@ class AuthService extends ChangeNotifier {
                 'updated_at': DateTime.now().toIso8601String(),
               };
               await HiveHelper().saveSetting(
-                  'cached_user_profile_$userId', jsonEncode(body2));
+                'cached_user_profile_$userId',
+                jsonEncode(body2),
+              );
               try {
-                await http.post(
-                  Uri.parse('${BackendService.baseUrl}/api/profile'),
-                  headers: BackendService.headers(),
-                  body: jsonEncode(body2),
-                ).timeout(const Duration(seconds: 10));
+                await http
+                    .post(
+                      Uri.parse('${BackendService.baseUrl}/api/profile'),
+                      headers: BackendService.headers(),
+                      body: jsonEncode(body2),
+                    )
+                    .timeout(const Duration(seconds: 10));
               } catch (e) {
                 debugPrint("Error saving email to backend: $e");
               }
             }
           } else {
             // New user — create profile model for current session
-            _currentUser = UserModel(
-              uid: userId,
-              email: resolvedEmail,
-            );
+            _currentUser = UserModel(uid: userId, email: resolvedEmail);
           }
         }
         _isLoading = false;
         notifyListeners();
         return data;
-
       } else {
         _isLoading = false;
         notifyListeners();
@@ -496,10 +533,14 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       if (BackendService.token != null) {
         try {
-          final response = await http.delete(
-            Uri.parse('${BackendService.baseUrl}/api/profile/delete-account'),
-            headers: BackendService.headers(),
-          ).timeout(const Duration(seconds: 10));
+          final response = await http
+              .delete(
+                Uri.parse(
+                  '${BackendService.baseUrl}/api/profile/delete-account',
+                ),
+                headers: BackendService.headers(),
+              )
+              .timeout(const Duration(seconds: 10));
           debugPrint("Delete account response: ${response.statusCode}");
         } catch (e) {
           debugPrint("Backend delete request error: $e");
