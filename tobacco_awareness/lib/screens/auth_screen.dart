@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
-import 'dart:io';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import 'profile_assessment_screen.dart';
@@ -174,7 +172,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                               } catch (e) {
                                 if (context.mounted) {
                                   final String errorMessage = _getNetworkErrorMessage(e);
-                                  _showErrorDialog(context, errorMessage);
+                                  _showErrorDialog(context, errorMessage, rawError: e.toString());
                                 }
                               }
                             },
@@ -209,29 +207,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                                 ),
                                 const SizedBox(width: 16),
                                 const Text(
-                                  "Google দিয়ে শুরু করুন",
+                                  'Google দিয়ে শুরু করুন',
                                   style: TextStyle(
                                     fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ],
                             ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  GestureDetector(
-                    onTap: () => _showPrivacyPolicyDialog(context),
-                    child: Text(
-                      "সাইন-ইন করার মাধ্যমে আমাদের প্রাইভেসি পলিসিতে সম্মতি দিচ্ছেন",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppTheme.textLight.withValues(alpha: 0.8),
-                        decoration: TextDecoration.underline,
-                      ),
+
+                  const Spacer(flex: 3),
+                  Text(
+                    'সাইন-ইন করার মাধ্যমে আমাদের প্রাইভেসি পলিসিতে সম্মতি দিচ্ছেন',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textLight.withValues(alpha: 0.7),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -241,72 +238,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     );
   }
 
-  void _showPrivacyPolicyDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.privacy_tip_outlined, color: AppTheme.primaryGreen),
-            SizedBox(width: 8),
-            Text("প্রাইভেসি পলিসি", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
-        ),
-        content: const SingleChildScrollView(
-          child: Text(
-            "QuitMate অ্যাপ আপনার ব্যক্তিগত তথ্যের গোপনীয়তা রক্ষা করতে প্রতিশ্রুতিবদ্ধ।\n\n"
-            "• আমরা শুধুমাত্র আপনার অ্যাকাউন্ট সেশন ও দৈনিক অগ্রগতি ডাটা সুরক্ষিতভাবে সংরক্ষণ করি।\n"
-            "• আপনার কোনো ডাটা তৃতীয় পক্ষের কাছে বিক্রি বা শেয়ার করা হয় না।\n"
-            "• যেকোনো সময় 'প্রাইভেসি ও সিকিউরিটি' মেনু থেকে স্থায়ীভাবে আপনার সমস্ত ডাটা মুছে ফেলা সম্ভব।",
-            style: TextStyle(fontSize: 14, height: 1.5),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("বন্ধ করুন", style: TextStyle(color: AppTheme.primaryGreen, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// নেটওয়ার্ক বা অন্যান্য error থেকে user-friendly বাংলা message তৈরি করে
+  /// Network error detection & user friendly message
   String _getNetworkErrorMessage(dynamic error) {
-    final errorStr = error.toString().toLowerCase();
+    final String errorStr = error.toString().toLowerCase();
 
-    // Network / internet connection errors
-    if (error is SocketException ||
-        errorStr.contains('socketexception') ||
-        errorStr.contains('network is unreachable') ||
-        errorStr.contains('connection refused') ||
-        errorStr.contains('connection timed out') ||
-        errorStr.contains('failed host lookup') ||
-        errorStr.contains('no route to host') ||
+    // Offline / No internet connection
+    if (errorStr.contains('socketexception') ||
+        errorStr.contains('clientexception') ||
+        errorStr.contains('connection failed') ||
         errorStr.contains('network_error') ||
-        errorStr.contains('networkerror')) {
-      return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না!\n\nঅনুগ্রহ করে আপনার মোবাইল ডাটা বা ওয়াইফাই চেক করে আবার চেষ্টা করুন। 📡';
+        errorStr.contains('failed host lookup') ||
+        errorStr.contains('handshakeexception')) {
+      return 'ইন্টারনেট কানেকশন পাওয়া যায়নি।\n\nঅনুগ্রহ করে ওয়াইফাই বা মোবাইল ডাটা চালু আছে কিনা পরীক্ষা করুন এবং আবার চেষ্টা করুন।';
     }
 
-    // Timeout errors
-    if (error is TimeoutException ||
-        errorStr.contains('timeout') ||
-        errorStr.contains('timed out')) {
-      return 'সার্ভার থেকে সাড়া পেতে দেরি হচ্ছে!\n\nঅনুগ্রহ করে কিছুক্ষণের মধ্যে আবার চেষ্টা করুন। ⏳';
-    }
-
-    // Google Sign-In cancelled
-    if (errorStr.contains('sign_in_cancelled') ||
-        errorStr.contains('canceled') ||
-        errorStr.contains('cancelled')) {
-      return 'সাইন-ইন প্রক্রিয়াটি বাতিল করা হয়েছে। 🔄';
-    }
-
-    // Google Sign-In failed
+    // Google sign in specific errors
     if (errorStr.contains('sign_in_failed') ||
-        errorStr.contains('google')) {
-      return 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।\n\nঅনুগ্রহ করে ইন্টারনেট কানেকশন চেক করে আবার চেষ্টা করুন।';
+        errorStr.contains('google') ||
+        errorStr.contains('platformexception') ||
+        errorStr.contains('api-exception')) {
+      return 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।\n\nনিচে কারিগরি ত্রুটির বিস্তারিত দেওয়া হলো:';
+    }
+
+    // Timeout
+    if (errorStr.contains('timeout') || errorStr.contains('timed out')) {
+      return 'সার্ভারের সাথে সংযোগ সময় শেষ হয়ে গেছে।\n\nঅনুগ্রহ করে আপনার ইন্টারনেট চেক করে আবার চেষ্টা করুন।';
     }
 
     // Server/API errors
@@ -321,15 +277,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
     return 'লগইন করতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন। 🙏';
   }
 
-  /// Error dialog দেখায় - snackbar এর চেয়ে বেশি visible
-  void _showErrorDialog(BuildContext context, String message) {
+  /// Detailed Diagnostic Error Dialog
+  void _showErrorDialog(BuildContext context, String message, {String? rawError}) {
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         backgroundColor: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.all(28.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -340,12 +296,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.wifi_off_rounded,
+                  Icons.error_outline_rounded,
                   color: Colors.red.shade400,
                   size: 48,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               const Text(
                 'সংযোগ সমস্যা',
                 style: TextStyle(
