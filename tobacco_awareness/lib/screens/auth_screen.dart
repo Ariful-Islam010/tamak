@@ -257,7 +257,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
         errorStr.contains('google') ||
         errorStr.contains('platformexception') ||
         errorStr.contains('api-exception')) {
-      return 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।\n\nনিচে কারিগরি ত্রুটির বিস্তারিত দেওয়া হলো:';
+      // DEVELOPER_ERROR (code 10) = SHA-1 certificate mismatch in Firebase
+      if (errorStr.contains(': 10:') || errorStr.contains('developer_error')) {
+        return 'গুগল সাইন-ইন কনফিগারেশন সমস্যা।\n\nঅ্যাপটি পুনরায় ইনস্টল করে চেষ্টা করুন।';
+      }
+      return 'গুগল সাইন-ইন সম্পন্ন করা সম্ভব হয়নি।\n\nনিচে কারিগরি ত্রুটির বিস্তারিত দেওয়া হলো:';
     }
 
     // Timeout
