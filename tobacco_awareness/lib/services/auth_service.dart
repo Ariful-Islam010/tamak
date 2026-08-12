@@ -405,10 +405,7 @@ class AuthService extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      final GoogleSignIn googleSignIn = GoogleSignIn(
-        serverClientId: _serverClientId,
-      );
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
         _isLoading = false;
         notifyListeners();
