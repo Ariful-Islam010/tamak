@@ -14,19 +14,19 @@
       },
       "oauth_client": [
         {
-          "client_id": "82683276860-ijv7dbjkvm6v10dchpmr5dne7lj8m4u9.apps.googleusercontent.com",
+          "client_id": "82683276860-3adehbk3ltq2d37m7m7t1o2k7nko6h5t.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.ariful010a.tobacco_awareness",
-            "certificate_hash": "557ef8761a4ea8a96cae8af79e85dcc903fc1313"
+            "certificate_hash": "9faacae1609b898d85c894de6a411af1398606d6"
           }
         },
         {
-          "client_id": "82683276860-k17ftk2ecm0s9c1jstom1q3u44a5ecb8.apps.googleusercontent.com",
+          "client_id": "82683276860-ofnkkjdamfo1jaia1o3hkk7lubqc01p3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.ariful010a.tobacco_awareness",
-            "certificate_hash": "9ea9ed882118906d1c91788545058d24c24eda34"
+            "certificate_hash": "ebd48523ca01475354bef26591e46c31e55eac27"
           }
         },
         {
