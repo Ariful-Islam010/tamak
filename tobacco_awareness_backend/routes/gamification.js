@@ -24,6 +24,9 @@ router.post('/', requireAuth, async (req, res) => {
     const userId = req.user.sub;
     const { current_streak, longest_streak, badges, last_check_in_date } = req.body;
     
+    // Ensure profile row exists to satisfy foreign key constraint
+    await query('INSERT INTO user_profiles (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [userId]);
+
     // UPSERT style query
     const result = await query(
       `INSERT INTO gamification_progress (user_id, current_streak, longest_streak, badges, last_check_in_date)

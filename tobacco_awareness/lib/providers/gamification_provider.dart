@@ -270,9 +270,13 @@ class GamificationProvider extends ChangeNotifier {
         // Sync progress to backend gamification_progress table
         String? lastCheckInDate;
         if (checkInsData.isNotEmpty) {
-          lastCheckInDate = checkInsData.last['check_in_date']
-              .toString()
-              .split('T')[0];
+          final lastItem = checkInsData.last;
+          if (lastItem is Map && lastItem['check_in_date'] != null) {
+            final rawDate = lastItem['check_in_date'].toString();
+            if (rawDate.isNotEmpty) {
+              lastCheckInDate = rawDate.split('T')[0];
+            }
+          }
         }
         await _syncToBackend(userId, lastCheckInDate: lastCheckInDate);
       }
@@ -300,10 +304,15 @@ class GamificationProvider extends ChangeNotifier {
     for (var checkIn in checkInsData) {
       final usedTobacco = checkIn['used_tobacco'] == true;
       if (!usedTobacco && checkIn['check_in_date'] != null) {
-        final dateStr = checkIn['check_in_date'].toString().split('T')[0];
-        final dt = DateTime.parse(dateStr);
-        final key = TimeUtils.getBstDateString(dt);
-        uniqueMap[key] = DateTime(dt.year, dt.month, dt.day);
+        final rawStr = checkIn['check_in_date'].toString();
+        if (rawStr.isNotEmpty) {
+          final dateStr = rawStr.split('T')[0];
+          final dt = DateTime.tryParse(dateStr);
+          if (dt != null) {
+            final key = TimeUtils.getBstDateString(dt);
+            uniqueMap[key] = DateTime(dt.year, dt.month, dt.day);
+          }
+        }
       }
     }
 

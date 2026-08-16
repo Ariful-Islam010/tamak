@@ -55,14 +55,18 @@ class CheckInProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      final quitDateStr =
-          await HiveHelper().getSetting('user_quit_date_$userId');
-      final quitDate =
-          quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
-      await NotificationService().scheduleEveningCheckIn(
-        quitDate: quitDate,
-        forceTomorrow: _hasCheckedInToday,
-      );
+      try {
+        final quitDateStr =
+            await HiveHelper().getSetting('user_quit_date_$userId');
+        final quitDate =
+            quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
+        await NotificationService().scheduleEveningCheckIn(
+          quitDate: quitDate,
+          forceTomorrow: _hasCheckedInToday,
+        );
+      } catch (e) {
+        debugPrint("Error scheduling evening check-in notification: $e");
+      }
 
       // If logged in, fetch from backend in background to verify/sync
       if (userId != 'guest' && BackendService.token != null) {
@@ -144,7 +148,14 @@ class CheckInProvider extends ChangeNotifier {
           throw Exception("অ্যাকাউন্টটি আর সক্রিয় নেই। অনুগ্রহ করে আবার লগইন করুন।");
         } else if (response.statusCode != 200) {
           debugPrint("Check-in failed with status ${response.statusCode}: ${response.body}");
-          throw Exception("সার্ভারে চেক-ইন জমা দিতে ব্যর্থ হয়েছে (${response.statusCode})");
+          await SyncService().queueCheckIn(
+            userId: userId,
+            checkInDate: today,
+            cravingLevel: _cravingLevel.toInt(),
+            mood: _selectedMood ?? 'Normal',
+            usedTobacco: _usedTobacco ?? false,
+            note: note,
+          );
         }
       } on SocketException catch (_) {
         debugPrint("No internet. Queueing check-in for offline sync.");
@@ -166,10 +177,23 @@ class CheckInProvider extends ChangeNotifier {
           usedTobacco: _usedTobacco ?? false,
           note: note,
         );
+      } catch (e) {
+        if (e is Exception && e.toString().contains("অ্যাকাউন্টটি আর সক্রিয় নেই")) {
+          rethrow;
+        }
+        debugPrint("General error in submitCheckIn: $e. Queueing check-in for offline sync.");
+        await SyncService().queueCheckIn(
+          userId: userId,
+          checkInDate: today,
+          cravingLevel: _cravingLevel.toInt(),
+          mood: _selectedMood ?? 'Normal',
+          usedTobacco: _usedTobacco ?? false,
+          note: note,
+        );
       }
     }
 
-    // Save locally to Hive after server confirmation (or for guest)
+    // Save locally to Hive after server confirmation (or for guest / queued)
     await HiveHelper().saveCheckIn(
       userId,
       today,
@@ -181,14 +205,18 @@ class CheckInProvider extends ChangeNotifier {
     _hasCheckedInToday = true;
     notifyListeners();
 
-    final quitDateStr =
-        await HiveHelper().getSetting('user_quit_date_$userId');
-    final quitDate =
-        quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
-    await NotificationService().scheduleEveningCheckIn(
-      quitDate: quitDate,
-      forceTomorrow: true,
-    );
+    try {
+      final quitDateStr =
+          await HiveHelper().getSetting('user_quit_date_$userId');
+      final quitDate =
+          quitDateStr != null ? DateTime.tryParse(quitDateStr) : null;
+      await NotificationService().scheduleEveningCheckIn(
+        quitDate: quitDate,
+        forceTomorrow: true,
+      );
+    } catch (e) {
+      debugPrint("Error scheduling notification after submitCheckIn: $e");
+    }
   }
 
   void clearDraft() {
