@@ -284,12 +284,13 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
                                 TextField(
                                   controller: _reflectionController,
                                   maxLines: 4,
+                                  maxLength: 100,
                                   style: const TextStyle(
                                       fontSize: 14,
                                       color: Color(0xFF1A1A2E)),
                                   decoration: InputDecoration(
                                     hintText:
-                                        "আজকের দিনটি কেমন ছিল? (ঐচ্ছিক)",
+                                        "আজকের দিনটি কেমন ছিল? (সর্বোচ্চ ১০০ অক্ষর)",
                                     hintStyle:
                                         TextStyle(color: Colors.grey[400]),
                                     fillColor: const Color(0xFFF8F9FA),
@@ -330,6 +331,13 @@ class _DailyCheckInScreenState extends ConsumerState<DailyCheckInScreen>
                                       final messenger = ScaffoldMessenger.of(context);
                                       final navigator = Navigator.of(context);
                                       final noteText = _reflectionController.text.trim();
+                                      if (noteText.length > 100) {
+                                        messenger.showSnackBar(const SnackBar(
+                                          backgroundColor: Colors.red,
+                                          content: Text("আজকের অনুভূতি বা নোট ১০০ অক্ষরের বেশি হতে পারবে না!"),
+                                        ));
+                                        return;
+                                      }
                                       try {
                                         await ref.read(checkInProvider).submitCheckIn(
                                           note: noteText.isNotEmpty ? noteText : null,

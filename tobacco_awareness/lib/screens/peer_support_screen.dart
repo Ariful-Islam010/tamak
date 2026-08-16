@@ -31,11 +31,24 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
   }
 
   Future<void> _sendMessage() async {
-    if (_messageController.text.trim().isEmpty) return;
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    final words = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+    if (words.length > 100) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("মেসেজ ১০০ শব্দের বেশি হতে পারবে না!"),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+      return;
+    }
 
     final user = ref.read(authServiceProvider).currentUser;
     final userName = user?.displayName ?? "ব্যবহারকারী";
-    final text = _messageController.text;
 
     _messageController.clear();
     _scrollToBottom();
@@ -331,8 +344,9 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         child: TextField(
                           controller: customReasonController,
+                          maxLength: 100,
                           decoration: const InputDecoration(
-                            hintText: "বিস্তারিত কারণ লিখুন...",
+                            hintText: "বিস্তারিত কারণ লিখুন... (সর্বোচ্চ ১০০ অক্ষর)",
                             border: OutlineInputBorder(),
                           ),
                         ),
@@ -1027,7 +1041,25 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
             ElevatedButton(
               onPressed: () async {
                 final newText = editController.text.trim();
-                if (newText.isEmpty) return;
+                if (newText.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("খালি মেসেজ সংরক্ষণ করা যাবে না!"),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
+                }
+                final words = newText.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).toList();
+                if (words.length > 100) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("মেসেজ ১০০ শব্দের বেশি হতে পারবে না!"),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
+                }
                 Navigator.pop(ctx);
                 try {
                   await ref.read(chatProvider).editMessage(messageId, newText);

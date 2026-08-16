@@ -277,18 +277,38 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGreen),
             onPressed: () {
               final name = nameCtrl.text.trim();
-              final number = numCtrl.text.trim();
-              if (number.isNotEmpty) {
-                setState(() {
-                  if (editIndex != null) {
-                    _friends[editIndex] = {'name': name, 'number': number};
-                  } else {
-                    _friends.add({'name': name, 'number': number});
-                  }
-                });
-                _saveFriends();
+              final number = numCtrl.text.trim().replaceAll(' ', '');
+              
+              if (name.length < 3 || name.length > 20) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('বন্ধুর নাম ৩ থেকে ২০ অক্ষরের মধ্যে হতে হবে!'),
+                    backgroundColor: AppTheme.errorColor,
+                  ),
+                );
+                return;
               }
-              if (context.mounted) Navigator.pop(context);
+
+              final bdPhoneRegex = RegExp(r'^(?:\+88|88)?01[3-9]\d{8}$');
+              if (!bdPhoneRegex.hasMatch(number)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 01712345678)!'),
+                    backgroundColor: AppTheme.errorColor,
+                  ),
+                );
+                return;
+              }
+
+              setState(() {
+                if (editIndex != null) {
+                  _friends[editIndex] = {'name': name, 'number': number};
+                } else {
+                  _friends.add({'name': name, 'number': number});
+                }
+              });
+              _saveFriends();
+              Navigator.pop(context);
             },
             child: const Text('সংরক্ষণ'),
           ),

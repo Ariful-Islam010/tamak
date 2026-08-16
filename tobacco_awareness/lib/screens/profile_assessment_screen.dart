@@ -57,10 +57,11 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
   bool _validateCurrentPage() {
     switch (_currentPage) {
       case 0: // Name - MUST be entered
-        if (_nameController.text.trim().isEmpty) {
+        final nameVal = _nameController.text.trim();
+        if (nameVal.length < 3 || nameVal.length > 20) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("অনুগ্রহ করে আপনার নাম প্রবেশ করান!"),
+              content: Text("আপনার নাম অন্তত ৩ থেকে সর্বোচ্চ ২০ অক্ষরের হতে হবে!"),
               backgroundColor: AppTheme.errorColor,
               behavior: SnackBarBehavior.floating,
             ),
@@ -69,10 +70,11 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
         }
         return true;
       case 1: // Educational info - MUST be entered
-        if (_classController.text.trim().isEmpty) {
+        final eduVal = _classController.text.trim();
+        if (eduVal.isEmpty || eduVal.length > 100) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("অনুগ্রহ করে আপনার শিক্ষাগত তথ্য/শ্রেণি প্রবেশ করান!"),
+              content: Text("শিক্ষাগত তথ্য আবশ্যক এবং সর্বোচ্চ ১০০ অক্ষরের হতে পারবে!"),
               backgroundColor: AppTheme.errorColor,
               behavior: SnackBarBehavior.floating,
             ),
@@ -82,10 +84,10 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
         return true;
       case 2: // Age - MUST be entered
         final age = int.tryParse(_ageController.text.trim());
-        if (age == null || age <= 0) {
+        if (age == null || age < 7 || age > 100) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("অনুগ্রহ করে আপনার বয়স সঠিকভাবে টাইপ করুন!"),
+              content: Text("আপনার বয়স ৭ থেকে ১০০ বছরের মধ্যে হতে হবে!"),
               backgroundColor: AppTheme.errorColor,
               behavior: SnackBarBehavior.floating,
             ),
@@ -389,8 +391,9 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
       "আপনি কোন ক্লাসে পড়েন বা আপনার শিক্ষাগত তথ্য দিন।",
       TextField(
         controller: _classController,
+        maxLength: 100,
         decoration: const InputDecoration(
-          hintText: "যেমন: একাদশ শ্রেণি / অনার্স ২য় বর্ষ",
+          hintText: "যেমন: একাদশ শ্রেণি / অনার্স ২য় বর্ষ (সর্বোচ্চ ১০০ অক্ষর)",
         ),
       ),
     );

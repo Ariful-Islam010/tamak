@@ -1,8 +1,3 @@
--- ============================================================
--- Tobacco Awareness Application — 100% Frontend Matched Schema
--- Database: tamak
--- ============================================================
-
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 1. Users Table (Authentication: Email & Google Sign-in)

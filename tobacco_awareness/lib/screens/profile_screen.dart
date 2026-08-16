@@ -22,6 +22,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isUploading = false;
   bool _notificationsEnabled = true;
+  File? _localImageFile;
 
   @override
   void initState() {
@@ -93,7 +94,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
       if (pickedFile == null) return;
 
+      final File file = File(pickedFile.path);
       setState(() {
+        _localImageFile = file;
         _isUploading = true;
       });
 
@@ -116,7 +119,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         );
       }
 
-      final File file = File(pickedFile.path);
       final String? secureUrl = await authService.uploadProfilePhoto(file);
 
       if (mounted) {
@@ -256,8 +258,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: 16),
                     TextField(
                       controller: eduController,
+                      maxLength: 100,
                       decoration: const InputDecoration(
-                        labelText: "শিক্ষাগত যোগ্যতা",
+                        labelText: "শিক্ষাগত যোগ্যতা (সর্বোচ্চ ১০০ অক্ষর)",
                         prefixIcon: Icon(Icons.school),
                       ),
                     ),
@@ -292,17 +295,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       height: 50,
                       child: ElevatedButton(
                         onPressed: () async {
-                          final int? ageVal = int.tryParse(ageController.text.trim());
-                          if (nameController.text.trim().isEmpty) {
+                          final nameText = nameController.text.trim();
+                          final ageText = ageController.text.trim();
+                          final int? ageVal = int.tryParse(ageText);
+
+                          if (nameText.length < 3 || nameText.length > 20) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("নাম খালি রাখা যাবে না!"), backgroundColor: AppTheme.errorColor),
+                              const SnackBar(
+                                content: Text("নাম অন্তত ৩ থেকে সর্বোচ্চ ২০ অক্ষরের হতে হবে!"),
+                                backgroundColor: AppTheme.errorColor,
+                              ),
                             );
                             return;
                           }
-                          
+
+                          if (ageVal == null || ageVal < 7 || ageVal > 100) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("সঠিক বয়স টাইপ করুন (৭ থেকে ১০০ বছর)!"),
+                                backgroundColor: AppTheme.errorColor,
+                              ),
+                            );
+                            return;
+                          }
+
+                          final eduText = eduController.text.trim();
+                          if (eduText.length > 100) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("শিক্ষাগত তথ্য ১০০ অক্ষরের বেশি হতে পারবে না!"),
+                                backgroundColor: AppTheme.errorColor,
+                              ),
+                            );
+                            return;
+                          }
+
                           if (user != null) {
                             final updatedUser = user.copyWith(
-                              displayName: nameController.text.trim(),
+                              displayName: nameText,
                               educationalInfo: eduController.text.trim().isNotEmpty ? eduController.text.trim() : null,
                               age: ageVal,
                               gender: selectedGender,
@@ -538,10 +568,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             child: CircleAvatar(
                               radius: 50,
                               backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                              backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
+                              backgroundImage: _localImageFile != null
+                                  ? FileImage(_localImageFile!) as ImageProvider
+                                  : (user?.photoUrl != null && user!.photoUrl!.isNotEmpty
+                                      ? NetworkImage(user.photoUrl!)
+                                      : null),
                               child: _isUploading
                                   ? const CircularProgressIndicator(color: AppTheme.primaryBlue)
-                                  : (user?.photoUrl == null
+                                  : (_localImageFile == null && (user?.photoUrl == null || user!.photoUrl!.isEmpty)
                                       ? const Icon(Icons.person, size: 60, color: AppTheme.primaryBlue)
                                       : null),
                             ),

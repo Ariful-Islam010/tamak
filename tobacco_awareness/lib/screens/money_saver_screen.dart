@@ -43,10 +43,30 @@ class _MoneySaverScreenState extends ConsumerState<MoneySaverScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final int? amount = int.tryParse(amountController.text);
-                if (titleController.text.isNotEmpty && amount != null && amount > 0) {
-                  ref.read(moneySaverProvider).addDream(titleController.text, amount, AppTheme.primaryBlue);
+                final title = titleController.text.trim();
+                final int? amount = int.tryParse(amountController.text.trim());
+                
+                if (title.length < 3 || title.length > 20) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("স্বপ্নের নাম ৩ থেকে ২০ অক্ষরের মধ্যে হতে হবে!"),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
                 }
+
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("সঠিক টাকার পরিমাণ টাইপ করুন (০ এর বেশি)!"),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
+                }
+
+                ref.read(moneySaverProvider).addDream(title, amount, AppTheme.primaryBlue);
                 Navigator.pop(context);
               },
               child: const Text("যোগ করুন"),
@@ -80,10 +100,17 @@ class _MoneySaverScreenState extends ConsumerState<MoneySaverScreen> {
             ),
             ElevatedButton(
               onPressed: () {
-                final int? amount = int.tryParse(amountController.text);
-                if (amount != null && amount > 0) {
-                  ref.read(moneySaverProvider).addMoney(amount);
+                final int? amount = int.tryParse(amountController.text.trim());
+                if (amount == null || amount <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("সঠিক টাকার পরিমাণ টাইপ করুন (০ এর বেশি)!"),
+                      backgroundColor: AppTheme.errorColor,
+                    ),
+                  );
+                  return;
                 }
+                ref.read(moneySaverProvider).addMoney(amount);
                 Navigator.pop(context);
               },
               child: const Text("যোগ করুন"),

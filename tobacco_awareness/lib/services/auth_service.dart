@@ -340,13 +340,31 @@ class AuthService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
       if (BackendService.token != null && BackendService.userId != null) {
+        if (_currentUser != null) {
+          _currentUser = _currentUser!.copyWith(photoUrl: photoUrl);
+        } else {
+          _currentUser = UserModel(
+            uid: BackendService.userId!,
+            photoUrl: photoUrl,
+          );
+        }
         final body = {
           'id': BackendService.userId,
           'email': _currentUser?.email,
           'display_name': _currentUser?.displayName,
           'photo_url': photoUrl,
+          'educational_info': _currentUser?.educationalInfo,
+          'plan_duration': _currentUser?.planDuration,
+          'quit_date': _currentUser?.quitDate?.toIso8601String(),
+          'ai_quit_plan': _currentUser?.aiQuitPlan,
+          'age': _currentUser?.age,
+          'gender': _currentUser?.gender,
           'updated_at': DateTime.now().toIso8601String(),
         };
+        await HiveHelper().saveSetting(
+          'cached_user_profile_${BackendService.userId}',
+          jsonEncode(body),
+        );
         await http
             .post(
               Uri.parse('${BackendService.baseUrl}/api/profile'),
@@ -354,16 +372,6 @@ class AuthService extends ChangeNotifier {
               body: jsonEncode(body),
             )
             .timeout(const Duration(seconds: 15));
-        if (_currentUser != null) {
-          _currentUser = _currentUser!.copyWith(photoUrl: photoUrl);
-        } else {
-          _currentUser = UserModel(
-            uid: BackendService.userId!,
-            email: _currentUser?.email,
-            photoUrl: photoUrl,
-            displayName: _currentUser?.displayName,
-          );
-        }
       }
       _isLoading = false;
       notifyListeners();
