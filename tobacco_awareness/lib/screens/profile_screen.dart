@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/backend_service.dart';
 import '../utils/error_utils.dart';
+import '../utils/profile_image_helper.dart';
 import 'auth_screen.dart';
 import 'privacy_security_screen.dart';
 import 'help_support_screen.dart';
@@ -966,7 +967,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _viewProfileImage() {
     final user = ref.read(authServiceProvider).currentUser;
-    if (user?.photoUrl == null) return;
+    final imageProvider = ProfileImageHelper.getProfileImageProvider(
+      user?.photoUrl,
+      localFilePath: _localImageFile?.path,
+    );
+    if (imageProvider == null) return;
 
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -987,7 +992,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: CircleAvatar(
                           radius: 140,
                           backgroundColor: Colors.white10,
-                          backgroundImage: NetworkImage(user!.photoUrl!),
+                          backgroundImage: imageProvider,
                         ),
                       ),
                     ),

@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../services/backend_service.dart';
 import '../providers/chat_provider.dart';
 import '../utils/error_utils.dart';
+import '../utils/profile_image_helper.dart';
 
 class PeerSupportScreen extends ConsumerStatefulWidget {
   const PeerSupportScreen({super.key});
@@ -173,19 +174,27 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
               children: [
                 GestureDetector(
                   onTap: () {
-                    if (userPhoto != null || userDetails?['photo_url'] != null) {
-                      _showFullScreenImage(context, userDetails?['photo_url'] ?? userPhoto, null);
+                    final photoToView = userDetails?['photo_url'] ?? userPhoto;
+                    if (photoToView != null && photoToView.toString().isNotEmpty) {
+                      final fullUrl = photoToView.toString().startsWith('/')
+                          ? '${BackendService.baseUrl}$photoToView'
+                          : photoToView.toString();
+                      _showFullScreenImage(context, fullUrl, null);
                     }
                   },
-                  child: CircleAvatar(
-                    radius: 40,
-                    backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                    backgroundImage: (userPhoto != null || userDetails?['photo_url'] != null)
-                        ? NetworkImage(userDetails?['photo_url'] ?? userPhoto!)
-                        : null,
-                    child: (userPhoto == null && userDetails?['photo_url'] == null)
-                        ? const Icon(Icons.person, size: 48, color: AppTheme.primaryGreen)
-                        : null,
+                  child: Builder(
+                    builder: (context) {
+                      final effectivePhotoUrl = userDetails?['photo_url'] ?? userPhoto;
+                      final avatarImage = ProfileImageHelper.getProfileImageProvider(effectivePhotoUrl);
+                      return CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppTheme.primaryGreen.withValues(alpha: 0.1),
+                        backgroundImage: avatarImage,
+                        child: avatarImage == null
+                            ? const Icon(Icons.person, size: 48, color: AppTheme.primaryGreen)
+                            : null,
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -671,17 +680,22 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
           if (!isMe)
             GestureDetector(
               onTap: () => _showUserProfileCard(context, senderId, sender, senderPhoto),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor: isCounselor ? AppTheme.accentYellow : Colors.grey.shade300,
-                backgroundImage: senderPhoto != null ? NetworkImage(senderPhoto) : null,
-                child: senderPhoto == null
-                    ? Icon(
-                        isCounselor ? Icons.verified_user : Icons.person,
-                        size: 20,
-                        color: isCounselor ? Colors.white : Colors.grey.shade600,
-                      )
-                    : null,
+              child: Builder(
+                builder: (context) {
+                  final avatarImage = ProfileImageHelper.getProfileImageProvider(senderPhoto);
+                  return CircleAvatar(
+                    radius: 16,
+                    backgroundColor: isCounselor ? AppTheme.accentYellow : Colors.grey.shade300,
+                    backgroundImage: avatarImage,
+                    child: avatarImage == null
+                        ? Icon(
+                            isCounselor ? Icons.verified_user : Icons.person,
+                            size: 20,
+                            color: isCounselor ? Colors.white : Colors.grey.shade600,
+                          )
+                        : null,
+                  );
+                },
               ),
             ),
           if (!isMe) const SizedBox(width: 6),

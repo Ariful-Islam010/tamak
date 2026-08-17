@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/backend_service.dart';
+import '../services/hive_helper.dart';
 import '../providers/money_saver_provider.dart';
 import '../providers/check_in_provider.dart';
 import '../providers/gamification_provider.dart';
@@ -14,6 +16,7 @@ import 'peer_support_screen.dart';
 import 'profile_screen.dart';
 import 'education_info_screen.dart';
 import '../utils/time_utils.dart';
+import '../utils/profile_image_helper.dart';
 
 class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -23,16 +26,32 @@ class HomeDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
+  String? _localPhotoPath;
+
   @override
   void initState() {
     super.initState();
+    _loadLocalPhoto();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshAllData();
     });
   }
 
+  Future<void> _loadLocalPhoto() async {
+    final uid = BackendService.userId;
+    if (uid != null) {
+      final path = await HiveHelper().getSetting('local_profile_photo_$uid');
+      if (path != null && path.isNotEmpty && mounted) {
+        setState(() {
+          _localPhotoPath = path;
+        });
+      }
+    }
+  }
+
   // ✅ OPTIMIZED: সব ৩টি API এখন একসাথে (Parallel) রান হয়, একে একে নয়
   Future<void> _refreshAllData() async {
+    await _loadLocalPhoto();
     await Future.wait([
       ref.read(moneySaverProvider).loadSavingsData(),
       ref.read(checkInProvider).loadCheckInStatus(),
@@ -70,6 +89,10 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     }
 
     final int totalSaved = moneyProvider.totalSavings;
+    final profileImage = ProfileImageHelper.getProfileImageProvider(
+      user?.photoUrl,
+      localFilePath: _localPhotoPath,
+    );
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -118,12 +141,15 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                         ),
                         const SizedBox(width: 8),
                         GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                          onTap: () async {
+                            await Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                            await _refreshAllData();
+                          },
                           child: CircleAvatar(
                             radius: 20,
                             backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.2),
-                            backgroundImage: user?.photoUrl != null ? NetworkImage(user!.photoUrl!) : null,
-                            child: user?.photoUrl == null ? const Icon(Icons.person, color: AppTheme.primaryBlue) : null,
+                            backgroundImage: profileImage,
+                            child: profileImage == null ? const Icon(Icons.person, color: AppTheme.primaryBlue) : null,
                           ),
                         ),
                       ],
@@ -173,7 +199,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                   children: [
                     Expanded(
                       child: _DashboardStatCard(
-                        title: "তামাকমুক্ত দিন",
+                        title: "তামাক ছাড়ার যাত্রা",
                         value: _toBengali(tobaccoFreeDays),
                         icon: Icons.air,
                         color: AppTheme.primaryGreen,
