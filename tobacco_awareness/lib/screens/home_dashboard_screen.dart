@@ -48,16 +48,6 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
         .replaceAll('9', '৯');
   }
 
-  String _toBengaliOrdinal(int day) {
-    if (day == 1) return "১ম";
-    if (day == 2) return "২য়";
-    if (day == 3) return "৩য়";
-    if (day == 4) return "৪র্থ";
-    if (day == 5) return "৫ম";
-    if (day == 6) return "৬ষ্ঠ";
-    return "${_toBengali(day)}ম";
-  }
-
   String _getGreeting() {
     final hour = TimeUtils.nowBst.hour;
     if (hour < 12) return "সুপ্রভাত,";
@@ -72,8 +62,9 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
     final moneyProvider = ref.watch(moneySaverProvider);
     final userName = user?.displayName ?? "ব্যবহারকারী";
 
-    int tobaccoFreeDays = 0;
-    if (user?.quitDate != null) {
+    final gamiProvider = ref.watch(gamificationProvider);
+    int tobaccoFreeDays = gamiProvider.totalTobaccoFreeDays;
+    if (tobaccoFreeDays == 0 && user?.quitDate != null) {
       final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1;
       if (diff >= 1) tobaccoFreeDays = diff;
     }
@@ -141,7 +132,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Motivational Strip
+                // Motivational Strip — General Motivational Message
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
@@ -166,9 +157,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          user?.quitDate != null
-                              ? "দারুণ! আপনি তামাকমুক্ত জীবনের ${_toBengaliOrdinal(TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1)} দিনে আছেন! 🌿"
-                              : "আজই হোক তামাকমুক্ত জীবনের প্রথম দিন! 🌿",
+                          "তামাকমুক্ত জীবনই সুস্থ ও সুন্দর আগামী! আজই তামাকমুক্ত থাকার জন্য দৃঢ় প্রতিজ্ঞ থাকুন 🌿",
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                             color: AppTheme.white, fontWeight: FontWeight.bold, height: 1.4,
                           ),

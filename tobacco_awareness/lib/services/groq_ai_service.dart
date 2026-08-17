@@ -14,9 +14,7 @@ class GroqAiService {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/ai/generate-plan'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: BackendService.headers(),
         body: jsonEncode({
           'durationInDays': durationInDays,
           'age': age,
@@ -53,9 +51,7 @@ class GroqAiService {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/api/ai/get-sos-advice'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: BackendService.headers(),
         body: jsonEncode({
           'triggerReason': triggerReason,
         }),

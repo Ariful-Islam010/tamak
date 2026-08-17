@@ -14,6 +14,7 @@ __pycache__/
 # Environments
 .env
 .env.local
+.jwt_secret
 .venv
 env/
 venv/

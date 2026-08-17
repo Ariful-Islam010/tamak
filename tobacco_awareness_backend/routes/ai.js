@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Groq = require('groq-sdk');
 const config = require('../config');
+const { requireAuth } = require('../middleware/auth');
 
 const groq = new Groq({ apiKey: config.GROQ_API_KEY });
 
@@ -62,7 +63,7 @@ CRITICAL INSTRUCTIONS:
 }
 
 // POST /api/ai/generate-plan
-router.post('/generate-plan', async (req, res) => {
+router.post('/generate-plan', requireAuth, async (req, res) => {
   try {
     const { durationInDays, age, gender } = req.body;
     const totalDays = parseInt(durationInDays, 10) || 7;
@@ -96,7 +97,7 @@ router.post('/generate-plan', async (req, res) => {
 });
 
 // POST /api/ai/get-sos-advice
-router.post('/get-sos-advice', async (req, res) => {
+router.post('/get-sos-advice', requireAuth, async (req, res) => {
   try {
     const { triggerReason } = req.body;
 

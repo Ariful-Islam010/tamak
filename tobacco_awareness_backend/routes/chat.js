@@ -6,16 +6,23 @@ const { requireAuth } = require('../middleware/auth');
 // GET /api/chat/messages
 router.get('/messages', requireAuth, async (req, res) => {
   try {
+    const limit = Math.min(parseInt(req.query.limit || '50', 10), 100);
+    const offset = parseInt(req.query.offset || '0', 10);
+
     const result = await query(`
       SELECT p.id, p.sender_id, p.content, p.image_url, p.created_at,
              u.display_name as display_name, u.photo_url as photo_url
       FROM peer_support_messages p
       LEFT JOIN user_profiles u ON p.sender_id = u.id
-      ORDER BY p.created_at ASC
-    `);
+      ORDER BY p.created_at DESC
+      LIMIT $1 OFFSET $2
+    `, [limit, offset]);
+
+    // Reverse rows to return chronological ascending order for UI display
+    const rowsAsc = result.rows.reverse();
     
     // Map to the nested structure expected by the frontend
-    const data = result.rows.map(row => ({
+    const data = rowsAsc.map(row => ({
       id: row.id,
       sender_id: row.sender_id,
       content: row.content,

@@ -9,14 +9,14 @@ const { query } = require('../services/db');
 const config = require('../config');
 const crypto = require('crypto');
 
-// Calculate current total size of uploads directory
-function getUploadsDirSize() {
-  const uploadsDir = path.join(__dirname, '..', 'uploads');
-  if (!fs.existsSync(uploadsDir)) return 0;
-  return fs.readdirSync(uploadsDir).reduce((total, file) => {
-    try { return total + fs.statSync(path.join(uploadsDir, file)).size; }
-    catch { return total; }
-  }, 0);
+// Calculate current total size of uploaded files via database
+async function getUploadsDirSize() {
+  try {
+    const res = await query('SELECT COALESCE(SUM(file_size_bytes), 0) AS total FROM media_files');
+    return parseInt(res.rows[0].total, 10);
+  } catch (err) {
+    return 0;
+  }
 }
 
 // Multer — 10MB per file limit, memory storage
@@ -38,7 +38,7 @@ router.post('/', requireAuth, upload.single('file'), async (req, res) => {
     }
 
     // Check total storage limit
-    const currentSize = getUploadsDirSize();
+    const currentSize = await getUploadsDirSize();
     const maxBytes = config.MAX_UPLOAD_STORAGE_BYTES;
     if (currentSize + req.file.size > maxBytes) {
       const maxMB = Math.round(maxBytes / 1024 / 1024);
@@ -92,7 +92,7 @@ router.get('/files', requireAuth, async (req, res) => {
 
     const countResult = await query('SELECT COUNT(*) FROM media_files');
     const total = parseInt(countResult.rows[0].count);
-    const totalStorageBytes = getUploadsDirSize();
+    const totalStorageBytes = await getUploadsDirSize();
 
     return res.json({
       files: result.rows,

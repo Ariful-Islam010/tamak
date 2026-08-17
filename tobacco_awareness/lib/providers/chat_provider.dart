@@ -52,6 +52,81 @@ class ChatProvider extends ChangeNotifier {
 
       _socket?.on('new_message', (data) {
         debugPrint('⚡ Received new message via WebSocket');
+        if (data != null) {
+          try {
+            Map<String, dynamic>? row;
+            if (data is List && data.isNotEmpty && data.first is Map) {
+              row = Map<String, dynamic>.from(data.first);
+            } else if (data is Map) {
+              row = Map<String, dynamic>.from(data);
+            }
+
+            if (row != null) {
+              final idStr = row['id']?.toString();
+              if (idStr != null && !_deletedMessageIds.contains(idStr)) {
+                final existingIndex = _messages.indexWhere((m) => m['id']?.toString() == idStr);
+                if (existingIndex == -1) {
+                  final senderData = row['sender'] as Map<String, dynamic>?;
+                  final userId = BackendService.userId;
+                  DateTime createdAtStr;
+                  if (row['created_at'] != null) {
+                    final str = row['created_at'].toString();
+                    final parsed = DateTime.parse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
+                    createdAtStr = parsed.toLocal();
+                  } else {
+                    createdAtStr = DateTime.now();
+                  }
+
+                  final formatter = DateFormat('hh:mm a');
+                  String formattedTime = formatter
+                      .format(createdAtStr)
+                      .replaceAll('AM', 'এএম')
+                      .replaceAll('PM', 'পিএম')
+                      .replaceAll('0', '০')
+                      .replaceAll('1', '১')
+                      .replaceAll('2', '২')
+                      .replaceAll('3', '৩')
+                      .replaceAll('4', '৪')
+                      .replaceAll('5', '৫')
+                      .replaceAll('6', '৬')
+                      .replaceAll('7', '৭')
+                      .replaceAll('8', '৮')
+                      .replaceAll('9', '৯');
+
+                  final isMe = row['sender_id'] == userId;
+
+                  final senderName = senderData?['display_name']
+                      ?? senderData?['name']
+                      ?? senderData?['username']
+                      ?? senderData?['full_name']
+                      ?? (isMe ? null : "ব্যবহারকারী");
+
+                  final isCounselor = (senderData?['display_name'] ?? senderData?['name'] ?? '')
+                      .toString()
+                      .contains("কাউন্সেলর");
+
+                  _messages.add({
+                    "id": row['id'],
+                    "sender_id": row['sender_id'],
+                    "isMe": isMe,
+                    "sender": senderName ?? "ব্যবহারকারী",
+                    "senderPhoto": senderData?['photo_url'] ?? senderData?['avatar_url'],
+                    "isCounselor": isCounselor,
+                    "text": row['content'] ?? "",
+                    "imageUrl": row['image_url'],
+                    "time": formattedTime,
+                    "createdAt": createdAtStr,
+                  });
+                  _saveMessagesToCache();
+                  notifyListeners();
+                  return;
+                }
+              }
+            }
+          } catch (e) {
+            debugPrint("Error parsing websocket message: $e");
+          }
+        }
         loadMessages();
       });
 

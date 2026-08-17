@@ -35,7 +35,7 @@ io.on('connection', (socket) => {
     console.log('⚡ User disconnected:', socket.id);
   });
 });
-// Middleware
+// Core Middleware
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -45,8 +45,36 @@ app.get('/', (req, res) => {
   res.json({ status: 'ok', message: 'Tobacco Awareness Node.js / Express.js Backend is running 🚀' });
 });
 
-// API Routers
-app.use('/api/auth', authRouter);
+const rateLimit = require('express-rate-limit');
+
+// Rate Limiters
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  message: { detail: 'Too many requests from this IP, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 login/signup attempts per 15 minutes
+  message: { detail: 'Too many authentication attempts, please try again after 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 AI generations per 15 minutes
+  message: { detail: 'AI request limit reached. Please wait a few minutes before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/auth', authLimiter, authRouter);
+app.use('/api/ai', aiLimiter, aiRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/checkins', checkinsRouter);
 app.use('/api/savings', savingsRouter);

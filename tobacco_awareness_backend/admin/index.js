@@ -7,10 +7,14 @@ const path = require('path');
 // ── Admin Auth Middleware ─────────────────────────────────────────────────────
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'tamak_admin_2024';
 
+if (!process.env.ADMIN_PASSWORD) {
+  console.warn('⚠️  SECURITY WARNING: ADMIN_PASSWORD environment variable is NOT set! Using fallback admin password.');
+}
+
 function requireAdmin(req, res, next) {
   const auth = req.headers['authorization'] || '';
   const token = auth.replace('Bearer ', '').trim();
-  if (token !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+  if (!token || token !== ADMIN_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
 
