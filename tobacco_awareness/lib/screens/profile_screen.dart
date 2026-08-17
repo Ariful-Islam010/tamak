@@ -7,6 +7,7 @@ import '../services/hive_helper.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
+import '../services/backend_service.dart';
 import '../utils/error_utils.dart';
 import 'auth_screen.dart';
 import 'privacy_security_screen.dart';
@@ -28,6 +29,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void initState() {
     super.initState();
     _loadNotificationPreference();
+    _loadCachedLocalPhoto();
+  }
+
+  Future<void> _loadCachedLocalPhoto() async {
+    final uid = BackendService.userId;
+    if (uid != null) {
+      final path = await HiveHelper().getSetting('local_profile_photo_$uid');
+      if (path != null && path.isNotEmpty) {
+        final f = File(path);
+        if (f.existsSync() && mounted) {
+          setState(() {
+            _localImageFile = f;
+          });
+        }
+      }
+    }
   }
 
   Future<void> _loadNotificationPreference() async {
@@ -126,6 +143,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
 
       if (secureUrl != null) {
+        final uid = BackendService.userId;
+        if (uid != null) {
+          await HiveHelper().saveSetting('local_profile_photo_$uid', file.path);
+        }
         if (mounted) {
           await ref.read(authServiceProvider).updateProfilePhoto(secureUrl);
         }
@@ -571,7 +592,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               backgroundImage: _localImageFile != null
                                   ? FileImage(_localImageFile!) as ImageProvider
                                   : (user?.photoUrl != null && user!.photoUrl!.isNotEmpty
-                                      ? NetworkImage(user.photoUrl!)
+                                      ? NetworkImage(
+                                          user.photoUrl!.startsWith('/')
+                                              ? '${BackendService.baseUrl}${user.photoUrl!}'
+                                              : user.photoUrl!
+                                        )
                                       : null),
                               child: _isUploading
                                   ? const CircularProgressIndicator(color: AppTheme.primaryBlue)
