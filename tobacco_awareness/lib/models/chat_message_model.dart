@@ -44,7 +44,7 @@ class ChatMessageModel {
       time: json['time']?.toString() ?? '',
       type: json['type']?.toString(),
       imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
-      isSystem: json['is_system'] as bool? ?? json['isSystem'] as bool? ?? false,
+      isSystem: json['is_system'] == true || json['is_system'] == 1 || json['isSystem'] == true || json['isSystem'] == 1,
       replyToUser: json['reply_to_user']?.toString() ?? json['replyToUser']?.toString(),
       replyToText: json['reply_to_text']?.toString() ?? json['replyToText']?.toString(),
       createdAt: json['created_at'] != null

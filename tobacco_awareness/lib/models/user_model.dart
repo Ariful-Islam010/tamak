@@ -29,20 +29,26 @@ class UserModel {
     if (json == null) {
       return UserModel(uid: '');
     }
+    int? parseNum(dynamic val) {
+      if (val == null) return null;
+      if (val is num) return val.toInt();
+      if (val is String) return int.tryParse(val);
+      return null;
+    }
     return UserModel(
       uid: json['uid']?.toString() ?? json['id']?.toString() ?? '',
       email: json['email']?.toString(),
       displayName: json['displayName']?.toString() ?? json['display_name']?.toString(),
       photoUrl: json['photoUrl']?.toString() ?? json['photo_url']?.toString(),
       educationalInfo: json['educationalInfo']?.toString() ?? json['educational_info']?.toString(),
-      planDuration: (json['planDuration'] ?? json['plan_duration'] as num?)?.toInt(),
+      planDuration: parseNum(json['planDuration'] ?? json['plan_duration']),
       quitDate: json['quitDate'] != null
           ? DateTime.tryParse(json['quitDate'].toString())
           : json['quit_date'] != null
               ? DateTime.tryParse(json['quit_date'].toString())
               : null,
       aiQuitPlan: json['aiQuitPlan']?.toString() ?? json['ai_quit_plan']?.toString(),
-      age: (json['age'] as num?)?.toInt(),
+      age: parseNum(json['age']),
       gender: json['gender']?.toString(),
     );
   }

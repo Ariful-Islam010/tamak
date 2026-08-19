@@ -24,15 +24,25 @@ class SavingsGoalModel {
     if (json == null) {
       return SavingsGoalModel(title: '', targetAmount: 0);
     }
-    int target = (json['target'] ?? json['target_amount'] as num?)?.toInt() ?? 0;
+    final rawTarget = json['target'] ?? json['target_amount'];
+    int target = 0;
+    if (rawTarget is num) target = rawTarget.toInt();
+    if (rawTarget is String) target = int.tryParse(rawTarget) ?? 0;
     if (target > maxGoalAmount) target = maxGoalAmount;
 
+    final rawCurrent = json['current_amount'];
+    int current = 0;
+    if (rawCurrent is num) current = rawCurrent.toInt();
+    if (rawCurrent is String) current = int.tryParse(rawCurrent) ?? 0;
+
+    final isComp = json['is_completed'] == true || json['is_completed'] == 1;
+
     return SavingsGoalModel(
-      title: json['title'] as String? ?? '',
+      title: json['title']?.toString() ?? '',
       targetAmount: target,
-      currentAmount: (json['current_amount'] as num?)?.toInt() ?? 0,
-      isCompleted: json['is_completed'] as bool? ?? false,
-      color: json['color'] != null ? Color(json['color'] as int) : Colors.blue,
+      currentAmount: current,
+      isCompleted: isComp,
+      color: json['color'] != null && json['color'] is int ? Color(json['color'] as int) : Colors.blue,
       icon: Icons.star,
     );
   }
