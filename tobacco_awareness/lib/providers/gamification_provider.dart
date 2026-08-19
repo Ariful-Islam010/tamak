@@ -325,7 +325,7 @@ class GamificationProvider extends ChangeNotifier {
 
     if (tobaccoFreeDates.isNotEmpty) {
       final todayStr = TimeUtils.todayBstDateString;
-      final todayDt = DateTime.parse(todayStr);
+      final todayDt = DateTime.tryParse(todayStr) ?? TimeUtils.nowBst;
       final daysDiffFromToday = TimeUtils.daysDifferenceBst(todayDt, tobaccoFreeDates[0]);
 
       if (daysDiffFromToday <= 1) {

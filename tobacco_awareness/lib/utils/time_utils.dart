@@ -19,9 +19,7 @@ class TimeUtils {
 
   /// Formats any given [dateTime] into 'YYYY-MM-DD' string
   static String getBstDateString(DateTime dateTime) {
-    final dt = dateTime.isUtc
-        ? dateTime.add(const Duration(hours: 6))
-        : dateTime;
+    final dt = dateTime.toLocal();
     final year = dt.year.toString().padLeft(4, '0');
     final month = dt.month.toString().padLeft(2, '0');
     final day = dt.day.toString().padLeft(2, '0');

@@ -21,10 +21,32 @@ class DurableSyncQueue {
       if (rawQueue != null && rawQueue.isNotEmpty) {
         final List<dynamic> items = jsonDecode(rawQueue);
         if (items.isNotEmpty) {
-          debugPrint('⚡ [DurableSyncQueue] Processing ${items.length} pending transactional items...');
-          await SyncService().processSyncQueue();
+          debugPrint('⚡ [DurableSyncQueue] Migrating ${items.length} pending transactional items to SyncService...');
+          for (var item in items) {
+            if (item is Map<String, dynamic>) {
+              final type = item['type'] as String?;
+              final data = item['data'] as Map<String, dynamic>?;
+              if (type == 'checkin' && data != null) {
+                await SyncService().queueCheckIn(
+                  userId: data['user_id'] ?? '',
+                  checkInDate: data['check_in_date'] ?? '',
+                  cravingLevel: (data['craving_level'] as num?)?.toInt() ?? 5,
+                  mood: data['mood'] ?? 'Normal',
+                  usedTobacco: data['used_tobacco'] == true,
+                  note: data['note'],
+                );
+              } else if (type == 'savings' && data != null) {
+                await SyncService().queueSavings(
+                  userId: data['user_id'] ?? '',
+                  amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+                );
+              }
+            }
+          }
+          await prefs.removeSetting('durable_offline_queue');
         }
       }
+      await SyncService().processSyncQueue();
     } catch (e) {
       debugPrint('⚡ [DurableSyncQueue] Error processing queue: $e');
     } finally {
@@ -35,22 +57,22 @@ class DurableSyncQueue {
   /// Add durable transactional action item to offline queue
   Future<void> enqueueAction({required String type, required Map<String, dynamic> data}) async {
     try {
-      final prefs = HiveHelper();
-      final rawQueue = await prefs.getSetting('durable_offline_queue');
-      List<dynamic> queue = [];
-
-      if (rawQueue != null && rawQueue.isNotEmpty) {
-        queue = jsonDecode(rawQueue);
+      if (type == 'checkin') {
+        await SyncService().queueCheckIn(
+          userId: data['user_id'] ?? '',
+          checkInDate: data['check_in_date'] ?? '',
+          cravingLevel: (data['craving_level'] as num?)?.toInt() ?? 5,
+          mood: data['mood'] ?? 'Normal',
+          usedTobacco: data['used_tobacco'] == true,
+          note: data['note'],
+        );
+      } else if (type == 'savings') {
+        await SyncService().queueSavings(
+          userId: data['user_id'] ?? '',
+          amount: (data['amount'] as num?)?.toDouble() ?? 0.0,
+        );
       }
-
-      queue.add({
-        'type': type,
-        'data': data,
-        'timestamp': DateTime.now().toIso8601String(),
-      });
-
-      await prefs.saveSetting('durable_offline_queue', jsonEncode(queue));
-      debugPrint('⚡ [DurableSyncQueue] Enqueued transaction: $type');
+      debugPrint('⚡ [DurableSyncQueue] Enqueued transaction: $type via SyncService');
     } catch (e) {
       debugPrint('⚡ [DurableSyncQueue] Enqueue error: $e');
     }

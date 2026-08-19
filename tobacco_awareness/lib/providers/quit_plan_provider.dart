@@ -137,8 +137,14 @@ class QuitPlanProvider extends ChangeNotifier {
 
       if (planState != null) {
         lastAnsweredDate = planState['last_answered_date'] as String?;
-        lastAnsweredStatus =
-            (planState['last_answered_status'] as int? ?? 0) == 1;
+        final rawStatus = planState['last_answered_status'];
+        if (rawStatus is bool) {
+          lastAnsweredStatus = rawStatus;
+        } else if (rawStatus is int) {
+          lastAnsweredStatus = (rawStatus == 1);
+        } else {
+          lastAnsweredStatus = false;
+        }
         lastStartedDate = planState['last_started_date'] as String?;
         final completedDatesJson = planState['completed_task_dates'] as String?;
         if (completedDatesJson != null) {

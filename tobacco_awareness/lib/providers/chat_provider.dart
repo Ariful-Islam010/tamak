@@ -71,8 +71,8 @@ class ChatProvider extends ChangeNotifier {
                   DateTime createdAtStr;
                   if (row['created_at'] != null) {
                     final str = row['created_at'].toString();
-                    final parsed = DateTime.parse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
-                    createdAtStr = parsed.toLocal();
+                    final parsed = DateTime.tryParse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
+                    createdAtStr = parsed != null ? parsed.toLocal() : DateTime.now();
                   } else {
                     createdAtStr = DateTime.now();
                   }
@@ -228,8 +228,8 @@ class ChatProvider extends ChangeNotifier {
           DateTime createdAtStr;
           if (row['created_at'] != null) {
             final str = row['created_at'].toString();
-            final parsed = DateTime.parse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
-            createdAtStr = parsed.toLocal();
+            final parsed = DateTime.tryParse(str.endsWith('Z') || str.contains('+') ? str : '${str}Z');
+            createdAtStr = parsed != null ? parsed.toLocal() : DateTime.now();
           } else {
             createdAtStr = DateTime.now();
           }

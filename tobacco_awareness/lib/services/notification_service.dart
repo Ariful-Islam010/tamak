@@ -28,7 +28,16 @@ class NotificationService {
 
     // Initialize timezone data
     tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
+    try {
+      final timeZoneName = tz.local.name;
+      if (timeZoneName.isEmpty || timeZoneName == 'UTC') {
+        tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
+      }
+    } catch (_) {
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Dhaka'));
+      } catch (_) {}
+    }
 
     // Android initialization settings
     const AndroidInitializationSettings androidSettings =
