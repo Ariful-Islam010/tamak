@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/quit_plan_provider.dart';
 import '../services/auth_service.dart';
+import '../utils/time_utils.dart';
 
 class QuitPlanScreen extends ConsumerWidget {
   const QuitPlanScreen({super.key});
@@ -56,19 +57,13 @@ class QuitPlanScreen extends ConsumerWidget {
 
     // ── Calculate days relative to quitDate ──
     final quitDate = authService.currentUser?.quitDate;
-    final today = DateTime(
-      DateTime.now().year,
-      DateTime.now().month,
-      DateTime.now().day,
-    );
 
     // Days until plan starts (positive = future, 0 = today, negative = past)
     int daysUntilStart = 0;
     int dayIndex = 0;
 
     if (quitDate != null) {
-      final quitDay = DateTime(quitDate.year, quitDate.month, quitDate.day);
-      final diff = today.difference(quitDay).inDays;
+      final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, quitDate);
       if (diff < 0) {
         // Plan hasn't started yet
         daysUntilStart = -diff;

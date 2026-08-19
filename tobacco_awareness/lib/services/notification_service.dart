@@ -3,6 +3,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 
+import '../utils/time_utils.dart';
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -226,13 +228,7 @@ class NotificationService {
     String notifBody;
 
     if (quitDate != null) {
-      final today = DateTime(
-        DateTime.now().year,
-        DateTime.now().month,
-        DateTime.now().day,
-      );
-      final quitDay = DateTime(quitDate.year, quitDate.month, quitDate.day);
-      final diff = today.difference(quitDay).inDays;
+      final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, quitDate);
 
       if (diff < 0) {
         // Plan hasn't started yet

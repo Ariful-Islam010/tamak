@@ -26,10 +26,12 @@ class TimeUtils {
     return '$year-$month-$day';
   }
 
-  /// Calculates calendar days difference between two dates
+  /// Calculates calendar days difference between two dates in local timezone
   static int daysDifferenceBst(DateTime date1, DateTime date2) {
-    final d1 = DateTime(date1.year, date1.month, date1.day);
-    final d2 = DateTime(date2.year, date2.month, date2.day);
+    final local1 = date1.toLocal();
+    final local2 = date2.toLocal();
+    final d1 = DateTime(local1.year, local1.month, local1.day);
+    final d2 = DateTime(local2.year, local2.month, local2.day);
     return d1.difference(d2).inDays;
   }
 }
