@@ -83,7 +83,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
     final gamiProvider = ref.watch(gamificationProvider);
     int tobaccoFreeDays = gamiProvider.totalTobaccoFreeDays;
-    if (tobaccoFreeDays == 0 && user?.quitDate != null) {
+    if (user?.quitDate != null) {
       final diff = TimeUtils.daysDifferenceBst(TimeUtils.nowBst, user!.quitDate!) + 1;
       if (diff >= 1) tobaccoFreeDays = diff;
     }
