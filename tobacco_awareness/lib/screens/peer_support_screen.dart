@@ -1,13 +1,12 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http;
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/backend_service.dart';
+import '../services/chat_service.dart';
 import '../providers/chat_provider.dart';
 import '../utils/error_utils.dart';
 import '../utils/profile_image_helper.dart';
@@ -143,17 +142,7 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
     
     Map<String, dynamic>? userDetails;
     if (userId != null) {
-      try {
-        final res = await http.get(
-          Uri.parse('${BackendService.baseUrl}/api/chat/user-profile/$userId'),
-          headers: BackendService.headers(),
-        ).timeout(const Duration(seconds: 5));
-        if (res.statusCode == 200) {
-          userDetails = jsonDecode(res.body);
-        }
-      } catch (e) {
-        debugPrint("Error fetching user details: $e");
-      }
+      userDetails = await ChatService().fetchUserProfileCard(userId);
     }
 
     final int streakDays = userDetails?['current_streak'] ?? 0;

@@ -25,6 +25,43 @@ class UserModel {
     this.gender,
   });
 
+  factory UserModel.fromJson(Map<String, dynamic>? json) {
+    if (json == null) {
+      return UserModel(uid: '');
+    }
+    return UserModel(
+      uid: json['uid']?.toString() ?? json['id']?.toString() ?? '',
+      email: json['email']?.toString(),
+      displayName: json['displayName']?.toString() ?? json['display_name']?.toString(),
+      photoUrl: json['photoUrl']?.toString() ?? json['photo_url']?.toString(),
+      educationalInfo: json['educationalInfo']?.toString() ?? json['educational_info']?.toString(),
+      planDuration: (json['planDuration'] ?? json['plan_duration'] as num?)?.toInt(),
+      quitDate: json['quitDate'] != null
+          ? DateTime.tryParse(json['quitDate'].toString())
+          : json['quit_date'] != null
+              ? DateTime.tryParse(json['quit_date'].toString())
+              : null,
+      aiQuitPlan: json['aiQuitPlan']?.toString() ?? json['ai_quit_plan']?.toString(),
+      age: (json['age'] as num?)?.toInt(),
+      gender: json['gender']?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'uid': uid,
+      'email': email,
+      'displayName': displayName,
+      'photoUrl': photoUrl,
+      'educationalInfo': educationalInfo,
+      'planDuration': planDuration,
+      'quitDate': quitDate?.toIso8601String(),
+      'aiQuitPlan': aiQuitPlan,
+      'age': age,
+      'gender': gender,
+    };
+  }
+
   UserModel copyWith({
     String? email,
     String? displayName,

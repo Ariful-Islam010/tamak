@@ -3,9 +3,8 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:http/http.dart' as http;
 import '../services/hive_helper.dart';
-import '../services/backend_service.dart';
+import '../services/sos_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_theme.dart';
 import '../utils/time_utils.dart';
@@ -25,19 +24,7 @@ class _SosEmergencyScreenState extends State<SosEmergencyScreen>
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   Future<void> _logSosToBackend(String mode, {String? distraction}) async {
-    if (BackendService.token == null) return;
-    try {
-      await http.post(
-        Uri.parse('${BackendService.baseUrl}/api/profile/sos-log'),
-        headers: BackendService.headers(),
-        body: jsonEncode({
-          'selected_mode': mode,
-          'distraction_clicked': distraction,
-        }),
-      ).timeout(const Duration(seconds: 5));
-    } catch (e) {
-      debugPrint("Error logging SOS: $e");
-    }
+    await SosService().logSosEvent(mode, distraction: distraction);
   }
 
 

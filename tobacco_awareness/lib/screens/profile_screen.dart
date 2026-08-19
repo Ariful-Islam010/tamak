@@ -382,7 +382,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      nameController.dispose();
+      eduController.dispose();
+      ageController.dispose();
+    });
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
