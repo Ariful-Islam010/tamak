@@ -119,7 +119,10 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
               child: InteractiveViewer(
                 child: localImagePath != null
                     ? Image.file(File(localImagePath))
-                    : Image.network(imageUrl!),
+                    : Image.network(
+                        imageUrl!,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.broken_image, color: Colors.white, size: 64),
+                      ),
               ),
             ),
             Positioned(
@@ -760,6 +763,12 @@ class _PeerSupportScreenState extends ConsumerState<PeerSupportScreen> {
                                               ),
                                             );
                                           },
+                                          errorBuilder: (context, error, stackTrace) => Container(
+                                            height: 250,
+                                            width: 250,
+                                            color: Colors.grey.shade200,
+                                            child: const Icon(Icons.broken_image, color: Colors.grey),
+                                          ),
                                         ),
                                   ),
                                 ),

@@ -222,7 +222,7 @@ class AuthService extends ChangeNotifier {
           'educational_info': updatedUser.educationalInfo,
           'plan_duration': updatedUser.planDuration,
           'quit_date': updatedUser.quitDate?.toIso8601String(),
-          'ai_quit_plan': updatedUser.aiQuitPlan,
+          'ai_quit_plan': updatedUser.aiQuitPlan ?? _currentUser?.aiQuitPlan,
           'age': updatedUser.age,
           'gender': updatedUser.gender,
           'updated_at': DateTime.now().toIso8601String(),

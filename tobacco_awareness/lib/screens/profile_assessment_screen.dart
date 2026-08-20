@@ -228,6 +228,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
         educationalInfo: _classController.text.isNotEmpty ? _classController.text : null,
         planDuration: _selectedDuration ?? 7,
         quitDate: _selectedDate,
+        aiQuitPlan: aiPlan ?? currentUser.aiQuitPlan,
         age: int.tryParse(_ageController.text) ?? 19,
         gender: _selectedGender ?? "পুরুষ",
       );

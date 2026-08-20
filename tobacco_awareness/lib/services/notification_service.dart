@@ -254,15 +254,12 @@ class NotificationService {
       notifBody = _getRandomMorningMessage();
     }
 
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       _morningReminderId,
       notifTitle,
       notifBody,
       scheduledTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     debugPrint('⏰ Morning notification scheduled at 8:00 AM');
@@ -278,15 +275,12 @@ class NotificationService {
     // a static day-number would become stale (always show "Day 2" etc).
     const String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
 
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       _eveningCheckInId,
       '📋 আজকের চেক-ইন করুন',
       body,
       scheduledTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     debugPrint('⏰ Evening check-in scheduled at 8:00 PM');
@@ -298,15 +292,12 @@ class NotificationService {
 
     final scheduledTime = _nextInstanceOf(12, 0);
 
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       _streakReminderId,
       '💪 আপনার স্ট্রিক ধরে রাখুন!',
       'প্রতিদিনের ছোট পদক্ষেপ বড় পরিবর্তন আনে। আজও তামাকমুক্ত থাকুন!',
       scheduledTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
     debugPrint('⏰ Streak reminder scheduled at 12:00 PM');
@@ -320,16 +311,54 @@ class NotificationService {
     required DateTime scheduledAt,
   }) async {
     final tz.TZDateTime tzDateTime = tz.TZDateTime.from(scheduledAt, tz.local);
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       id,
       title,
       body,
       tzDateTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  /// Safe helper method for scheduling notifications with fallback if exact alarms are disabled
+  Future<void> _safeZonedSchedule(
+    int id,
+    String title,
+    String body,
+    tz.TZDateTime scheduledDate,
+    NotificationDetails notificationDetails, {
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        scheduledDate,
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+      );
+    } catch (e) {
+      debugPrint('⚠️ Exact alarm notification error ($e). Falling back to inexactAllowWhileIdle.');
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledDate,
+          notificationDetails,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: matchDateTimeComponents,
+        );
+      } catch (fallbackError) {
+        debugPrint('⚠️ Inexact notification scheduling error: $fallbackError');
+      }
+    }
   }
 
   // ──────────────────────────────────────────────
@@ -435,14 +464,12 @@ class NotificationService {
 
     final tzDateTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       _planCompletionReminderId,
       '📋 আজকের পরিকল্পনা সম্পন্ন করেছেন?',
       'আজকের তামাক বর্জন লক্ষ্য কি সম্পন্ন করেছেন? হ্যাঁ অথবা না ক্লিক করে আপডেট করুন!',
       tzDateTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
 
     debugPrint('⏰ Plan completion reminder scheduled for: $scheduledTime');
@@ -455,15 +482,12 @@ class NotificationService {
     // If already answered today, schedule for tomorrow
     final scheduledTime = _nextInstanceOf(10, 0, forceTomorrow: hasAnsweredToday);
 
-    await _plugin.zonedSchedule(
+    await _safeZonedSchedule(
       _viewPlanReminderId,
       '📋 আজকের তামাকমুক্ত পরিকল্পনা',
       'আপনার আজকের লক্ষ্য ও এআই টাস্কটি দেখে নিন এবং দিনটি সফল করুন! 🌿',
       scheduledTime,
       _buildDetails(),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
 

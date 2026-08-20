@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../services/notification_service.dart';
 import '../services/hive_helper.dart';
 import '../services/backend_service.dart';
+import '../services/groq_ai_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/fallback_constants.dart';
 
@@ -68,11 +69,15 @@ class QuitPlanProvider extends ChangeNotifier {
       _isCompletedToday = _hasAnsweredToday && lastAnsweredStatus;
       _isGoalStarted = _isCompletedToday;
 
-      // Reschedule reminders
-      await NotificationService()
-          .schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
-      await NotificationService()
-          .scheduleViewPlanReminder(hasAnsweredToday: _hasAnsweredToday);
+      // Reschedule reminders safely without blocking plan sync
+      try {
+        await NotificationService()
+            .schedulePlanCompletionReminder(hasAnsweredToday: _hasAnsweredToday);
+        await NotificationService()
+            .scheduleViewPlanReminder(hasAnsweredToday: _hasAnsweredToday);
+      } catch (e) {
+        debugPrint('Notification scheduling error: $e');
+      }
 
       // Try fetching fresh plan from backend in the background
       if (userId != 'guest' && BackendService.token != null) {
@@ -85,7 +90,10 @@ class QuitPlanProvider extends ChangeNotifier {
               .timeout(const Duration(seconds: 10));
           if (response.statusCode == 200 && response.body != 'null') {
             final profileData = jsonDecode(response.body);
-            if (profileData != null && profileData['ai_quit_plan'] != null) {
+            if (profileData != null &&
+                profileData['ai_quit_plan'] != null &&
+                profileData['ai_quit_plan'].toString().isNotEmpty &&
+                profileData['ai_quit_plan'].toString() != 'null') {
               final fetchedPlan = profileData['ai_quit_plan'];
               final String freshPlanJson = (fetchedPlan is String)
                   ? fetchedPlan
@@ -100,6 +108,30 @@ class QuitPlanProvider extends ChangeNotifier {
                   completedTaskDatesJson: jsonEncode(completedDates),
                   lastStartedDate: lastStartedDate,
                 );
+              }
+            } else if (profileData != null) {
+              // 💡 DB has NULL ai_quit_plan
+              if (storedPlan != null && storedPlan.isNotEmpty) {
+                // Sync existing local Hive plan to backend DB
+                await saveAiPlan(storedPlan);
+              } else {
+                // Auto-generate fresh AI plan for backend DB & Hive
+                final int duration = profileData['plan_duration'] is int
+                    ? profileData['plan_duration']
+                    : (int.tryParse(profileData['plan_duration']?.toString() ?? '') ?? 7);
+                final String age = profileData['age']?.toString() ?? "20";
+                final String gender = profileData['gender']?.toString() ?? "পুরুষ";
+
+                final String? autoPlan = await GroqAiService.generateQuitPlan(
+                  durationInDays: duration,
+                  age: age,
+                  gender: gender,
+                );
+
+                if (autoPlan != null) {
+                  storedPlan = autoPlan;
+                  await saveAiPlan(autoPlan);
+                }
               }
             }
           }
