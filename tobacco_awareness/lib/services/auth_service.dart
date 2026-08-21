@@ -200,14 +200,18 @@ class AuthService extends ChangeNotifier {
 
   /// Call this after onboarding to persist all profile fields.
   Future<void> updateUserData(UserModel updatedUser) async {
-    _currentUser = updatedUser;
+    final existingPlan = (updatedUser.aiQuitPlan != null && updatedUser.aiQuitPlan!.isNotEmpty && updatedUser.aiQuitPlan != 'null')
+        ? updatedUser.aiQuitPlan
+        : _currentUser?.aiQuitPlan;
+    final finalUser = updatedUser.copyWith(aiQuitPlan: existingPlan);
+    _currentUser = finalUser;
     notifyListeners();
     try {
       if (BackendService.token != null && BackendService.userId != null) {
-        if (updatedUser.quitDate != null) {
+        if (finalUser.quitDate != null) {
           await HiveHelper().saveSetting(
             'user_quit_date_${BackendService.userId}',
-            updatedUser.quitDate!.toIso8601String(),
+            finalUser.quitDate!.toIso8601String(),
           );
         } else {
           await HiveHelper().removeSetting(
@@ -216,15 +220,15 @@ class AuthService extends ChangeNotifier {
         }
         final body = {
           'id': BackendService.userId,
-          'email': updatedUser.email,
-          'display_name': updatedUser.displayName,
-          'photo_url': updatedUser.photoUrl,
-          'educational_info': updatedUser.educationalInfo,
-          'plan_duration': updatedUser.planDuration,
-          'quit_date': updatedUser.quitDate?.toIso8601String(),
-          'ai_quit_plan': updatedUser.aiQuitPlan ?? _currentUser?.aiQuitPlan,
-          'age': updatedUser.age,
-          'gender': updatedUser.gender,
+          'email': finalUser.email,
+          'display_name': finalUser.displayName,
+          'photo_url': finalUser.photoUrl,
+          'educational_info': finalUser.educationalInfo,
+          'plan_duration': finalUser.planDuration,
+          'quit_date': finalUser.quitDate?.toIso8601String(),
+          'ai_quit_plan': existingPlan,
+          'age': finalUser.age,
+          'gender': finalUser.gender,
           'updated_at': DateTime.now().toIso8601String(),
         };
         await HiveHelper().saveSetting(

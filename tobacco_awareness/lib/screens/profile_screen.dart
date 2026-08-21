@@ -358,6 +358,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               educationalInfo: eduController.text.trim().isNotEmpty ? eduController.text.trim() : null,
                               age: ageVal,
                               gender: selectedGender,
+                              aiQuitPlan: user.aiQuitPlan,
                             );
                             await authService.updateUserData(updatedUser);
                             if (context.mounted) {

@@ -43,5 +43,21 @@ class FallbackConstants {
       "ai_task": "আপনার জন্য ১ সপ্তাহের তামাকমুক্ত থাকার ব্যাজ ও রিওয়ার্ড কার্ড প্রস্তুত করা হয়েছে।"
     },
   ];
+
+  static List<Map<String, dynamic>> getFallbackPlanForDuration(int durationInDays) {
+    List<Map<String, dynamic>> plan = [];
+    for (int i = 0; i < durationInDays; i++) {
+      final base = quitPlans[i % quitPlans.length];
+      plan.add({
+        "day": i + 1,
+        "title": "দিন ${i + 1}: ${base['title']}",
+        "desc": base['desc'],
+        "user_task": base['user_task'],
+        "ai_task": base['ai_task'],
+        "daily_target": i + 1 == durationInDays ? "০ (শূন্য) - তামাকমুক্ত থাকুন!" : "নিয়ন্ত্রণ রাখা",
+      });
+    }
+    return plan;
+  }
 }
 

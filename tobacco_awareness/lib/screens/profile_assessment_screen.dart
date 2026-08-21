@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/groq_ai_service.dart';
 import '../providers/quit_plan_provider.dart';
+import '../utils/fallback_constants.dart';
 import 'home_dashboard_screen.dart';
 
 
@@ -206,15 +208,18 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
     );
 
     // Generate AI Plan
-    final String? aiPlan = await GroqAiService.generateQuitPlan(
+    String? aiPlan = await GroqAiService.generateQuitPlan(
       durationInDays: _selectedDuration ?? 7,
       age: _ageController.text,
       gender: _selectedGender ?? "পুরুষ",
     );
 
-    if (aiPlan != null) {
-      await quitPlan.saveAiPlan(aiPlan);
+    if (aiPlan == null || aiPlan.isEmpty || aiPlan == 'null') {
+      final fallbackPlan = FallbackConstants.getFallbackPlanForDuration(_selectedDuration ?? 7);
+      aiPlan = jsonEncode(fallbackPlan);
     }
+
+    await quitPlan.saveAiPlan(aiPlan);
     
     if (mounted) {
       Navigator.pop(context); // Dismiss loading dialog
@@ -228,7 +233,7 @@ class _ProfileAssessmentScreenState extends ConsumerState<ProfileAssessmentScree
         educationalInfo: _classController.text.isNotEmpty ? _classController.text : null,
         planDuration: _selectedDuration ?? 7,
         quitDate: _selectedDate,
-        aiQuitPlan: aiPlan ?? currentUser.aiQuitPlan,
+        aiQuitPlan: aiPlan,
         age: int.tryParse(_ageController.text) ?? 19,
         gender: _selectedGender ?? "পুরুষ",
       );

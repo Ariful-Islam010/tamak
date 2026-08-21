@@ -122,16 +122,19 @@ class QuitPlanProvider extends ChangeNotifier {
                 final String age = profileData['age']?.toString() ?? "20";
                 final String gender = profileData['gender']?.toString() ?? "পুরুষ";
 
-                final String? autoPlan = await GroqAiService.generateQuitPlan(
+                String? autoPlan = await GroqAiService.generateQuitPlan(
                   durationInDays: duration,
                   age: age,
                   gender: gender,
                 );
 
-                if (autoPlan != null) {
-                  storedPlan = autoPlan;
-                  await saveAiPlan(autoPlan);
+                if (autoPlan == null || autoPlan.isEmpty || autoPlan == 'null') {
+                  final fallbackList = FallbackConstants.getFallbackPlanForDuration(duration);
+                  autoPlan = jsonEncode(fallbackList);
                 }
+
+                storedPlan = autoPlan;
+                await saveAiPlan(autoPlan);
               }
             }
           }
