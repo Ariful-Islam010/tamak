@@ -273,7 +273,7 @@ class NotificationService {
 
     // Use a generic body — since this repeats daily via matchDateTimeComponents,
     // a static day-number would become stale (always show "Day 2" etc).
-    const String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং পয়েন্ট অর্জন করুন! 🌟';
+    const String body = 'আজকের তামাক-মুক্ত দিন কেমন ছিল? চেক-ইন করুন এবং আপনার স্ট্রিক বজায় রাখুন! 🌟';
 
     await _safeZonedSchedule(
       _eveningCheckInId,
@@ -420,7 +420,7 @@ class NotificationService {
     final messages = [
       'আজও তামাকমুক্ত থাকার সংকল্প করুন। আপনি পারবেন! 🌿',
       'প্রতিটি তামাকমুক্ত দিন আপনার জীবনকে দীর্ঘায়িত করছে। 💚',
-      'আজকের কাজগুলো সম্পন্ন করুন এবং পয়েন্ট অর্জন করুন!',
+      'আজকের কাজগুলো সম্পন্ন করুন এবং নতুন ব্যাজ অর্জন করুন!',
       'আপনার পরিবারের জন্য সুস্থ থাকুন। তামাক ছাড়ুন!',
       'শরীর সুস্থ, মন সুস্থ - তামাকমুক্ত জীবন সুন্দর! 🌸',
     ];
